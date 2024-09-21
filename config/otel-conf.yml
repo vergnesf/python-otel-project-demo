@@ -1,0 +1,107 @@
+#############################################################
+# RECEIVERS
+# #############################################################
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+  # postgresql:
+  #   endpoint: postgres:5432
+  #   transport: tcp
+  #   username: postgres
+  #   password: yourpassword
+  #   databases:
+  #     - mydatabase
+  #   collection_interval: 30s
+  #   tls:
+  #     insecure: true
+  #     insecure_skip_verify: true
+
+# #############################################################
+# PROCESSORS
+# #############################################################
+processors:
+  memory_limiter:
+    # check_interval (default = 0s): Time between measurements of memory usage. The recommended value is 1 second.
+    # If the expected traffic to the Collector is very spiky then decrease the check_interval or increase spike_limit_mib to avoid memory usage going over the hard limit.
+    check_interval: 1s
+    # limit_mib (default = 0): Maximum amount of memory, in MiB, targeted to be allocated by the process heap.
+    # Note that typically the total memory usage of process will be about 50MiB higher than this value. This defines the hard limit
+    # limit_mib: 500
+    # spike_limit_mib (default = 20% of limit_mib): Maximum spike expected between the measurements of memory usage.
+    # The value must be less than limit_mib. The soft limit value will be equal to (limit_mib - spike_limit_mib).
+    # The recommended value for spike_limit_mib is about 20% limit_mib.
+    # spike_limit_mib: 100
+    # limit_percentage (default = 0): Maximum amount of total memory targeted to be allocated by the process heap.
+    # This configuration is supported on Linux systems with cgroups and it's intended to be used in dynamic platforms like docker.
+    # This option is used to calculate memory_limit from the total available memory. For instance setting of 75% with the total memory of 1GiB will result in the limit of 750 MiB.
+    # The fixed memory setting (limit_mib) takes precedence over the percentage configuration.
+    limit_percentage: 80
+    # spike_limit_percentage (default = 0): Maximum spike expected between the measurements of memory usage.
+    # The value must be less than limit_percentage. This option is used to calculate spike_limit_mib from the total available memory.
+    # For instance setting of 25% with the total memory of 1GiB will result in the spike limit of 250MiB. This option is intended to be used only with limit_percentage.
+    spike_limit_percentage: 30
+
+  batch:
+    # end_batch_size (default = 8192): Number of spans, metric data points, or log records after which a batch will be sent regardless of the timeout.
+    # send_batch_size acts as a trigger and does not affect the size of the batch.
+    # If you need to enforce batch size limits sent to the next component in the pipeline see send_batch_max_size.
+    send_batch_size: 4096
+    # timeout (default = 200ms): Time duration after which a batch will be sent regardless of size.
+    # If set to zero, send_batch_size is ignored as data will be sent immediately, subject to only send_batch_max_size.
+    timeout: 10s
+    # send_batch_max_size (default = 0): The upper limit of the batch size.
+    # 0 means no upper limit of the batch size. This property ensures that larger batches are split into smaller units.
+    # It must be greater than or equal to send_batch_size.
+    # send_batch_max_size: 21000
+    # metadata_keys (default = empty): When set, this processor will create one batcher instance per distinct combination of values in the client.Metadata.
+    # metadata_cardinality_limit (default = 1000): When metadata_keys is not empty,
+    # this setting limits the number of unique combinations of metadata key values that will be processed over the lifetime of the process
+
+# #############################################################
+# EXPORTERS
+# #############################################################
+exporters:
+  prometheusremotewrite:
+    endpoint: http://mimir:9009/api/v1/push
+    tls:
+      insecure: true
+  otlphttp/loki:
+    endpoint: "http://loki:3100/otlp"
+  otlp:
+    endpoint: "http://tempo:4317"
+    tls:
+      insecure: true
+
+# #############################################################
+# EXTENSIONS
+# #############################################################
+extensions:
+  health_check:
+
+# #############################################################
+# SERVICE
+# #############################################################
+service:
+  extensions: [health_check]
+  telemetry:
+    metrics:
+      level: basic
+      address: 0.0.0.0:10002
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheusremotewrite]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/loki]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp]
