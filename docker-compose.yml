@@ -18,6 +18,7 @@ services:
       dockerfile: customer/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: customer
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
@@ -39,6 +40,7 @@ services:
       dockerfile: supplier/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: supplier
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
@@ -60,6 +62,7 @@ services:
       dockerfile: order/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: order
     environment:
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
@@ -81,6 +84,7 @@ services:
       dockerfile: stock/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: stock
     environment:
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
@@ -102,6 +106,7 @@ services:
       dockerfile: ordercheck/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: ordercheck
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
@@ -123,6 +128,7 @@ services:
       dockerfile: suppliercheck/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: suppliercheck
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
@@ -144,6 +150,7 @@ services:
       dockerfile: ordermanagement/Dockerfile
       args:
         DOCKER_REGISTRY: $DOCKER_REGISTRY
+        IMG_PYTHON: $IMG_PYTHON
     container_name: ordermanagement
     environment:
       API_URL_ORDERS: http://order:5000

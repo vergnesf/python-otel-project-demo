@@ -1,6 +1,9 @@
 # Use an official Python base image
 ARG DOCKER_REGISTRY
-FROM ${DOCKER_REGISTRY}python:3.10-slim
+ARG IMG_PYTHON
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
+
+USER root
 
 # Set the working directory
 WORKDIR /app
