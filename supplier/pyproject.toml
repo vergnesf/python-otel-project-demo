@@ -1,17 +1,12 @@
-[tool.poetry]
+[project]
 name = "supplier"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Add your description here"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-pydantic = "^2.8.2"
-opentelemetry-distro = "^0.48b0"
-opentelemetry-exporter-otlp = "^1.27.0"
-confluent-kafka = "^2.5.3"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires-python = ">=3.12"
+dependencies = [
+    "confluent-kafka>=2.6.0",
+    "opentelemetry-distro>=0.48b0",
+    "opentelemetry-exporter-otlp>=1.27.0",
+    "pydantic>=2.9.2",
+]
