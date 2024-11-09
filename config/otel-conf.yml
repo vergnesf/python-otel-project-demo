@@ -66,16 +66,12 @@ processors:
 # EXPORTERS
 # #############################################################
 exporters:
-  prometheusremotewrite:
-    endpoint: http://mimir:9009/api/v1/push
-    tls:
-      insecure: true
+  otlphttp/mimir:
+    endpoint: http://mimir:9009/otlp
   otlphttp/loki:
     endpoint: "http://loki:3100/otlp"
-  otlp:
-    endpoint: "http://tempo:4317"
-    tls:
-      insecure: true
+  otlphttp/tempo:
+    endpoint: "http://tempo:4318"
 
 # #############################################################
 # EXTENSIONS
@@ -88,15 +84,11 @@ extensions:
 # #############################################################
 service:
   extensions: [health_check]
-  telemetry:
-    metrics:
-      level: basic
-      address: 0.0.0.0:10002
   pipelines:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheusremotewrite]
+      exporters: [otlphttp/mimir]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
@@ -104,4 +96,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp]
+      exporters: [otlphttp/tempo]
