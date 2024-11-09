@@ -56,3 +56,30 @@ uv run opentelemetry-instrument \
     --log_level debug \
     python -m order.main
 ```
+
+## Kubernetes Section ⚓
+
+Integrating Kubernetes into this project enables efficient deployment and orchestration of microservices. Here are the steps to set up a local test environment using **kind** (Kubernetes IN Docker) 🐳 and to deploy a highly available PostgreSQL database with **CloudNativePG** 🐘.
+
+### Creating a Kubernetes Cluster with kind 🔨
+
+**kind** is a tool that lets you create local Kubernetes clusters using Docker as the container runtime. It’s perfect for quickly testing deployments in a simple environment. ⚡
+
+```sh
+kind create cluster -n test-cluster
+```
+
+### Deploying CloudNativePG 🐘
+
+**CloudNativePG** is a solution that simplifies managing PostgreSQL databases in a Kubernetes environment, providing high availability features. 🚀 This sets up the necessary resources to run PostgreSQL reliably and efficiently. 🛡️
+
+```sh
+kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.24/releases/cnpg-1.24.1.yaml
+```
+
+### Deploy it 🚀
+
+```sh
+cd k8s/base
+k apply -k .
+```
