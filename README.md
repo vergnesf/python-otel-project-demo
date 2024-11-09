@@ -41,18 +41,18 @@ docker compose up -d --build
 
 ## Running Locally 🐛
 
-Each microservice is set up with **Poetry**, so you can launch the different services using `poetry run`.
+Each microservice is set up with **uv**, so you can launch the different services using `uv run`.
 
 Locally, you'll need to modify `PYTHONPATH` to include the project and access the "common" part, which simplifies things for me.
 
 To run a microservice with auto-instrumentation:
 
 ```sh
-poetry run opentelemetry-instrument \
-    --traces_exporter console,otlp \
-    --metrics_exporter console,otlp \
+uv run opentelemetry-instrument \
+    --traces_exporter otlp \
+    --metrics_exporter otlp \
     --service_name customer2 \
-    --exporter_otlp_endpoint http://localhost:4317 \
+    --exporter_otlp_endpoint http://localhost:4318 \
     --log_level debug \
     python -m order.main
 ```
