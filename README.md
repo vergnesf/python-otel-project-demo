@@ -80,6 +80,5 @@ kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/
 ### Deploy it 🚀
 
 ```sh
-cd k8s/base
-k apply -k .
+k apply -k k8s/base .
 ```
