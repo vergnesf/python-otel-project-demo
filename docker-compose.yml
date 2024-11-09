@@ -28,7 +28,7 @@ services:
       OTEL_SERVICE_NAME: customer
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     depends_on:
       broker:
@@ -50,7 +50,7 @@ services:
       OTEL_SERVICE_NAME: supplier
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     depends_on:
       broker:
@@ -71,7 +71,7 @@ services:
       OTEL_SERVICE_NAME: order
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     ports:
       - 8005:5000
@@ -93,7 +93,7 @@ services:
       OTEL_SERVICE_NAME: stock
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     ports:
       - 8006:5000
@@ -116,7 +116,7 @@ services:
       OTEL_SERVICE_NAME: ordercheck
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     depends_on:
       broker:
@@ -138,7 +138,7 @@ services:
       OTEL_SERVICE_NAME: suppliercheck
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     depends_on:
       broker:
@@ -161,7 +161,7 @@ services:
       OTEL_SERVICE_NAME: ordermanagement
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
       OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp, console
+      OTEL_LOGS_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
     depends_on:
       - order

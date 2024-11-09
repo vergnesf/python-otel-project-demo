@@ -16,6 +16,7 @@ COPY common/common/ /app/common/common
 
 # Install uv
 RUN pip install uv && \
+    uv add pip && \
     uv run opentelemetry-bootstrap -a install
 
 EXPOSE 5000
