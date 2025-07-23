@@ -1,4 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+import random
+import os
+import logging
 
 from .. import schemas
 from ..crud import (
@@ -11,9 +14,33 @@ from ..crud import (
 from ..database import get_db
 from ..models import OrderStatus
 
+# Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
 orders_bp = Blueprint("orders", __name__)
 
+# Get error rate from environment variable (default 0.1)
+ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+
 MSG_ERROR_NOT_FOUND = "Order not found"
+
+
+# Custom error handler to log all HTTP error codes properly
+@orders_bp.after_request
+def log_response(response):
+    if response.status_code >= 500:
+        current_app.logger.error(
+            f"HTTP {response.status_code} error for {request.method} {request.path}"
+        )
+    elif response.status_code >= 400:
+        current_app.logger.warning(
+            f"HTTP {response.status_code} client error for {request.method} {request.path}"
+        )
+    elif response.status_code == 200:
+        current_app.logger.debug(
+            f"HTTP {response.status_code} success for {request.method} {request.path}"
+        )
+    return response
 
 
 @orders_bp.route("/", methods=["POST"])
@@ -51,10 +78,19 @@ def create_order_route():
             status:
               type: string
     """
+    # Simulate DB insertion error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return jsonify({"error": "Simulated DB insertion error"}), 500
     data = request.json
     db = next(get_db())
     order_data = schemas.OrderCreate(**data)
-    new_order = create_order(db=db, order=order_data)
+    try:
+        new_order = create_order(db=db, order=order_data)
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order creation"}),
+            500,
+        )
     return jsonify(new_order.to_dict()), 201
 
 
@@ -93,10 +129,22 @@ def read_orders_route():
               status:
                 type: string
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return (
+            jsonify({"error": "Simulated API error during order list"}),
+            502,
+        )
     skip = int(request.args.get("skip", 0))
     limit = int(request.args.get("limit", 10))
     db = next(get_db())
-    orders = get_orders(db=db, skip=skip, limit=limit)
+    try:
+        orders = get_orders(db=db, skip=skip, limit=limit)
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order list"}),
+            500,
+        )
     return jsonify([order.to_dict() for order in orders])
 
 
@@ -139,12 +187,24 @@ def read_orders_by_status_route(status):
               status:
                 type: string
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return (
+            jsonify({"error": "Simulated API error during order list by status"}),
+            502,
+        )
     skip = int(request.args.get("skip", 0))
     limit = int(request.args.get("limit", 10))
     db = next(get_db())
-    orders = get_orders_by_status(
-        db=db, order_status=OrderStatus(status), skip=skip, limit=limit
-    )
+    try:
+        orders = get_orders_by_status(
+            db=db, order_status=OrderStatus(status), skip=skip, limit=limit
+        )
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order list by status"}),
+            500,
+        )
     return jsonify([order.to_dict() for order in orders])
 
 
@@ -177,8 +237,20 @@ def read_order_route(order_id):
       404:
         description: Order not found
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return (
+            jsonify({"error": "Simulated API error during order read"}),
+            502,
+        )
     db = next(get_db())
-    db_order = get_order(db=db, order_id=order_id)
+    try:
+        db_order = get_order(db=db, order_id=order_id)
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order read"}),
+            500,
+        )
     if db_order is None:
         return jsonify({"error": "Order not found"}), 404
     return jsonify(db_order.to_dict())
@@ -222,6 +294,12 @@ def update_order_status_route(order_id):
       404:
         description: Order not found
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return (
+            jsonify({"error": "Simulated API error during order status update"}),
+            502,
+        )
     data = request.json
     if "order_status" not in data:
         return jsonify({"error": "Missing 'order_status' in request body"}), 400
@@ -232,11 +310,23 @@ def update_order_status_route(order_id):
         return jsonify({"error": "Invalid order status"}), 400
 
     db = next(get_db())
-    order = get_order(db, order_id=order_id)
+    try:
+        order = get_order(db, order_id=order_id)
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order fetch for update"}),
+            500,
+        )
     if order is None:
         return jsonify({"error": "Order not found"}), 404
 
-    updated_order = update_order_status(
-        db, order_id=order_id, order_status=order_status
-    )
+    try:
+        updated_order = update_order_status(
+            db, order_id=order_id, order_status=order_status
+        )
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during order status update"}),
+            500,
+        )
     return jsonify(updated_order.to_dict()), 200
