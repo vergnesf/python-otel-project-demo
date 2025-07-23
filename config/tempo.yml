@@ -3,18 +3,10 @@ server:
 
 distributor:
   receivers: # this configuration will listen on all ports and protocols that tempo is capable of.
-    jaeger: # the receives all come from the OpenTelemetry collector.  more configuration information can
-      protocols: # be found there: https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver
-        thrift_http: #
-        grpc: # for a production deployment you should only enable the receivers you need!
-        thrift_binary:
-        thrift_compact:
-    zipkin:
     otlp:
       protocols:
         http:
-        grpc:
-    opencensus:
+          endpoint: 0.0.0.0:4318
 
 ingester:
   trace_idle_period: 10s # the length of time after a trace has not received spans to consider it complete and flush it

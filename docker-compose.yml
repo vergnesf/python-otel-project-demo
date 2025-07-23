@@ -22,7 +22,9 @@ services:
     container_name: customer
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      INTERVAL_SECONDS: 20
+      INTERVAL_SECONDS: 5
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: customer
@@ -44,7 +46,9 @@ services:
     container_name: supplier
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      INTERVAL_SECONDS: 20
+      INTERVAL_SECONDS: 5
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: supplier
@@ -66,6 +70,8 @@ services:
     container_name: order
     environment:
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: order
@@ -88,6 +94,8 @@ services:
     container_name: stock
     environment:
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: stock
@@ -111,6 +119,8 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://order:5000
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: ordercheck
@@ -133,6 +143,8 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://stock:5000
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: suppliercheck
@@ -155,7 +167,9 @@ services:
     environment:
       API_URL_ORDERS: http://order:5000
       API_URL_STOCKS: http://stock:5000
-      INTERVAL_SECONDS: 20
+      INTERVAL_SECONDS: 5
+      ERROR_RATE: 0.1
+      LOG_LEVEL: DEBUG
       OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
       OTEL_PYTHON_LOG_CORRELATION: true
       OTEL_SERVICE_NAME: ordermanagement
@@ -199,6 +213,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   broker:
     image: ${DOCKER_REGISTRY}${IMG_KAFKA}
@@ -207,7 +226,8 @@ services:
     volumes:
       - kafka-data:/var/lib/kafka/data:Z
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "29092:29092"
       - "9092:9092"
@@ -243,12 +263,20 @@ services:
       - postgres-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   adminer:
     image: ${DOCKER_REGISTRY}${IMG_ADMINER}
     container_name: adminer
     ports:
       - 8081:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # ###############################################################################################
   # OpenTelemetry part
@@ -326,3 +354,14 @@ services:
       - mimir
       - loki
       - tempo
+    
+  grafana-mcp:
+    image:  ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
+    container_name: grafana-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      GRAFANA_URL: http://grafana:3000
+      GRAFANA_API_KEY: XXXXXX
+    depends_on:
+      - grafana
