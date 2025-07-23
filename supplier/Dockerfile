@@ -1,6 +1,6 @@
 # Use an official Python base image
-ARG DOCKER_REGISTRY
-ARG IMG_PYTHON
+ARG DOCKER_REGISTRY=""
+ARG IMG_PYTHON="python:3.13-slim"
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root

@@ -1,5 +1,8 @@
 from pydantic import ValidationError
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
+import random
+import os
+import logging
 
 from .. import schemas
 from ..crud import (
@@ -11,9 +14,33 @@ from ..crud import (
 from ..database import get_db
 from ..schemas import StockDecrease
 
+# Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
 stocks_bp = Blueprint("stocks", __name__)
 
+# Get error rate from environment variable (default 0.1)
+ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+
 MSG_ERROR_NOT_FOUND = "Stock not found"
+
+
+# Custom error handler to log all HTTP error codes properly
+@stocks_bp.after_request
+def log_response(response):
+    if response.status_code >= 500:
+        current_app.logger.error(
+            f"HTTP {response.status_code} error for {request.method} {request.path}"
+        )
+    elif response.status_code >= 400:
+        current_app.logger.warning(
+            f"HTTP {response.status_code} client error for {request.method} {request.path}"
+        )
+    elif response.status_code == 200:
+        current_app.logger.debug(
+            f"HTTP {response.status_code} success for {request.method} {request.path}"
+        )
+    return response
 
 
 @stocks_bp.route("/", methods=["POST"])
@@ -49,10 +76,16 @@ def create_stock_route():
             quantity:
               type: integer
     """
+    # Simulate DB/API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return jsonify({"error": "Simulated DB error during stock creation"}), 500
     data = request.json
     db = next(get_db())
     stock_data = schemas.StockCreate(**data)
-    new_stock = create_stock(db=db, stock=stock_data)
+    try:
+        new_stock = create_stock(db=db, stock=stock_data)
+    except Exception:
+        return jsonify({"error": "Unexpected error during stock creation"}), 500
     return jsonify(new_stock.to_dict()), 201
 
 
@@ -89,10 +122,16 @@ def read_stocks_route():
               quantity:
                 type: integer
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return jsonify({"error": "Simulated API error during stock list"}), 502
     skip = int(request.args.get("skip", 0))
     limit = int(request.args.get("limit", 10))
     db = next(get_db())
-    stocks = get_stocks(db, skip=skip, limit=limit)
+    try:
+        stocks = get_stocks(db, skip=skip, limit=limit)
+    except Exception:
+        return jsonify({"error": "Unexpected error during stock list"}), 500
     return jsonify([stock.to_dict() for stock in stocks]), 200
 
 
@@ -128,8 +167,14 @@ def read_stock_route(wood_type):
             error:
               type: string
     """
+    # Simulate API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return jsonify({"error": "Simulated API error during stock read"}), 502
     db = next(get_db())
-    db_stock = get_stock_by_wood_type(db, wood_type=wood_type)
+    try:
+        db_stock = get_stock_by_wood_type(db, wood_type=wood_type)
+    except Exception:
+        return jsonify({"error": "Unexpected error during stock read"}), 500
     if db_stock is None:
         return jsonify({"error": MSG_ERROR_NOT_FOUND}), 404
     return jsonify(db_stock.to_dict()), 200
@@ -182,6 +227,9 @@ def decrease_stock_route():
             error:
               type: string
     """
+    # Simulate DB/API error with probability ERROR_RATE
+    if random.random() < ERROR_RATE:
+        return jsonify({"error": "Simulated DB error during stock decrease"}), 500
     data = request.json
     try:
         stock_data = StockDecrease(**data)
@@ -189,16 +237,25 @@ def decrease_stock_route():
         return jsonify({"error": "Invalid input"}), 400
 
     db = next(get_db())
-    db_stock = get_stock_by_wood_type(db, wood_type=stock_data.wood_type)
+    try:
+        db_stock = get_stock_by_wood_type(db, wood_type=stock_data.wood_type)
+    except Exception:
+        return jsonify({"error": "Unexpected error during stock decrease (read)"}), 500
     if db_stock is None:
         return jsonify({"error": "Stock not found"}), 404
 
     if db_stock.quantity < stock_data.quantity:
         return jsonify({"error": "Insufficient stock"}), 400
 
-    decrease_stock_quantity(
-        db, wood_type=stock_data.wood_type, quantity=stock_data.quantity
-    )
-    db.commit()
-    db.refresh(db_stock)
+    try:
+        decrease_stock_quantity(
+            db, wood_type=stock_data.wood_type, quantity=stock_data.quantity
+        )
+        db.commit()
+        db.refresh(db_stock)
+    except Exception:
+        return (
+            jsonify({"error": "Unexpected error during stock decrease (update)"}),
+            500,
+        )
     return jsonify(db_stock.to_dict()), 200

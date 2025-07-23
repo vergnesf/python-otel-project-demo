@@ -1,3 +1,4 @@
+import random
 import os
 import time
 import json
@@ -5,9 +6,14 @@ import logging
 import requests
 from common.common.models import OrderStatus
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with environment variable
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(getattr(logging, log_level, logging.INFO))
 
 API_URL_ORDERS = os.environ.get("API_URL_ORDERS", "http://127.0.0.1:8000")
 API_URL_STOCKS = os.environ.get("API_URL_STOCKS", "http://127.0.0.1:8000")
@@ -22,7 +28,8 @@ def fetch_registered_orders():
     try:
         response = requests.get(API_URL_ORDERS_REGISTERED)
         response.raise_for_status()
-        return response.json()
+        orders = response.json()
+        return orders
     except requests.RequestException as e:
         logger.error(f"Failed to fetch orders: {e}")
         return []
@@ -52,8 +59,23 @@ def update_order_status(order_id, status):
 
 def process_registered_order():
     orders = fetch_registered_orders()
+    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+
+    if not orders:
+        return
+
+    logger.info("Found %d registered orders to process", len(orders))
+
     for order in orders:
         try:
+            # Simulate random error for observability testing
+            # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+            if random.random() < ERROR_RATE:
+                # Simulate an external API or DB failure
+                raise Exception(
+                    "Simulated error: external API or DB failure during order processing"
+                )
+
             logger.info("Processing order: %s", order)
             decrease_stock(order)
             logger.info("Stock decreased for order: %s", order)
@@ -66,6 +88,12 @@ def process_registered_order():
 
 
 if __name__ == "__main__":
+    interval_seconds = int(os.getenv("INTERVAL_SECONDS", 60))
+
+    logger.info(
+        "Starting order management service with %d seconds interval", interval_seconds
+    )
+
     while True:
         process_registered_order()
-        time.sleep(int(os.getenv("INTERVAL_SECONDS", 60)))
+        time.sleep(interval_seconds)
