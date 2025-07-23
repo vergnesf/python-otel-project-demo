@@ -1,3 +1,4 @@
+import random
 import json
 import logging
 import os
@@ -8,11 +9,14 @@ from confluent_kafka import Consumer, KafkaError, KafkaException
 
 from common.common.models import Stock, WoodType
 
-# Configure the logger
+# Configure the logger with environment variable
+log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(getattr(logging, log_level, logging.INFO))
 
 # Add the 'common' module path to PYTHONPATH
 sys.path.append(
@@ -37,6 +41,9 @@ API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000") + "/stocks"
 
 def consume_messages():
     try:
+        ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+        logger.info("Starting message consumption loop with ERROR_RATE=%s", ERROR_RATE)
+
         while True:
             msg = consumer.poll(timeout=1.0)
             if msg is None:
@@ -52,18 +59,29 @@ def consume_messages():
                 elif msg.error():
                     raise KafkaException(msg.error())
             else:
+                # Simulate random error for observability testing
+                # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+                if random.random() < ERROR_RATE:
+                    logger.error(
+                        "Simulated error: failed to process stock (API or network failure)"
+                    )
+                    continue
+
                 stock_data = json.loads(msg.value().decode("utf-8"))
                 logger.info("Received stock data: %s", stock_data)
+
                 response = requests.post(API_URL, json=stock_data)
                 if response.status_code == 201:
                     logger.info("Stock data successfully sent to API")
                 else:
                     logger.error("Failed to send stock data to API: %s", response.text)
     except KeyboardInterrupt:
-        pass
+        logger.info("Consumer shutting down due to keyboard interrupt")
     finally:
         consumer.close()
+        logger.info("Consumer closed")
 
 
 if __name__ == "__main__":
+    logger.info("SupplierCheck service starting")
     consume_messages()
