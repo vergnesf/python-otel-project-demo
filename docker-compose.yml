@@ -358,6 +358,7 @@ services:
   grafana-mcp:
     image:  ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
     container_name: grafana-mcp
+    pull_policy: always
     ports:
       - "8000:8000"
     environment:
