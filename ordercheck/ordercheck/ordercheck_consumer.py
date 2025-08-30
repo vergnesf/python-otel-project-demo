@@ -63,7 +63,7 @@ def consume_messages():
                 # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
                 if random.random() < ERROR_RATE:
                     logger.error(
-                        "Simulated error: failed to process order (API or network failure)"
+                        "failed to process order (API or network failure)"
                     )
                     continue
 

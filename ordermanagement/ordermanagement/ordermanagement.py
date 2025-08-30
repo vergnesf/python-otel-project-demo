@@ -73,7 +73,7 @@ def process_registered_order():
             if random.random() < ERROR_RATE:
                 # Simulate an external API or DB failure
                 raise Exception(
-                    "Simulated error: external API or DB failure during order processing"
+                    "external API or DB failure during order processing"
                 )
 
             logger.info("Processing order: %s", order)
