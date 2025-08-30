@@ -326,7 +326,6 @@ metadata:
     io.kubernetes.cri-o.SandboxID/supplier: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
     io.kubernetes.cri-o.SandboxID/suppliercheck: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
     io.kubernetes.cri-o.SandboxID/tempo: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/zookeeper: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
   creationTimestamp: "2025-08-30T14:47:50Z"
   labels:
     app: otel-python-demo
@@ -354,21 +353,6 @@ spec:
           mountPath: /etc/grafana/provisioning/datasources
         - mountPath: /var/lib/grafana
           name: grafana-data-pvc
-    #    - env:
-    #        - name: ZOOKEEPER_CLIENT_PORT
-    #          value: "2181"
-    #        - name: ZOOKEEPER_TICK_TIME
-    #          value: "2000"
-    #      image: docker.io/confluentinc/cp-zookeeper:7.9.2
-    #      name: zookeeper
-    #      securityContext: {}
-    #      volumeMounts:
-    #        - mountPath: /etc/zookeeper/secrets
-    #          name: zookeeper-secret-pvc-pvc
-    #        - mountPath: /var/lib/zookeeper/data
-    #          name: zookeeper-data-pvc
-    #        - mountPath: /var/lib/zookeeper/log
-    #          name: zookeeper-log-pvc
     - env:
         - name: KAFKA_NODE_ID
           value: "1"
@@ -730,12 +714,3 @@ spec:
     - name: mimir-data-pvc
       persistentVolumeClaim:
         claimName: mimir-data
-    - name: zookeeper-secret-pvc-pvc
-      persistentVolumeClaim:
-        claimName: zookeeper-secret-pvc
-    - name: zookeeper-data-pvc
-      persistentVolumeClaim:
-        claimName: zookeeper-data
-    - name: zookeeper-log-pvc
-      persistentVolumeClaim:
-        claimName: zookeeper-log
