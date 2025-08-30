@@ -16,7 +16,7 @@ The application is structured as follows:
 - **order**: API for managing orders 📝
 - **ordermanagement**: A service that updates the order status 😄
 
-The entire application is containerized, and the `docker-compose` file will build all the microservices and deploy the following additional components:
+The entire application is containerized, and the `podman-stack.yml` file will build all the microservices and deploy the following additional components:
 
 - **Kafka**: A cluster to receive orders and stock updates 📨
 - **PostgreSQL**: PostgreSQL database 🗄️
@@ -30,7 +30,7 @@ The entire application is containerized, and the `docker-compose` file will buil
 To run everything, use:
 
 ```sh
-docker compose up -d --build
+podman play kube podman-stack.yml --replace
 ```
 
 ### Useful URLs 🌐
