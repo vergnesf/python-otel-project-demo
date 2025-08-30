@@ -682,6 +682,17 @@ spec:
           hostPort: 8081
       name: akhq
       securityContext: {}
+    - name: grafana-mcp
+      image: mcp/grafana:latest
+      ports:
+        - containerPort: 8000
+          hostPort: 8000
+      env:
+        - name: GRAFANA_URL
+          value: http://grafana:3000
+        - name: GRAFANA_API_KEY
+          value: XXXXXX
+      securityContext: {}
   volumes:
     - name: grafana-datasources
       configMap:
