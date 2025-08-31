@@ -1,4 +1,3 @@
-apiVersion: v1
 ---
 kind: ConfigMap
 metadata:
@@ -305,61 +304,24 @@ data:
               url: "$${__value.raw}"
               datasourceUid: mytempo
 ---
+# =====================
+# POD KAFKA
+# =====================
 apiVersion: v1
 kind: Pod
 metadata:
-  annotations:
-    bind-mount-options: /home/fabien/workspace/git/vergnesf/python-otel-project-demo/config/mimir-config.yml:Z
-    io.kubernetes.cri-o.SandboxID/adminer: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/akhq: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/broker: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/customer: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/grafana: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/loki: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/mimir: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/order: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/ordercheck: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/ordermanagement: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/otel: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/postgres: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/stock: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/supplier: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/suppliercheck: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-    io.kubernetes.cri-o.SandboxID/tempo: 283dbae40e4eaad499d0bac44cf6f31a1361d60c277426bc928997b4e09ff21e
-  creationTimestamp: "2025-08-30T14:47:50Z"
-  labels:
-    app: otel-python-demo
-  name: otel-python-demo
+  name: kafka-stack
 spec:
   containers:
-    - env:
-        - name: GF_AUTH_ANONYMOUS_ENABLED
-          value: "true"
-        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-          value: Admin
-        - name: GF_FEATURE_TOGGLES_ENABLE
-          value: tempoServiceGraph,traceToMetrics
-        - name: GF_AUTH_DISABLE_LOGIN_FORM
-          value: "true"
-      image: docker.io/grafana/grafana:12.1.1
-      ports:
-        - containerPort: 3000
-          hostPort: 3000
-      name: grafana
-      securityContext:
-        runAsNonRoot: true
-      volumeMounts:
-        - name: grafana-datasources
-          mountPath: /etc/grafana/provisioning/datasources
-        - mountPath: /var/lib/grafana
-          name: grafana-data-pvc
-    - env:
+    - name: broker
+      image: docker.io/confluentinc/cp-kafka:8.0.0
+      env:
         - name: KAFKA_NODE_ID
           value: "1"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
           value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092"
+          value: "PLAINTEXT://broker:29092,PLAINTEXT_HOST://host.containers.internal:9092"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: "1"
         - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
@@ -371,7 +333,7 @@ spec:
         - name: KAFKA_JMX_PORT
           value: "9101"
         - name: KAFKA_JMX_HOSTNAME
-          value: localhost
+          value: "localhost"
         - name: KAFKA_PROCESS_ROLES
           value: "broker,controller"
         - name: KAFKA_CONTROLLER_QUORUM_VOTERS
@@ -386,286 +348,62 @@ spec:
           value: "/tmp/kraft-combined-logs"
         - name: CLUSTER_ID
           value: "jm1kaYDGRR2EDm8ZaQT84w"
-      image: docker.io/confluentinc/cp-kafka:8.0.0
-      name: broker
-      securityContext: {}
       volumeMounts:
         - mountPath: /etc/kafka/secrets
           name: kafka-secret-pvc
         - mountPath: /var/lib/kafka/data
           name: kafka-data-pvc
-    - args:
-        - postgres
-      env:
-        - name: POSTGRES_USER
-          value: postgres
-        - name: POSTGRES_PASSWORD
-          value: yourpassword
-        - name: POSTGRES_DB
-          value: mydatabase
-      image: docker.io/library/postgres:17
-      name: postgres
-      volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: postgres-data-pvc
-    - env:
-        - name: INTERVAL_SECONDS
-          value: "5"
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: broker:9092
-        - name: OTEL_SERVICE_NAME
-          value: customer
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-      image: localhost/customer:latest
-      name: customer
-      securityContext: {}
-    - env:
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: INTERVAL_SECONDS
-          value: "5"
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: OTEL_SERVICE_NAME
-          value: supplier
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: broker:9092
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-      image: localhost/supplier:latest
-      name: supplier
-      securityContext: {}
-    - env:
-        - name: OTEL_SERVICE_NAME
-          value: order
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: DATABASE_URL
-          value: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-      image: localhost/order:latest
-      name: order
-      securityContext: {}
-    - env:
-        - name: OTEL_SERVICE_NAME
-          value: stock
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: DATABASE_URL
-          value: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-      image: localhost/stock:latest
-      name: stock
-      securityContext: {}
-    - env:
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: broker:9092
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: API_URL
-          value: http://order:5000
-        - name: OTEL_SERVICE_NAME
-          value: ordercheck
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-      image: localhost/ordercheck:latest
-      name: ordercheck
-      securityContext: {}
-    - env:
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: OTEL_SERVICE_NAME
-          value: suppliercheck
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: API_URL
-          value: http://stock:5000
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: KAFKA_BOOTSTRAP_SERVERS
-          value: broker:9092
-      image: localhost/suppliercheck:latest
-      name: suppliercheck
-      securityContext: {}
-    - env:
-        - name: OTEL_LOGS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-          value: "true"
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel:4317
-        - name: ERROR_RATE
-          value: "0.1"
-        - name: OTEL_METRICS_EXPORTER
-          value: otlp
-        - name: OTEL_PYTHON_LOG_CORRELATION
-          value: "true"
-        - name: OTEL_TRACES_EXPORTER
-          value: otlp
-        - name: API_URL_STOCKS
-          value: http://stock:5000
-        - name: INTERVAL_SECONDS
-          value: "5"
-        - name: LOG_LEVEL
-          value: DEBUG
-        - name: OTEL_SERVICE_NAME
-          value: ordermanagement
-        - name: API_URL_ORDERS
-          value: http://order:5000
-      image: localhost/ordermanagement:latest
-      name: ordermanagement
-      securityContext: {}
-    - args:
-        - --config=/etc/otel-conf.yml
-      image: docker.io/otel/opentelemetry-collector-contrib:0.133.0
-      name: otel
-      securityContext: {}
-      volumeMounts:
-        - mountPath: /etc/otel-conf.yml
-          name: otel-conf
-          subPath: otel-conf.yml
-    - args:
-        - -config.file=/etc/config/loki.yaml
-      image: docker.io/grafana/loki:3.5.3
-      name: loki
-      securityContext:
-        runAsGroup: 0
-        runAsNonRoot: true
-        runAsUser: 0
-      volumeMounts:
-        - mountPath: /etc/config/loki.yaml
-          name: loki-config
-          subPath: loki-config.yml
-        - mountPath: /tmp/loki
-          name: loki-data-pvc
-    - args:
-        - -config.file=/etc/tempo.yaml
-      image: docker.io/grafana/tempo:2.8.2
-      name: tempo
-      securityContext:
-        runAsGroup: 0
-        runAsUser: 0
-      volumeMounts:
-        - mountPath: /etc/tempo.yaml
-          name: tempo-config
-          subPath: tempo.yml
-        - mountPath: /tmp/tempo
-          name: tempo-data-pvc
-    - args:
-        - -config.file=/etc/mimir-config.yml
-      image: docker.io/grafana/mimir:2.17.0
-      name: mimir
-      securityContext: {}
-      volumeMounts:
-        - mountPath: /etc/mimir-config.yml
-          name: mimir-config
-          subPath: mimir-config.yml
-        - mountPath: /tmp/mimir
-          name: mimir-data-pvc
-    - args:
-        - php
-        - -S
-        - "[::]:8080"
-        - -t
-        - /var/www/html
-      image: docker.io/library/adminer:5.3.0
-      name: adminer
+    - name: akhq
+      image: docker.io/tchiotludo/akhq:0.26.0
       ports:
         - containerPort: 8080
-          hostPort: 8080
-      securityContext: {}
-    - args:
-        - ./akhq
+          hostPort: 8081
+        - containerPort: 9092
+          hostPort: 9092
       env:
         - name: AKHQ_CONFIGURATION
           value: |-
-            micronaut:
-              server:
-                port: 8081
             akhq:
               connections:
                 docker-kafka-server:
                   properties:
                     bootstrap.servers: "broker:9092"
-      image: docker.io/tchiotludo/akhq:0.26.0
+  volumes:
+    - name: kafka-secret-pvc
+      persistentVolumeClaim:
+        claimName: kafka-secret
+    - name: kafka-data-pvc
+      persistentVolumeClaim:
+        claimName: kafka-data
+---
+# =====================
+# POD OBSERVABILITÉ
+# =====================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: observability-stack
+spec:
+  containers:
+    - name: grafana
+      image: docker.io/grafana/grafana:12.1.1
       ports:
-        - containerPort: 8081
-          hostPort: 8081
-      name: akhq
-      securityContext: {}
+        - containerPort: 3000
+          hostPort: 3000
+      env:
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: Admin
+        - name: GF_FEATURE_TOGGLES_ENABLE
+          value: tempoServiceGraph,traceToMetrics
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+      volumeMounts:
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - mountPath: /var/lib/grafana
+          name: grafana-data-pvc
     - name: grafana-mcp
       image: mcp/grafana:latest
       ports:
@@ -676,7 +414,54 @@ spec:
           value: http://grafana:3000
         - name: GRAFANA_API_KEY
           value: XXXXXX
-      securityContext: {}
+    - name: otel
+      image: docker.io/otel/opentelemetry-collector-contrib:0.133.0
+      args:
+        - --config=/etc/otel-conf.yml
+      volumeMounts:
+        - mountPath: /etc/otel-conf.yml
+          name: otel-conf
+          subPath: otel-conf.yml
+      ports:
+        - containerPort: 4317
+          hostPort: 4317
+    - name: loki
+      image: docker.io/grafana/loki:3.5.3
+      args:
+        - -config.file=/etc/config/loki.yaml
+      securityContext:
+        runAsGroup: 0
+        runAsNonRoot: true
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /etc/config/loki.yaml
+          name: loki-config
+          subPath: loki-config.yml
+        - mountPath: /tmp/loki
+          name: loki-data-pvc
+    - name: tempo
+      image: docker.io/grafana/tempo:2.8.2
+      args:
+        - -config.file=/etc/tempo.yaml
+      securityContext:
+        runAsGroup: 0
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /etc/tempo.yaml
+          name: tempo-config
+          subPath: tempo.yml
+        - mountPath: /tmp/tempo
+          name: tempo-data-pvc
+    - name: mimir
+      image: docker.io/grafana/mimir:2.17.0
+      args:
+        - -config.file=/etc/mimir-config.yml
+      volumeMounts:
+        - mountPath: /etc/mimir-config.yml
+          name: mimir-config
+          subPath: mimir-config.yml
+        - mountPath: /tmp/mimir
+          name: mimir-data-pvc
   volumes:
     - name: grafana-datasources
       configMap:
@@ -696,15 +481,6 @@ spec:
     - name: grafana-data-pvc
       persistentVolumeClaim:
         claimName: grafana-data
-    - name: kafka-secret-pvc
-      persistentVolumeClaim:
-        claimName: kafka-secret
-    - name: kafka-data-pvc
-      persistentVolumeClaim:
-        claimName: kafka-data
-    - name: postgres-data-pvc
-      persistentVolumeClaim:
-        claimName: postgres-data
     - name: loki-data-pvc
       persistentVolumeClaim:
         claimName: loki-data
@@ -714,3 +490,224 @@ spec:
     - name: mimir-data-pvc
       persistentVolumeClaim:
         claimName: mimir-data
+---
+# =====================
+# POD APPLICATIF
+# =====================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-stack
+spec:
+  containers:
+    - name: customer
+      image: localhost/customer:latest
+      env:
+        - name: INTERVAL_SECONDS
+          value: "5"
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: host.containers.internal:9092
+        - name: OTEL_SERVICE_NAME
+          value: customer
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+    - name: supplier
+      image: localhost/supplier:latest
+      env:
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: INTERVAL_SECONDS
+          value: "5"
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: OTEL_SERVICE_NAME
+          value: supplier
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: host.containers.internal:9092
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+    - name: order
+      image: localhost/order:latest
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: order
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: DATABASE_URL
+          value: postgresql://postgres:yourpassword@host.containers.internal:5432/mydatabase
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+    - name: stock
+      image: localhost/stock:latest
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: stock
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: DATABASE_URL
+          value: postgresql://postgres:yourpassword@host.containers.internal:5432/mydatabase
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+    - name: ordercheck
+      image: localhost/ordercheck:latest
+      env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: host.containers.internal:9092
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: API_URL
+          value: http://order:5000
+        - name: OTEL_SERVICE_NAME
+          value: ordercheck
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+    - name: suppliercheck
+      image: localhost/suppliercheck:latest
+      env:
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: OTEL_SERVICE_NAME
+          value: suppliercheck
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: API_URL
+          value: http://stock:5001
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: host.containers.internal:9092
+    - name: ordermanagement
+      image: localhost/ordermanagement:latest
+      env:
+        - name: OTEL_LOGS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+          value: "true"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://host.containers.internal:4317
+        - name: ERROR_RATE
+          value: "0.1"
+        - name: OTEL_METRICS_EXPORTER
+          value: otlp
+        - name: OTEL_PYTHON_LOG_CORRELATION
+          value: "true"
+        - name: OTEL_TRACES_EXPORTER
+          value: otlp
+        - name: API_URL_STOCKS
+          value: http://stock:5001
+        - name: INTERVAL_SECONDS
+          value: "5"
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: OTEL_SERVICE_NAME
+          value: ordermanagement
+        - name: API_URL_ORDERS
+          value: http://order:5000
+---
+# =====================
+# POD BASE DE DONNÉES
+# =====================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-stack
+spec:
+  containers:
+    - name: postgres
+      image: docker.io/library/postgres:17
+      env:
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: yourpassword
+        - name: POSTGRES_DB
+          value: mydatabase
+      volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-data-pvc
+    - name: adminer
+      image: docker.io/library/adminer:5.3.0
+      ports:
+        - containerPort: 5432
+          hostPort: 5432
+        - containerPort: 8080
+          hostPort: 8080
+      env:
+        - name: ADMINER_DEFAULT_SERVER
+          value: postgres
+        - name: ADMINER_DEFAULT_DB_DRIVER
+          value: postgres
+  volumes:
+    - name: postgres-data-pvc
+      persistentVolumeClaim:
+        claimName: postgres-data
