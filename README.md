@@ -30,6 +30,17 @@ The entire application is containerized, and the `podman-stack.yml` file will bu
 To run everything, use:
 
 ```sh
+# Build all image
+podman build -f customer/Dockerfile -t customer:latest .
+podman build -f supplier/Dockerfile -t supplier:latest .
+podman build -f order/Dockerfile -t order:latest .
+podman build -f ordercheck/Dockerfile -t ordercheck:latest .
+podman build -f ordermanagement/Dockerfile -t ordermanagement:latest .
+podman build -f stock/Dockerfile -t stock:latest .
+podman build -f supplier/Dockerfile -t supplier:latest .
+podman build -f suppliercheck/Dockerfile -t suppliercheck:latest .
+
+# Run
 podman play kube podman-stack.yml --replace
 ```
 
