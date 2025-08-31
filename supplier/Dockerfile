@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy uv configuration files
 COPY supplier/pyproject.toml /app/
-COPY supplier/uv.lock  /app/
 COPY supplier/supplier /app
 COPY common/common/ /app/common/common
 
