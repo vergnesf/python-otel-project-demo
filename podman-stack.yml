@@ -114,7 +114,7 @@ data:
       otlphttp/loki:
         endpoint: "http://loki:3100/otlp"
       otlphttp/tempo:
-        endpoint: "http://tempo:4318"
+        endpoint: "http://tempo:4319"
     extensions:
       health_check:
     service:
@@ -146,7 +146,7 @@ data:
         otlp:
           protocols:
             http:
-              endpoint: 0.0.0.0:4318
+              endpoint: 0.0.0.0:4319
     ingester:
       trace_idle_period: 10s # the length of time after a trace has not received spans to consider it complete and flush it
       max_block_bytes: 1_000_000 # cut the head block when it hits this size or ...
