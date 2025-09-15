@@ -314,7 +314,7 @@ metadata:
 spec:
   containers:
     - name: broker
-      image: docker.io/confluentinc/cp-kafka:8.0.0
+      image: confluentinc/cp-kafka:8.0.0
       env:
         - name: KAFKA_NODE_ID
           value: "1"
@@ -354,7 +354,7 @@ spec:
         - mountPath: /var/lib/kafka/data
           name: kafka-data-pvc
     - name: akhq
-      image: docker.io/tchiotludo/akhq:0.26.0
+      image: tchiotludo/akhq:0.26.0
       ports:
         - containerPort: 8080
           hostPort: 8081
@@ -386,7 +386,7 @@ metadata:
 spec:
   containers:
     - name: grafana
-      image: docker.io/grafana/grafana:12.1.1
+      image: grafana/grafana:12.1.1
       ports:
         - containerPort: 3000
           hostPort: 3000
@@ -415,7 +415,7 @@ spec:
         - name: GRAFANA_API_KEY
           value: XXXXXX
     - name: otel
-      image: docker.io/otel/opentelemetry-collector-contrib:0.133.0
+      image: otel/opentelemetry-collector-contrib:0.133.0
       args:
         - --config=/etc/otel-conf.yml
       volumeMounts:
@@ -426,7 +426,7 @@ spec:
         - containerPort: 4317
           hostPort: 4317
     - name: loki
-      image: docker.io/grafana/loki:3.5.3
+      image: grafana/loki:3.5.3
       args:
         - -config.file=/etc/config/loki.yaml
       securityContext:
@@ -440,7 +440,7 @@ spec:
         - mountPath: /tmp/loki
           name: loki-data-pvc
     - name: tempo
-      image: docker.io/grafana/tempo:2.8.2
+      image: grafana/tempo:2.8.2
       args:
         - -config.file=/etc/tempo.yaml
       securityContext:
@@ -453,7 +453,7 @@ spec:
         - mountPath: /tmp/tempo
           name: tempo-data-pvc
     - name: mimir
-      image: docker.io/grafana/mimir:2.17.0
+      image: grafana/mimir:2.17.0
       args:
         - -config.file=/etc/mimir-config.yml
       volumeMounts:
@@ -684,7 +684,7 @@ metadata:
 spec:
   containers:
     - name: postgres
-      image: docker.io/library/postgres:17
+      image: library/postgres:17
       env:
         - name: POSTGRES_USER
           value: postgres
@@ -696,7 +696,7 @@ spec:
         - mountPath: /var/lib/postgresql/data
           name: postgres-data-pvc
     - name: adminer
-      image: docker.io/library/adminer:5.3.0
+      image: library/adminer:5.3.0
       ports:
         - containerPort: 5432
           hostPort: 5432
