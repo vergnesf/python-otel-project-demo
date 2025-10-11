@@ -1,0 +1,49 @@
+apiVersion: 1
+datasources:
+  - name: mimir
+    uid: mymimir
+    type: prometheus
+    url: http://mimir:9009/prometheus
+    jsonData:
+      exemplarTraceIdDestinations:
+        - datasourceUid: mytempo
+          name: trace_id
+
+  - name: tempo
+    uid: mytempo
+    type: tempo
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: myloki
+        spanStartTimeShift: "1h"
+        spanEndTimeShift: "-1h"
+        tags: [{ key: "service.name", value: "application" }]
+        filterByTraceID: true
+        filterBySpanID: true
+        customQuery: false
+      tracesToMetrics:
+        datasourceUid: mymimir
+        spanStartTimeShift: "1h"
+        spanEndTimeShift: "-1h"
+        tags: [{ key: "service.name", value: "application" }]
+        queries:
+          - name: "Sample query"
+            query: "sum(rate(duration_milliseconds_bucket{$$__tags}[5m]))"
+      serviceMap:
+        datasourceUid: mymimir
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: myloki
+
+  - name: loki
+    uid: myloki
+    type: loki
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        - name: "traceID"
+          matcherRegex: '((?<=traceid":")[A-Za-z0-9]+)'
+          url: "$${__value.raw}"
+          datasourceUid: mytempo

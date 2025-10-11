@@ -27,8 +27,41 @@ The entire application is containerized, and the `podman-stack.yml` file will bu
 - **Tempo**: Traces database 📍
 - **Otel Gateway**: API for receiving observability data 🛠️
 
-To run everything, use:
+## Configuration �️
 
+### Environment Variables
+All image versions and registry configuration are managed in the `.env` file:
+
+```bash
+# Docker Registry (leave empty for Docker Hub)
+DOCKER_REGISTRY=
+# DOCKER_REGISTRY=my-registry.com/
+# DOCKER_REGISTRY=registry.gitlab.com/myproject/
+
+# Image versions (update as needed)
+IMG_GRAFANA=grafana/grafana:12.0.2
+IMG_LOKI=grafana/loki:3.5.2
+IMG_TEMPO=grafana/tempo:2.8.1
+# ... and more
+```
+
+Copy `.env.example` to `.env` and customize as needed:
+```sh
+cp .env.example .env
+```
+
+## Running the Application 🚀
+
+### With Docker Compose
+```sh
+# Start all services
+docker-compose up -d
+
+# Build and start
+docker-compose up --build -d
+```
+
+### With Podman (Legacy)
 ```sh
 # Build all image
 podman build -f customer/Dockerfile -t customer:latest .
