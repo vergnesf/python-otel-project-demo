@@ -16,38 +16,92 @@ The application is structured as follows:
 - **order**: API for managing orders 📝
 - **ordermanagement**: A service that updates the order status 😄
 
-The entire application is containerized, and the `podman-stack.yml` file will build all the microservices and deploy the following additional components:
+The entire application is containerized, and the `docker-compose.yml` file will build all the microservices and deploy the following additional components:
 
 - **Kafka**: A cluster to receive orders and stock updates 📨
 - **PostgreSQL**: PostgreSQL database 🗄️
 - **Adminer**: Web tool for viewing your database 📂
-- **Grafana**: Visualization tool 📊
+- **Grafana**: Standard visualization tool 📊
+- **Grafana with MCP support**: Enhanced Grafana with Model Context Protocol for AI integration 🤖
 - **Loki**: Log database 📝
 - **Mimir**: Metrics database 📈
 - **Tempo**: Traces database 📍
 - **Otel Gateway**: API for receiving observability data 🛠️
+- **n8n**: Workflow automation tool 🔄
 
-## Configuration �️
+## Key Features ✨
+
+- **Simulated Error Scenarios**: Built-in error simulation with configurable error rates via `ERROR_RATE` environment variable
+- **Comprehensive Observability**: Full OpenTelemetry auto-instrumentation with traces, metrics, and logs
+- **Docker-First Architecture**: Complete containerization with optimized build settings
+- **Flexible Configuration**: Environment-based configuration for easy deployment across different environments
+- **AI Integration Ready**: Includes Grafana with MCP (Model Context Protocol) support for AI-powered observability
+
+## Configuration ⚙️
 
 ### Environment Variables
-All image versions and registry configuration are managed in the `.env` file:
+All image versions and registry configuration are managed through environment variables. The project includes:
+
+- `.env.example`: Template with all available configuration options and documentation
+- `.env`: Your local configuration (not tracked in git)
+
+Key configuration options include:
 
 ```bash
-# Docker Registry (leave empty for Docker Hub)
-DOCKER_REGISTRY=
-# DOCKER_REGISTRY=my-registry.com/
-# DOCKER_REGISTRY=registry.gitlab.com/myproject/
+# Docker Registry Configuration
+DOCKER_REGISTRY=                    # Leave empty for Docker Hub
 
-# Image versions (update as needed)
-IMG_GRAFANA=grafana/grafana:12.0.2
-IMG_LOKI=grafana/loki:3.5.2
-IMG_TEMPO=grafana/tempo:2.8.1
-# ... and more
+# Core Services
+IMG_GRAFANA=grafana/grafana:12.0.2      # Standard Grafana
+IMG_GRAFANA_MCP=mcp/grafana:latest       # Grafana with MCP support
+IMG_LOKI=grafana/loki:3.5.2              # Log aggregation
+IMG_TEMPO=grafana/tempo:2.8.1            # Distributed tracing
+IMG_MIMIR=grafana/mimir:2.16.1           # Metrics storage
+
+# Additional Tools
+IMG_N8N=n8nio/n8n:1.112.0               # Workflow automation
+IMG_OTEL=otel/opentelemetry-collector-contrib:0.130.1  # OTEL collector
+
+# Performance Optimizations
+COMPOSE_PARALLEL_LIMIT=8                 # Parallel container builds
+DOCKER_BUILDKIT=1                        # Enable BuildKit
 ```
 
-Copy `.env.example` to `.env` and customize as needed:
+Setup configuration:
 ```sh
 cp .env.example .env
+# Edit .env with your specific settings
+```
+
+### Error Simulation 🎭
+The application includes built-in error simulation for testing observability:
+
+- **Customer Service**: Simulates Kafka/network failures when sending orders
+- **Supplier Check Service**: Simulates API/network failures when processing stock updates
+- **Configurable Error Rate**: Set `ERROR_RATE` environment variable (default: 0.1 = 10% error rate)
+
+Example configuration:
+```bash
+# In docker-compose.yml or your environment
+ERROR_RATE=0.2  # 20% error rate for testing
+```
+
+### Configuration Structure 📁
+The project has been reorganized with a cleaner configuration structure:
+
+```
+config/
+├── grafana/
+│   └── datasources/
+│       └── default.yaml          # Grafana datasource configuration
+├── loki/
+│   └── loki-config.yml          # Loki configuration
+├── mimir/
+│   └── mimir-config.yml         # Mimir configuration  
+├── otel/
+│   └── otel-conf.yml            # OpenTelemetry collector configuration
+└── tempo/
+    └── tempo.yml                # Tempo configuration
 ```
 
 ## Running the Application 🚀
@@ -59,29 +113,20 @@ docker-compose up -d
 
 # Build and start
 docker-compose up --build -d
-```
 
-### With Podman (Legacy)
-```sh
-# Build all image
-podman build -f customer/Dockerfile -t customer:latest .
-podman build -f supplier/Dockerfile -t supplier:latest .
-podman build -f order/Dockerfile -t order:latest .
-podman build -f ordercheck/Dockerfile -t ordercheck:latest .
-podman build -f ordermanagement/Dockerfile -t ordermanagement:latest .
-podman build -f stock/Dockerfile -t stock:latest .
-podman build -f supplier/Dockerfile -t supplier:latest .
-podman build -f suppliercheck/Dockerfile -t suppliercheck:latest .
+# Stop all services
+docker-compose down
 
-# Run
-podman play kube podman-stack.yml --replace
+# Clean up (remove volumes and images)
+docker-compose down -v --rmi all
 ```
 
 ### Useful URLs 🌐
 
-- [Grafana](http://localhost:3000/) 📊
-- [AKHQ](http://localhost:8080/) 🛠️
-- [Adminer](http://localhost:8081/) 🗃️
+- [Grafana (Standard)](http://localhost:3000/) 📊 - Main observability dashboard
+- [AKHQ](http://localhost:8080/) 🛠️ - Kafka management UI
+- [Adminer](http://localhost:8081/) 🗃️ - Database administration
+- [n8n](http://localhost:5678/) 🔄 - Workflow automation
 
 ## Running Locally 🐛
 
