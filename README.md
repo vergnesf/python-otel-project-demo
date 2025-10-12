@@ -96,16 +96,13 @@ config/
 │       └── default.yaml          # Grafana datasource configuration
 ├── loki/
 │   └── loki-config.yml          # Loki configuration
-├── mimir/
 │   └── mimir-config.yml         # Mimir configuration  
-├── otel/
 │   └── otel-conf.yml            # OpenTelemetry collector configuration
 └── tempo/
     └── tempo.yml                # Tempo configuration
 ```
 
 ## Running the Application 🚀
-
 ### With Docker Compose
 ```sh
 # Start all services
@@ -127,6 +124,82 @@ docker-compose down -v --rmi all
 - [AKHQ](http://localhost:8080/) 🛠️ - Kafka management UI
 - [Adminer](http://localhost:8081/) 🗃️ - Database administration
 - [n8n](http://localhost:5678/) 🔄 - Workflow automation
+
+## GPU Support with NVIDIA Container Toolkit 🚀
+
+For AI/LLM features (like the n8n AI models), you need GPU support in Docker. This requires the NVIDIA Container Toolkit.
+
+### Prerequisites 📋
+
+First, check if your GPU is detected:
+```bash
+nvidia-smi
+```
+
+You should see your GPU information. If this command fails, install NVIDIA drivers first.
+
+### Install NVIDIA Container Toolkit
+
+#### For Fedora/RHEL/CentOS:
+```bash
+# Configure the production repository
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+
+# Install the toolkit
+sudo dnf install -y nvidia-container-toolkit
+```
+
+### Configure Docker
+
+After installation, configure Docker to use the NVIDIA runtime:
+
+```bash
+# Configure the container runtime
+sudo nvidia-ctk runtime configure --runtime=docker
+
+# Restart Docker daemon
+sudo systemctl restart docker
+```
+
+### Test GPU Support
+
+Test that Docker can access your GPU:
+```bash
+# Test with a simple CUDA container
+docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu20.04 nvidia-smi
+```
+
+If successful, you should see your GPU information displayed within the container.
+
+### Common Issues 🔧
+
+
+For more details, see the [official NVIDIA Container Toolkit documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
+## Docker AI Model Runner 🤖
+
+Docker Model Runner (DMR) lets you run and manage AI models locally using Docker. This is particularly useful for the AI/LLM features in this project.
+
+### Installation 📦
+
+#### For Docker Engine (Fedora/RPM):
+```bash
+# Install Docker Model Runner plugin
+sudo dnf install docker-model-plugin
+
+# Test the installation
+docker model version
+```
+
+### Update DMR 🔄
+
+To update Docker Model Runner in Docker Engine:
+
+```bash
+# Uninstall current version and reinstall (preserves local models)
+docker model uninstall-runner --images && docker model install-runner
+```
 
 ## Running Locally 🐛
 

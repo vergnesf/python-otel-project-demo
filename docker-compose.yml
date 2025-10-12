@@ -551,6 +551,12 @@ services:
       - n8n-data:/home/node/.n8n
     networks:
       - otel-network
+    models:
+      - ai-qwen3
+
+models:
+  ai-qwen3:
+    model: ai/qwen3
 
 volumes:
   kafka-secrets:
