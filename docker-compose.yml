@@ -553,9 +553,25 @@ services:
     models:
       - ai-qwen3
 
+  flowise:
+    image: ${DOCKER_REGISTRY}${IMG_FLOWISE}
+    container_name: flowise
+    pull_policy: daily
+    ports:
+      - "3001:3000"
+    environment:
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+    volumes:
+      - flowise-data:/usr/src/app
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
 models:
   ai-qwen3:
-    model: ai/qwen3
+    model: ai/qwen3:0.6B-Q4_0
 
 volumes:
   kafka-secrets:
@@ -573,6 +589,8 @@ volumes:
   postgres-data:
     driver: local
   n8n-data:
+    driver: local
+  flowise-data:
     driver: local
 
 networks:
