@@ -201,6 +201,47 @@ To update Docker Model Runner in Docker Engine:
 docker model uninstall-runner --images && docker model install-runner
 ```
 
+### Integration with n8n 🔗
+
+To configure AI features in n8n using Docker Model Runner:
+
+1. In n8n, create an **OpenAI** credential type
+2. Use a dummy token (e.g., `dummy-token`)
+3. Set the base URL to: `http://172.17.0.1:12434/engines/llama.cpp/v1`
+
+This allows n8n to connect to your local Docker Model Runner instance for AI/LLM capabilities.
+
+### MCP (Model Context Protocol) in n8n 🛰️
+
+If you want to enable Grafana MCP integration inside n8n (for context enrichment / model context), configure a separate credential or webhook using the Server Sent Events transport with the following URL:
+
+- Transport: Server Sent Events (SSE)
+- URL: `http://grafana-mcp:8000/sse`
+
+Example notes:
+
+- Use the SSE transport when configuring the MCP server/transport in n8n so Grafana MCP can stream context updates.
+- The hostname `grafana-mcp` matches the internal Docker Compose service name used in this project; when running n8n inside the same Compose network, this resolves to the MCP service.
+
+#### Pre-step: create Grafana service account 🔐
+
+Before using the MCP server from n8n, create a Grafana service account and copy its token into your `.env` file:
+
+- In Grafana, go to Configuration → Service accounts → Create service account
+- Create a token for the account and copy the token value
+- Add the token to your `.env` as:
+
+```bash
+GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...
+```
+
+After setting the token, restart the MCP service so Grafana picks up the new credentials:
+
+```bash
+docker compose restart grafana-mcp
+```
+
+
 ## Running Locally 🐛
 
 Each microservice is set up with **uv**, so you can launch the different services using `uv run`.
