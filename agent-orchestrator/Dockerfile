@@ -15,7 +15,8 @@ COPY common-ai ../common-ai
 
 # Install uv and dependencies
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev
+    uv sync --no-dev && \
+    uv run opentelemetry-bootstrap -a install
 
 # ============================================
 # Runtime stage: Minimal runtime image
@@ -55,4 +56,4 @@ ENV PYTHONPATH="/app:$PYTHONPATH"
 EXPOSE 8001
 
 # Set the default command
-CMD ["uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]

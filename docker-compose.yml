@@ -1,7 +1,7 @@
 # =====================
 # YAML EXTENSIONS (réutilisables)
 # =====================
-x-common-otel-env: &common-otel-env
+x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
   OTEL_METRICS_EXPORTER: otlp
@@ -11,7 +11,13 @@ x-common-otel-env: &common-otel-env
   LOG_LEVEL: INFO
   ERROR_RATE: "0.1"
 
-x-common-llm-env: &common-llm-env
+x-common-llm-otel-env: &common-llm-otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+  OTEL_PYTHON_LOG_CORRELATION: "true"
   LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
   LLM_MODEL: ${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
@@ -187,7 +193,7 @@ services:
     container_name: customer
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
@@ -206,7 +212,7 @@ services:
     container_name: supplier
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
@@ -225,7 +231,7 @@ services:
     container_name: order
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: order
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     depends_on:
@@ -244,7 +250,7 @@ services:
     container_name: stock
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: stock
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     depends_on:
@@ -263,7 +269,7 @@ services:
     container_name: ordercheck
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: ordercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://order:5000
@@ -284,7 +290,7 @@ services:
     container_name: suppliercheck
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: suppliercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://stock:5001
@@ -305,7 +311,7 @@ services:
     container_name: ordermanagement
     <<: *app-settings
     environment:
-      <<: *common-otel-env
+      <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: ordermanagement
       API_URL_ORDERS: http://order:5000
       API_URL_STOCKS: http://stock:5001
@@ -382,12 +388,14 @@ services:
     ports:
       - "8001:8001"
     environment:
-      <<: *common-llm-env
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: agent-orchestrator
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8003
       AGENT_TRACES_URL: http://agent-traces:8004
     depends_on:
       - grafana-mcp
+      - otel-collector
     models:
       - ai-qwen3
 
@@ -402,10 +410,12 @@ services:
     ports:
       - "8002:8002"
     environment:
-      <<: *common-llm-env
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: agent-logs
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
+      - otel-collector
     models:
       - ai-qwen3
 
@@ -420,10 +430,12 @@ services:
     ports:
       - "8003:8003"
     environment:
-      <<: *common-llm-env
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: agent-metrics
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
+      - otel-collector
     models:
       - ai-qwen3
 
@@ -438,10 +450,12 @@ services:
     ports:
       - "8004:8004"
     environment:
-      <<: *common-llm-env
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: agent-traces
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
+      - otel-collector
     models:
       - ai-qwen3
 
