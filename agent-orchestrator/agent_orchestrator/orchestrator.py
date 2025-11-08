@@ -5,6 +5,7 @@ Orchestrator logic for coordinating specialized agents
 import asyncio
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -12,6 +13,17 @@ import httpx
 from common_ai import get_llm
 
 logger = logging.getLogger(__name__)
+
+# Load prompts from markdown files
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+def load_prompt(filename: str) -> str:
+    """Load a prompt template from a markdown file"""
+    prompt_path = PROMPTS_DIR / filename
+    if prompt_path.exists():
+        return prompt_path.read_text()
+    logger.warning(f"Prompt file not found: {filename}")
+    return ""
 
 
 class Orchestrator:
@@ -284,7 +296,7 @@ class Orchestrator:
         traces: dict | None,
     ) -> dict[str, Any]:
         """
-        Use LLM to synthesize agent responses intelligently
+        Use LLM to synthesize agent responses intelligently using prompt template
 
         Args:
             query: Original user query
@@ -297,96 +309,100 @@ class Orchestrator:
         """
         from datetime import datetime
 
-        # Prepare context for LLM
-        context_parts = ["## User Question", query, "", "## Agent Analysis Results", ""]
+        # Extract data from agent responses
+        logs_analysis = logs.get('analysis', 'No logs analysis available') if logs else 'Logs agent unavailable'
+        logs_confidence = logs.get('confidence', 0) if logs else 0
+        logs_total = logs.get('data', {}).get('total_logs', 0) if logs else 0
+        logs_errors = logs.get('data', {}).get('error_count', 0) if logs else 0
 
-        if logs and "analysis" in logs:
-            context_parts.append(f"### Logs Agent (Confidence: {logs.get('confidence', 0):.0%})")
-            context_parts.append(logs['analysis'])
-            if logs.get('data'):
-                context_parts.append(f"- Total logs: {logs['data'].get('total_logs', 0)}")
-                context_parts.append(f"- Error count: {logs['data'].get('error_count', 0)}")
-            context_parts.append("")
+        metrics_analysis = metrics.get('analysis', 'No metrics analysis available') if metrics else 'Metrics agent unavailable'
+        metrics_confidence = metrics.get('confidence', 0) if metrics else 0
+        metrics_error_rate = f"{metrics.get('data', {}).get('error_rate', 0)*100:.1f}%" if metrics else "N/A"
+        metrics_request_rate = f"{metrics.get('data', {}).get('request_rate', 0):.1f}" if metrics else "N/A"
+        metrics_latency = f"{metrics.get('data', {}).get('latency_p95', 0)}ms" if metrics else "N/A"
 
-        if metrics and "analysis" in metrics:
-            context_parts.append(f"### Metrics Agent (Confidence: {metrics.get('confidence', 0):.0%})")
-            context_parts.append(metrics['analysis'])
-            if metrics.get('data'):
-                context_parts.append(f"- Error rate: {metrics['data'].get('error_rate', 0):.1%}")
-                context_parts.append(f"- Request rate: {metrics['data'].get('request_rate', 0):.1f} req/s")
-                context_parts.append(f"- Latency p95: {metrics['data'].get('latency_p95', 0)}ms")
-            context_parts.append("")
+        traces_analysis = traces.get('analysis', 'No traces analysis available') if traces else 'Traces agent unavailable'
+        traces_confidence = traces.get('confidence', 0) if traces else 0
+        traces_total = traces.get('data', {}).get('total_traces', 0) if traces else 0
+        traces_slow = traces.get('data', {}).get('slow_traces', 0) if traces else 0
+        traces_failed = traces.get('data', {}).get('failed_traces', 0) if traces else 0
 
-        if traces and "analysis" in traces:
-            context_parts.append(f"### Traces Agent (Confidence: {traces.get('confidence', 0):.0%})")
-            context_parts.append(traces['analysis'])
-            if traces.get('data'):
-                context_parts.append(f"- Total traces: {traces['data'].get('total_traces', 0)}")
-                context_parts.append(f"- Slow traces: {traces['data'].get('slow_traces', 0)}")
-                context_parts.append(f"- Failed traces: {traces['data'].get('failed_traces', 0)}")
-            context_parts.append("")
+        # Load prompt template from markdown file
+        prompt_template = load_prompt("synthesize_analysis.md")
+        if not prompt_template:
+            # Fallback to basic synthesis
+            return self._basic_synthesis(query, logs, metrics, traces)
 
-        context = "\n".join(context_parts)
+        # Replace variables in template
+        try:
+            prompt = prompt_template.format(
+                query=query,
+                logs_confidence=f"{logs_confidence:.0%}",
+                logs_analysis=logs_analysis,
+                logs_total=logs_total,
+                logs_errors=logs_errors,
+                metrics_confidence=f"{metrics_confidence:.0%}",
+                metrics_analysis=metrics_analysis,
+                metrics_error_rate=metrics_error_rate,
+                metrics_request_rate=metrics_request_rate,
+                metrics_latency=metrics_latency,
+                traces_confidence=f"{traces_confidence:.0%}",
+                traces_analysis=traces_analysis,
+                traces_total=traces_total,
+                traces_slow=traces_slow,
+                traces_failed=traces_failed
+            )
+        except KeyError as e:
+            logger.error(f"Missing variable in synthesize_analysis.md template: {e}")
+            return self._basic_synthesis(query, logs, metrics, traces)
 
-        # Create prompt for LLM
-        prompt = f"""{context}
+        try:
+            # Call LLM
+            logger.info("Synthesizing agent responses with LLM...")
+            response = self.llm.invoke(prompt)
 
-## Your Task
-You are an expert Site Reliability Engineer analyzing observability data from multiple sources.
+            # Extract text from response
+            if hasattr(response, 'content'):
+                summary = response.content
+            else:
+                summary = str(response)
 
-Based on the analysis from the Logs, Metrics, and Traces agents above, provide:
+            # Extract recommendations from the LLM response
+            recommendations = []
+            if "recommendations" in summary.lower() or "recommend" in summary.lower():
+                # Parse recommendations from the LLM response
+                lines = summary.split('\n')
+                in_recommendations = False
+                for line in lines:
+                    if 'recommendation' in line.lower() or 'immediate action' in line.lower():
+                        in_recommendations = True
+                        continue
+                    if in_recommendations and line.strip().startswith(('-', '*', '•')):
+                        recommendations.append(line.strip().lstrip('-*•').strip())
+                    elif in_recommendations and line.strip() and not line.strip().startswith('#'):
+                        recommendations.append(line.strip())
+                    elif in_recommendations and line.startswith('#'):
+                        break
 
-1. **A coherent synthesis** that combines insights from all three agents to answer the user's question
-2. **Key findings** with severity levels (Critical, High, Medium, Low)
-3. **Root cause analysis** if patterns emerge across multiple signals
-4. **Actionable recommendations** prioritized by impact
+            # Add data-driven recommendations
+            if metrics and metrics.get('data', {}).get('anomalies'):
+                for anomaly in metrics['data']['anomalies']:
+                    recommendations.append(
+                        f"Address {anomaly['severity']} severity anomaly in {anomaly['metric']}"
+                    )
 
-Format your response in markdown with clear sections. Be concise but thorough.
-Focus on correlations between logs, metrics, and traces to identify real issues.
-"""
+            return {
+                "summary": summary,
+                "recommendations": recommendations if recommendations else [
+                    "Monitor the situation closely",
+                    "Review Grafana dashboards for additional context"
+                ],
+                "timestamp": datetime.now(),
+            }
 
-        # Call LLM
-        logger.info("Synthesizing agent responses with LLM...")
-        response = self.llm.invoke(prompt)
-
-        # Extract text from response
-        if hasattr(response, 'content'):
-            summary = response.content
-        else:
-            summary = str(response)
-
-        # Extract recommendations from the LLM response
-        recommendations = []
-        if "recommendations" in summary.lower() or "recommend" in summary.lower():
-            # Parse recommendations from the LLM response
-            lines = summary.split('\n')
-            in_recommendations = False
-            for line in lines:
-                if 'recommendation' in line.lower():
-                    in_recommendations = True
-                    continue
-                if in_recommendations and line.strip().startswith(('-', '*', '•')):
-                    recommendations.append(line.strip().lstrip('-*•').strip())
-                elif in_recommendations and line.strip() and not line.strip().startswith('#'):
-                    recommendations.append(line.strip())
-                elif in_recommendations and line.startswith('#'):
-                    break
-
-        # Add data-driven recommendations
-        if metrics and metrics.get('data', {}).get('anomalies'):
-            for anomaly in metrics['data']['anomalies']:
-                recommendations.append(
-                    f"Address {anomaly['severity']} severity anomaly in {anomaly['metric']}"
-                )
-
-        return {
-            "summary": summary,
-            "recommendations": recommendations if recommendations else [
-                "Monitor the situation closely",
-                "Review Grafana dashboards for additional context"
-            ],
-            "timestamp": datetime.now(),
-        }
+        except Exception as e:
+            logger.warning(f"LLM synthesis failed: {e}, using fallback")
+            return self._basic_synthesis(query, logs, metrics, traces)
 
     def _basic_synthesis(
         self,

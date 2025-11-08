@@ -69,8 +69,12 @@ class TracesAnalyzer:
         context = context or {}
         logger.info(f"Analyzing traces for query: {query}")
 
-        # Build TraceQL query
-        traceql_query = self._build_traceql_query(query, context)
+        # Use LLM to build better TraceQL query if available
+        if self.llm:
+            traceql_query = await self._build_traceql_query_with_llm(query, context)
+        else:
+            traceql_query = self._build_traceql_query(query, context)
+        
         logger.info(f"Generated TraceQL: {traceql_query}")
 
         # Query Tempo via MCP
@@ -352,6 +356,55 @@ class TracesAnalyzer:
         except Exception as e:
             logger.warning(f"LLM analysis failed: {e}, using fallback")
             return self._analyze_traces(traces_data, query, context)
+
+    async def _build_traceql_query_with_llm(
+        self, query: str, context: dict[str, Any]
+    ) -> str:
+        """
+        Use LLM to build an optimized TraceQL query from prompt template
+
+        Args:
+            query: User query
+            context: Request context
+
+        Returns:
+            TraceQL query string
+        """
+        services = context.get("services", [])
+        services_context = (
+            f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
+        )
+
+        # Load prompt template from markdown file
+        prompt_template = load_prompt("build_traceql.md")
+        if not prompt_template:
+            # Fallback to simple query building
+            return self._build_traceql_query(query, context)
+
+        # Replace variables in template
+        try:
+            prompt = prompt_template.format(
+                query=query,
+                services_context=services_context
+            )
+        except KeyError as e:
+            logger.error(f"Missing variable in build_traceql.md template: {e}")
+            return self._build_traceql_query(query, context)
+
+        try:
+            response = self.llm.invoke(prompt)
+            traceql = response.content if hasattr(response, "content") else str(response)
+            traceql = traceql.strip().strip("`").strip()
+            # Remove markdown code block markers if present
+            if traceql.startswith("```"):
+                lines = traceql.split("\n")
+                traceql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+                traceql = traceql.strip()
+            logger.info(f"LLM generated TraceQL: {traceql}")
+            return traceql
+        except Exception as e:
+            logger.warning(f"LLM query generation failed: {e}, using fallback")
+            return self._build_traceql_query(query, context)
 
     async def check_mcp_health(self) -> bool:
         """

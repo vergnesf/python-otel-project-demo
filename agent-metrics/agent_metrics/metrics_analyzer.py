@@ -69,8 +69,12 @@ class MetricsAnalyzer:
         context = context or {}
         logger.info(f"Analyzing metrics for query: {query}")
 
-        # Build PromQL queries
-        promql_queries = self._build_promql_queries(query, context)
+        # Use LLM to build better PromQL query if available
+        if self.llm:
+            promql_queries = await self._build_promql_queries_with_llm(query, context)
+        else:
+            promql_queries = self._build_promql_queries(query, context)
+        
         logger.info(f"Generated PromQL queries: {len(promql_queries)}")
 
         # Query Mimir via MCP
@@ -388,6 +392,55 @@ class MetricsAnalyzer:
         # TODO: Generate actual Grafana Explore URLs
         base_url = "http://grafana:3000/explore"
         return [f"{base_url}?query={promql}&range={time_range}"]
+
+    async def _build_promql_queries_with_llm(
+        self, query: str, context: dict[str, Any]
+    ) -> list[str]:
+        """
+        Use LLM to build optimized PromQL queries from prompt template
+
+        Args:
+            query: User query
+            context: Request context
+
+        Returns:
+            List of PromQL query strings
+        """
+        services = context.get("services", [])
+        services_context = (
+            f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
+        )
+
+        # Load prompt template from markdown file
+        prompt_template = load_prompt("build_promql.md")
+        if not prompt_template:
+            # Fallback to simple query building
+            return self._build_promql_queries(query, context)
+
+        # Replace variables in template
+        try:
+            prompt = prompt_template.format(
+                query=query,
+                services_context=services_context
+            )
+        except KeyError as e:
+            logger.error(f"Missing variable in build_promql.md template: {e}")
+            return self._build_promql_queries(query, context)
+
+        try:
+            response = self.llm.invoke(prompt)
+            promql = response.content if hasattr(response, "content") else str(response)
+            promql = promql.strip().strip("`").strip()
+            # Remove markdown code block markers if present
+            if promql.startswith("```"):
+                lines = promql.split("\n")
+                promql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+                promql = promql.strip()
+            logger.info(f"LLM generated PromQL: {promql}")
+            return [promql]
+        except Exception as e:
+            logger.warning(f"LLM query generation failed: {e}, using fallback")
+            return self._build_promql_queries(query, context)
 
     async def check_mcp_health(self) -> bool:
         """

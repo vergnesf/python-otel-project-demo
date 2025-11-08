@@ -1,4 +1,4 @@
-# Agentic Network Architecture 🤖
+# Agentic Network Architecture
 
 ## Overview
 

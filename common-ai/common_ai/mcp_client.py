@@ -157,7 +157,7 @@ class MCPGrafanaClient:
             time_range: Time range like '1h', '24h', '7d'
             
         Returns:
-            Tuple of (start, end) timestamps in nanoseconds
+            Tuple of (start, end) in RFC3339 format for MCP compatibility
         """
         now = datetime.now()
         
@@ -175,11 +175,11 @@ class MCPGrafanaClient:
             # Default to 1 hour
             start = now - timedelta(hours=1)
         
-        # Convert to nanoseconds timestamps
-        start_ns = str(int(start.timestamp() * 1e9))
-        end_ns = str(int(now.timestamp() * 1e9))
+        # Convert to RFC3339 format (ISO 8601 with Z suffix)
+        start_rfc = start.isoformat() + 'Z'
+        end_rfc = now.isoformat() + 'Z'
         
-        return start_ns, end_ns
+        return start_rfc, end_rfc
 
     async def query_logs(
         self,
@@ -203,21 +203,21 @@ class MCPGrafanaClient:
             session = await self._ensure_session()
             await self._list_tools()
 
-            start_ns, end_ns = self._parse_time_range(time_range)
+            start_rfc, end_rfc = self._parse_time_range(time_range)
 
             # Check if Loki datasource UID is available
             if not self.loki_uid:
                 logger.error("Loki datasource UID not found")
                 return {"error": "Loki datasource not configured", "logs": []}
 
-            # Call MCP tool for Loki query
+            # Call MCP tool for Loki query with correct parameter names
             result = await session.call_tool(
                 "query_loki_logs",
                 arguments={
-                    "datasource_uid": self.loki_uid,
-                    "query": query,
-                    "start": int(start_ns),
-                    "end": int(end_ns),
+                    "datasourceUid": self.loki_uid,
+                    "logql": query,
+                    "startRfc3339": start_rfc,
+                    "endRfc3339": end_rfc,
                     "limit": limit
                 }
             )
@@ -248,7 +248,7 @@ class MCPGrafanaClient:
         Args:
             query: PromQL query (e.g., 'rate(http_requests_total[5m])')
             time_range: Time range (e.g., '1h', '24h', '7d')
-            step: Step interval for range queries
+            step: Step interval for range queries (e.g., '1m', '5m')
 
         Returns:
             Dictionary containing metric query results
@@ -258,21 +258,26 @@ class MCPGrafanaClient:
             session = await self._ensure_session()
             await self._list_tools()
 
-            start_ns, end_ns = self._parse_time_range(time_range)
+            start_rfc, end_rfc = self._parse_time_range(time_range)
 
             # Check if Prometheus datasource UID is available
             if not self.prometheus_uid:
                 logger.error("Prometheus/Mimir datasource UID not found")
                 return {"error": "Prometheus datasource not configured"}
 
+            # Parse step to seconds (e.g., "1m" -> 60)
+            step_seconds = self._parse_step_to_seconds(step)
+
+            # Call MCP tool with correct parameter names
             result = await session.call_tool(
                 "query_prometheus",
                 arguments={
-                    "datasource_uid": self.prometheus_uid,
-                    "query": query,
-                    "start": int(start_ns),
-                    "end": int(end_ns),
-                    "step": step
+                    "datasourceUid": self.prometheus_uid,
+                    "expr": query,
+                    "queryType": "range",
+                    "startTime": start_rfc,
+                    "endTime": end_rfc,
+                    "stepSeconds": step_seconds
                 }
             )
 
@@ -289,6 +294,26 @@ class MCPGrafanaClient:
         except Exception as e:
             logger.error(f"Failed to query metrics via MCP: {e}")
             return {"error": str(e), "metrics": []}
+
+    def _parse_step_to_seconds(self, step: str) -> int:
+        """
+        Parse step string to seconds
+        
+        Args:
+            step: Step interval like '1m', '5m', '1h'
+            
+        Returns:
+            Step in seconds
+        """
+        if step.endswith('s'):
+            return int(step[:-1])
+        elif step.endswith('m'):
+            return int(step[:-1]) * 60
+        elif step.endswith('h'):
+            return int(step[:-1]) * 3600
+        else:
+            # Default to 60 seconds
+            return 60
 
     async def query_traces(
         self,
