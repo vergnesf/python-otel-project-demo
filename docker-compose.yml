@@ -533,6 +533,191 @@ services:
       - otel-network
 
   # =====================
+  # AGENTIC NETWORK
+  # =====================
+  agent-orchestrator:
+    image: ${DOCKER_REGISTRY:-}agent-orchestrator:latest
+    build:
+      context: .
+      dockerfile: agent-orchestrator/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}agent-orchestrator:latest
+      cache_to:
+        - type=inline
+    container_name: agent-orchestrator
+    pull_policy: build
+    ports:
+      - "8001:8001"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    environment:
+      - LOG_LEVEL=INFO
+      - AGENT_LOGS_URL=http://agent-logs:8002
+      - AGENT_METRICS_URL=http://agent-metrics:8003
+      - AGENT_TRACES_URL=http://agent-traces:8004
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
+      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+    depends_on:
+      - grafana-mcp
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+  agent-logs:
+    image: ${DOCKER_REGISTRY:-}agent-logs:latest
+    build:
+      context: .
+      dockerfile: agent-logs/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}agent-logs:latest
+      cache_to:
+        - type=inline
+    container_name: agent-logs
+    pull_policy: build
+    ports:
+      - "8002:8002"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - LOG_LEVEL=INFO
+      - MCP_GRAFANA_URL=http://grafana-mcp:8000
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
+      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+    depends_on:
+      - grafana-mcp
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+  agent-metrics:
+    image: ${DOCKER_REGISTRY:-}agent-metrics:latest
+    build:
+      context: .
+      dockerfile: agent-metrics/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}agent-metrics:latest
+      cache_to:
+        - type=inline
+    container_name: agent-metrics
+    pull_policy: build
+    ports:
+      - "8003:8003"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - LOG_LEVEL=INFO
+      - MCP_GRAFANA_URL=http://grafana-mcp:8000
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
+      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+    depends_on:
+      - grafana-mcp
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+  agent-traces:
+    image: ${DOCKER_REGISTRY:-}agent-traces:latest
+    build:
+      context: .
+      dockerfile: agent-traces/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}agent-traces:latest
+      cache_to:
+        - type=inline
+    container_name: agent-traces
+    pull_policy: build
+    ports:
+      - "8004:8004"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - LOG_LEVEL=INFO
+      - MCP_GRAFANA_URL=http://grafana-mcp:8000
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
+      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+    depends_on:
+      - grafana-mcp
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+  agents-ui:
+    image: ${DOCKER_REGISTRY:-}agents-ui:latest
+    build:
+      context: .
+      dockerfile: agents-ui/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}agents-ui:latest
+      cache_to:
+        - type=inline
+    container_name: agents-ui
+    pull_policy: build
+    ports:
+      - "3002:3002"
+      - "8005:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    environment:
+      - ORCHESTRATOR_URL=http://agent-orchestrator:8001
+    depends_on:
+      - agent-orchestrator
+    networks:
+      - otel-network
+
+  # =====================
   # N8N STACK
   # =====================
   n8n:
