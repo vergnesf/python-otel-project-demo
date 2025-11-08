@@ -401,6 +401,12 @@ class TracesAnalyzer:
                 traceql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
                 traceql = traceql.strip()
             logger.info(f"LLM generated TraceQL: {traceql}")
+            
+            # If LLM returned empty string, use fallback
+            if not traceql:
+                logger.warning("LLM generated empty TraceQL, using fallback")
+                return self._build_traceql_query(query, context)
+                
             return traceql
         except Exception as e:
             logger.warning(f"LLM query generation failed: {e}, using fallback")

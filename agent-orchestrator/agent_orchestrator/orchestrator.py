@@ -57,48 +57,48 @@ class Orchestrator:
     async def analyze(self, query: str, time_range: str = "1h") -> dict[str, Any]:
         """
         Analyze user query by coordinating specialized agents
+        Uses LLM to intelligently route to the right agents
 
         Args:
             query: User query to analyze
             time_range: Time range for analysis
 
         Returns:
-            Synthesized response from all agents
+            Synthesized response from selected agents
         """
         logger.info(f"Analyzing query: {query}")
 
-        # First, understand the query intent
-        intent = self._understand_query_intent(query)
-        logger.info(f"Query intent: {intent}")
+        # Use LLM to decide which agents to call
+        routing_decision = await self._route_query(query)
+        logger.info(f"Routing decision: {routing_decision}")
 
-        # Handle non-observability queries (greetings, etc.)
-        if intent == "greeting":
+        # Handle non-observability queries
+        if routing_decision["query_type"] in ["greeting", "other"]:
             from datetime import datetime
-            return {
-                "query": query,
-                "summary": "👋 Bonjour ! Je suis votre assistant d'observabilité. Je peux vous aider à analyser la santé de vos services en examinant les logs, métriques et traces. N'hésitez pas à me poser des questions sur vos applications !",
-                "agent_responses": {},
-                "recommendations": [
-                    "Demandez-moi par exemple : 'Quelle est la santé de mes services ?'",
-                    "Ou : 'Y a-t-il des erreurs dans le service customer ?'",
-                    "Ou : 'Quels services ont des problèmes de performance ?'"
-                ],
-                "timestamp": datetime.now(),
-            }
-        elif intent == "general":
-            from datetime import datetime
-            return {
-                "query": query,
-                "summary": "Je suis spécialisé dans l'analyse d'observabilité (logs, métriques, traces). Pourriez-vous reformuler votre question pour qu'elle concerne la santé ou les performances de vos services ?",
-                "agent_responses": {},
-                "recommendations": [
-                    "Posez des questions sur les erreurs, la performance, ou la santé des services",
-                    "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'"
-                ],
-                "timestamp": datetime.now(),
-            }
+            if routing_decision["query_type"] == "greeting":
+                return {
+                    "query": query,
+                    "summary": "👋 Bonjour ! Je suis votre assistant d'observabilité. Je peux vous aider à analyser la santé de vos services en examinant les logs, métriques et traces. N'hésitez pas à me poser des questions sur vos applications !",
+                    "agent_responses": {},
+                    "recommendations": [
+                        "Demandez-moi par exemple : 'Quelle est la santé de mes services ?'",
+                        "Ou : 'Y a-t-il des erreurs dans le service customer ?'",
+                        "Ou : 'Quels services ont des problèmes de performance ?'"
+                    ],
+                    "timestamp": datetime.now(),
+                }
+            else:
+                return {
+                    "query": query,
+                    "summary": f"Je suis spécialisé dans l'analyse d'observabilité. {routing_decision['reasoning']}",
+                    "agent_responses": {},
+                    "recommendations": [
+                        "Posez des questions sur les erreurs, la performance, ou la santé des services",
+                        "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'"
+                    ],
+                    "timestamp": datetime.now(),
+                }
 
-        # For observability queries, proceed with agent coordination
         # Prepare request for agents
         agent_request = {
             "query": query,
@@ -106,51 +106,55 @@ class Orchestrator:
             "context": self._extract_context(query),
         }
 
-        # Query all agents in parallel
-        responses = await asyncio.gather(
-            self._query_agent(self.logs_agent_url, agent_request),
-            self._query_agent(self.metrics_agent_url, agent_request),
-            self._query_agent(self.traces_agent_url, agent_request),
-            return_exceptions=True,
-        )
+        # Query only the selected agents in parallel
+        agents_to_call = routing_decision.get("agents_to_call", [])
+        tasks = []
+        agent_names = []
+        
+        if "logs" in agents_to_call:
+            tasks.append(self._query_agent(self.logs_agent_url, agent_request))
+            agent_names.append("logs")
+        if "metrics" in agents_to_call:
+            tasks.append(self._query_agent(self.metrics_agent_url, agent_request))
+            agent_names.append("metrics")
+        if "traces" in agents_to_call:
+            tasks.append(self._query_agent(self.traces_agent_url, agent_request))
+            agent_names.append("traces")
 
-        logs_response, metrics_response, traces_response = responses
+        # Execute queries in parallel
+        if tasks:
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+        else:
+            responses = []
+
+        # Map responses to agent names
+        agent_responses_dict = {}
+        for i, agent_name in enumerate(agent_names):
+            response = responses[i] if i < len(responses) else None
+            agent_responses_dict[agent_name] = (
+                response if not isinstance(response, Exception) 
+                else {"error": str(response)}
+            )
+
+        # Add None for agents that were not called
+        logs_response = agent_responses_dict.get("logs")
+        metrics_response = agent_responses_dict.get("metrics")
+        traces_response = agent_responses_dict.get("traces")
 
         # Synthesize responses
         summary = self._synthesize_responses(
             query=query,
-            logs=logs_response if not isinstance(logs_response, Exception) else None,
-            metrics=(
-                metrics_response
-                if not isinstance(metrics_response, Exception)
-                else None
-            ),
-            traces=(
-                traces_response if not isinstance(traces_response, Exception) else None
-            ),
+            logs=logs_response,
+            metrics=metrics_response,
+            traces=traces_response,
         )
 
         return {
             "query": query,
             "summary": summary["summary"],
-            "agent_responses": {
-                "logs": (
-                    logs_response
-                    if not isinstance(logs_response, Exception)
-                    else {"error": str(logs_response)}
-                ),
-                "metrics": (
-                    metrics_response
-                    if not isinstance(metrics_response, Exception)
-                    else {"error": str(metrics_response)}
-                ),
-                "traces": (
-                    traces_response
-                    if not isinstance(traces_response, Exception)
-                    else {"error": str(traces_response)}
-                ),
-            },
+            "agent_responses": agent_responses_dict,
             "recommendations": summary["recommendations"],
+            "routing": routing_decision,  # Include routing decision for transparency
             "timestamp": summary["timestamp"],
         }
 
@@ -178,6 +182,101 @@ class Orchestrator:
         except httpx.HTTPError as e:
             logger.error(f"Failed to query agent at {agent_url}: {e}")
             raise
+
+    async def _route_query(self, query: str) -> dict[str, Any]:
+        """
+        Use LLM to intelligently decide which agents to call
+
+        Args:
+            query: User query
+
+        Returns:
+            Routing decision with agents to call
+        """
+        # Fallback if no LLM available
+        if not self.llm:
+            logger.warning("LLM not available, using fallback routing")
+            return self._fallback_routing(query)
+
+        # Load routing prompt
+        prompt_template = load_prompt("route_query.md")
+        if not prompt_template:
+            logger.warning("Routing prompt not found, using fallback")
+            return self._fallback_routing(query)
+
+        try:
+            prompt = prompt_template.format(query=query)
+            response = self.llm.invoke(prompt)
+            response_text = response.content if hasattr(response, "content") else str(response)
+            
+            # Clean response
+            response_text = response_text.strip()
+            # Remove markdown code blocks if present
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+                response_text = response_text.strip()
+            if response_text.startswith("json"):
+                response_text = response_text[4:].strip()
+
+            # Parse JSON response
+            import json
+            routing = json.loads(response_text)
+            logger.info(f"LLM routing decision: {routing}")
+            return routing
+            
+        except Exception as e:
+            logger.warning(f"LLM routing failed: {e}, using fallback")
+            return self._fallback_routing(query)
+
+    def _fallback_routing(self, query: str) -> dict[str, Any]:
+        """
+        Fallback routing logic when LLM is not available
+
+        Args:
+            query: User query
+
+        Returns:
+            Routing decision
+        """
+        query_lower = query.lower()
+        agents = []
+        query_type = "observability"
+
+        # Check for greetings
+        greetings = ["hello", "hi", "bonjour", "salut"]
+        if any(g in query_lower for g in greetings) and len(query_lower.split()) <= 3:
+            return {
+                "agents_to_call": [],
+                "reasoning": "Simple greeting detected",
+                "query_type": "greeting"
+            }
+
+        # Logs keywords
+        if any(k in query_lower for k in ["log", "erreur", "error", "exception", "message", "dernières"]):
+            agents.append("logs")
+            query_type = "logs"
+
+        # Metrics keywords  
+        if any(k in query_lower for k in ["métrique", "metric", "taux", "rate", "latence", "latency", "performance", "cpu", "mémoire", "memory"]):
+            agents.append("metrics")
+            query_type = "metrics" if not agents else "correlation"
+
+        # Traces keywords
+        if any(k in query_lower for k in ["trace", "span", "flux", "appel", "call chain"]):
+            agents.append("traces")
+            query_type = "traces" if len(agents) == 1 else "correlation"
+
+        # If no specific agents identified, call all for safety
+        if not agents:
+            agents = ["logs", "metrics", "traces"]
+            query_type = "correlation"
+
+        return {
+            "agents_to_call": agents,
+            "reasoning": f"Fallback routing based on keywords",
+            "query_type": query_type
+        }
 
     def _understand_query_intent(self, query: str) -> str:
         """

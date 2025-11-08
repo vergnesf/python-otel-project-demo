@@ -157,9 +157,11 @@ class MCPGrafanaClient:
             time_range: Time range like '1h', '24h', '7d'
             
         Returns:
-            Tuple of (start, end) in RFC3339 format for MCP compatibility
+            Tuple of (start, end) in RFC3339 format (UTC) for MCP compatibility
         """
-        now = datetime.now()
+        from datetime import datetime, timedelta, timezone
+        
+        now = datetime.now(timezone.utc)
         
         # Parse time range
         if time_range.endswith('h'):
@@ -175,10 +177,10 @@ class MCPGrafanaClient:
             # Default to 1 hour
             start = now - timedelta(hours=1)
         
-        # Convert to RFC3339 format without microseconds (YYYY-MM-DDTHH:MM:SSZ)
-        # MCP server expects this specific format
-        start_rfc = start.strftime('%Y-%m-%dT%H:%M:%SZ')
-        end_rfc = now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        # Convert to RFC3339 format with timezone (e.g., 2025-11-08T16:09:20Z)
+        # Use isoformat() and replace microseconds, then add Z suffix
+        start_rfc = start.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+        end_rfc = now.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
         
         return start_rfc, end_rfc
 
@@ -229,7 +231,13 @@ class MCPGrafanaClient:
                 for content_item in result.content:
                     if hasattr(content_item, 'text'):
                         logs_data = json.loads(content_item.text)
-                        return logs_data
+                        # MCP peut retourner soit une liste directe, soit un dict
+                        if isinstance(logs_data, list):
+                            return {"logs": logs_data, "total": len(logs_data)}
+                        elif isinstance(logs_data, dict):
+                            return logs_data
+                        else:
+                            return {"logs": [], "total": 0}
 
             return {"logs": [], "total": 0}
 
@@ -288,7 +296,13 @@ class MCPGrafanaClient:
                 for content_item in result.content:
                     if hasattr(content_item, 'text'):
                         metrics_data = json.loads(content_item.text)
-                        return metrics_data
+                        # MCP peut retourner soit une liste directe, soit un dict
+                        if isinstance(metrics_data, list):
+                            return {"metrics": metrics_data, "total": len(metrics_data)}
+                        elif isinstance(metrics_data, dict):
+                            return metrics_data
+                        else:
+                            return {"metrics": [], "total": 0}
 
             return {"metrics": [], "total": 0}
 
@@ -324,6 +338,10 @@ class MCPGrafanaClient:
     ) -> dict[str, Any]:
         """
         Query traces from Tempo via MCP
+        
+        Note: Tempo support in MCP Grafana requires proxied tools which may not
+        be available. This method is prepared for future use or when proxied tools
+        are enabled.
 
         Args:
             query: TraceQL query (e.g., '{service.name="order" && status=error}')
@@ -331,21 +349,29 @@ class MCPGrafanaClient:
             limit: Maximum number of traces to return
 
         Returns:
-            Dictionary containing trace query results
+            Dictionary containing trace query results or error if Tempo tools unavailable
         """
         try:
             # Ensure session is initialized
             session = await self._ensure_session()
             await self._list_tools()
 
-            start_ns, end_ns = self._parse_time_range(time_range)
+            start_rfc, end_rfc = self._parse_time_range(time_range)
 
+            # Check if Tempo datasource UID is available
+            if not self.tempo_uid:
+                logger.error("Tempo datasource UID not found")
+                return {"error": "Tempo datasource not configured", "traces": []}
+
+            # Try to use tempo_traceql-search tool (proxied tool)
+            # This requires proxied tools to be enabled in MCP server
             result = await session.call_tool(
-                "tempo_search_traces",
+                "tempo_traceql-search",
                 arguments={
+                    "datasourceUid": self.tempo_uid,
                     "query": query,
-                    "start": int(start_ns),
-                    "end": int(end_ns),
+                    "start": start_rfc,
+                    "end": end_rfc,
                     "limit": limit
                 }
             )
@@ -361,6 +387,15 @@ class MCPGrafanaClient:
             return {"traces": [], "total": 0}
 
         except Exception as e:
+            error_msg = str(e)
+            # If tool not found, it means proxied tools are disabled
+            if "tempo_traceql-search" in error_msg.lower() or "unknown tool" in error_msg.lower():
+                logger.warning("Tempo proxied tools not available. Enable with MCP server flag.")
+                return {
+                    "error": "Tempo tools not available - proxied tools may be disabled in MCP server",
+                    "traces": [],
+                    "suggestion": "Remove --disable-proxied flag from MCP server or use direct Tempo API"
+                }
             logger.error(f"Failed to query traces via MCP: {e}")
             return {"error": str(e), "traces": []}
 

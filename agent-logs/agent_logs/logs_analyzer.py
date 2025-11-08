@@ -289,6 +289,12 @@ class LogsAnalyzer:
                 logql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
                 logql = logql.strip()
             logger.info(f"LLM generated LogQL: {logql}")
+            
+            # If LLM returned empty string, use fallback
+            if not logql:
+                logger.warning("LLM generated empty LogQL, using fallback")
+                return self._build_logql_query(query, context)
+                
             return logql
         except Exception as e:
             logger.warning(f"LLM query generation failed: {e}, using fallback")

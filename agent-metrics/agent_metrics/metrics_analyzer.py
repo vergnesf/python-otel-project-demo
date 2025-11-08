@@ -437,6 +437,12 @@ class MetricsAnalyzer:
                 promql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
                 promql = promql.strip()
             logger.info(f"LLM generated PromQL: {promql}")
+            
+            # If LLM returned empty string, use fallback
+            if not promql:
+                logger.warning("LLM generated empty PromQL, using fallback")
+                return self._build_promql_queries(query, context)
+                
             return [promql]
         except Exception as e:
             logger.warning(f"LLM query generation failed: {e}, using fallback")
