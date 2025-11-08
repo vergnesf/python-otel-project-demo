@@ -75,11 +75,19 @@ class ChatState(rx.State):
             "ORCHESTRATOR_URL", "http://agent-orchestrator:8001"
         )
 
+        # Detect time range in question (e.g., "5 dernières minutes")
+        time_range = "1h"
+        q_lower = question.lower()
+        if "5" in q_lower and (
+            "minute" in q_lower or "minutes" in q_lower or "5m" in q_lower
+        ):
+            time_range = "5m"
+
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(
                     f"{orchestrator_url}/analyze",
-                    json={"query": question, "time_range": "1h"},
+                    json={"query": question, "time_range": time_range},
                 )
                 response.raise_for_status()
                 result = response.json()

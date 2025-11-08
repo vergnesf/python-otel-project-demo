@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import re
 
 from common_ai import get_llm
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Load prompts from markdown files
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+
 
 def load_prompt(filename: str) -> str:
     """Load a prompt template from a markdown file"""
@@ -68,13 +70,18 @@ class Orchestrator:
         """
         logger.info(f"Analyzing query: {query}")
 
-        # Use LLM to decide which agents to call
-        routing_decision = await self._route_query(query)
+        # Translate to English if the query is not English
+        translated_query = await self._translate_to_english(query)
+        logger.info(f"Translated query: {translated_query}")
+
+        # Use LLM to decide which agents to call (use translated query)
+        routing_decision = await self._route_query(translated_query)
         logger.info(f"Routing decision: {routing_decision}")
 
         # Handle non-observability queries
         if routing_decision["query_type"] in ["greeting", "other"]:
             from datetime import datetime
+
             if routing_decision["query_type"] == "greeting":
                 return {
                     "query": query,
@@ -83,7 +90,7 @@ class Orchestrator:
                     "recommendations": [
                         "Demandez-moi par exemple : 'Quelle est la santé de mes services ?'",
                         "Ou : 'Y a-t-il des erreurs dans le service customer ?'",
-                        "Ou : 'Quels services ont des problèmes de performance ?'"
+                        "Ou : 'Quels services ont des problèmes de performance ?'",
                     ],
                     "timestamp": datetime.now(),
                 }
@@ -94,7 +101,7 @@ class Orchestrator:
                     "agent_responses": {},
                     "recommendations": [
                         "Posez des questions sur les erreurs, la performance, ou la santé des services",
-                        "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'"
+                        "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'",
                     ],
                     "timestamp": datetime.now(),
                 }
@@ -110,7 +117,7 @@ class Orchestrator:
         agents_to_call = routing_decision.get("agents_to_call", [])
         tasks = []
         agent_names = []
-        
+
         if "logs" in agents_to_call:
             tasks.append(self._query_agent(self.logs_agent_url, agent_request))
             agent_names.append("logs")
@@ -132,7 +139,8 @@ class Orchestrator:
         for i, agent_name in enumerate(agent_names):
             response = responses[i] if i < len(responses) else None
             agent_responses_dict[agent_name] = (
-                response if not isinstance(response, Exception) 
+                response
+                if not isinstance(response, Exception)
                 else {"error": str(response)}
             )
 
@@ -151,12 +159,66 @@ class Orchestrator:
 
         return {
             "query": query,
+            "original_query": query,
+            "translated_query": translated_query,
             "summary": summary["summary"],
             "agent_responses": agent_responses_dict,
             "recommendations": summary["recommendations"],
             "routing": routing_decision,  # Include routing decision for transparency
             "timestamp": summary["timestamp"],
         }
+
+    async def _translate_to_english(self, query: str) -> str:
+        """
+        Translate the input query to English using the available LLM.
+        If no LLM available or translation fails, return the original query.
+
+        Returns:
+            Translated query (or original if translation not possible)
+        """
+        if not query:
+            return query
+
+        # Prefer LLM for language detection/translation when available
+        # Fallback: if the query contains any non-ascii letters (e.g., accented), attempt translation
+        def _simple_nonascii_check(s: str) -> bool:
+            try:
+                s.encode("ascii")
+                return False
+            except UnicodeEncodeError:
+                return True
+
+        need_translation = _simple_nonascii_check(query)
+
+        # If no sign of non-ascii and no LLM, assume English
+        if not need_translation and not self.llm:
+            return query
+
+        # If LLM available, ask it to translate
+        if self.llm:
+            try:
+                prompt = f"Translate the following user question to English. Return only the translated sentence (no explanations):\n\n{query}"
+                response = self.llm.invoke(prompt)
+                text = (
+                    response.content if hasattr(response, "content") else str(response)
+                )
+                # Strip code blocks and surrounding text
+                text = text.strip()
+                if text.startswith("```"):
+                    parts = text.split("\n")
+                    text = "\n".join(parts[1:-1]) if len(parts) > 2 else parts[1]
+                # If the translation is empty, fallback
+                if not text:
+                    return query
+                return text.strip()
+            except Exception as e:
+                logger.warning(
+                    f"Translation with LLM failed: {e}, using original query"
+                )
+                return query
+
+        # No LLM - return original
+        return query
 
     async def _query_agent(
         self, agent_url: str, request: dict[str, Any]
@@ -193,10 +255,14 @@ class Orchestrator:
         Returns:
             Routing decision with agents to call
         """
-        # Fallback if no LLM available
+        # If no LLM available, use conservative fallback routing
         if not self.llm:
-            logger.warning("LLM not available, using fallback routing")
-            return self._fallback_routing(query)
+            logger.warning("LLM not available, using conservative fallback routing")
+            return {
+                "agents_to_call": ["logs", "metrics", "traces"],
+                "reasoning": "LLM unavailable — calling all agents for safety",
+                "query_type": "correlation",
+            }
 
         # Load routing prompt
         prompt_template = load_prompt("route_query.md")
@@ -207,8 +273,10 @@ class Orchestrator:
         try:
             prompt = prompt_template.format(query=query)
             response = self.llm.invoke(prompt)
-            response_text = response.content if hasattr(response, "content") else str(response)
-            
+            response_text = (
+                response.content if hasattr(response, "content") else str(response)
+            )
+
             # Clean response
             response_text = response_text.strip()
             # Remove markdown code blocks if present
@@ -221,10 +289,11 @@ class Orchestrator:
 
             # Parse JSON response
             import json
+
             routing = json.loads(response_text)
             logger.info(f"LLM routing decision: {routing}")
             return routing
-            
+
         except Exception as e:
             logger.warning(f"LLM routing failed: {e}, using fallback")
             return self._fallback_routing(query)
@@ -239,43 +308,11 @@ class Orchestrator:
         Returns:
             Routing decision
         """
-        query_lower = query.lower()
-        agents = []
-        query_type = "observability"
-
-        # Check for greetings
-        greetings = ["hello", "hi", "bonjour", "salut"]
-        if any(g in query_lower for g in greetings) and len(query_lower.split()) <= 3:
-            return {
-                "agents_to_call": [],
-                "reasoning": "Simple greeting detected",
-                "query_type": "greeting"
-            }
-
-        # Logs keywords
-        if any(k in query_lower for k in ["log", "erreur", "error", "exception", "message", "dernières"]):
-            agents.append("logs")
-            query_type = "logs"
-
-        # Metrics keywords  
-        if any(k in query_lower for k in ["métrique", "metric", "taux", "rate", "latence", "latency", "performance", "cpu", "mémoire", "memory"]):
-            agents.append("metrics")
-            query_type = "metrics" if not agents else "correlation"
-
-        # Traces keywords
-        if any(k in query_lower for k in ["trace", "span", "flux", "appel", "call chain"]):
-            agents.append("traces")
-            query_type = "traces" if len(agents) == 1 else "correlation"
-
-        # If no specific agents identified, call all for safety
-        if not agents:
-            agents = ["logs", "metrics", "traces"]
-            query_type = "correlation"
-
+        # Conservative fallback routing: call all agents
         return {
-            "agents_to_call": agents,
-            "reasoning": f"Fallback routing based on keywords",
-            "query_type": query_type
+            "agents_to_call": ["logs", "metrics", "traces"],
+            "reasoning": "Conservative fallback: call all agents when LLM unavailable or uncertain",
+            "query_type": "correlation",
         }
 
     def _understand_query_intent(self, query: str) -> str:
@@ -288,39 +325,35 @@ class Orchestrator:
         Returns:
             Intent type: "greeting", "general", or "observability"
         """
-        query_lower = query.lower().strip()
+        # Prefer LLM for intent detection when available
+        if self.llm:
+            try:
+                prompt = (
+                    "Determine the user's intent given the following query. "
+                    "Return one word: 'greeting', 'observability', or 'general'.\n\nQuery: {query}"
+                ).format(query=query)
+                response = self.llm.invoke(prompt)
+                text = (
+                    response.content if hasattr(response, "content") else str(response)
+                )
+                text = text.strip().lower()
+                for token in ("greeting", "observability", "general"):
+                    if token in text:
+                        return token
+            except Exception:
+                logger.debug(
+                    "LLM intent detection failed, falling back to simple heuristics"
+                )
 
-        # Check for greetings
-        greetings = [
-            "hello", "hi", "hey", "bonjour", "salut", "bonsoir",
-            "good morning", "good afternoon", "good evening"
-        ]
-        if any(greeting in query_lower for greeting in greetings):
-            # Check if it's just a greeting or a greeting + question
-            if len(query_lower.split()) <= 3:
-                return "greeting"
-
-        # Check for observability-related keywords
-        observability_keywords = [
-            "error", "erreur", "log", "metric", "métrique", "trace",
-            "performance", "latency", "latence", "service", "health", "santé",
-            "status", "statut", "slow", "lent", "fast", "rapide",
-            "issue", "problème", "problem", "fail", "échec",
-            "availability", "disponibilité", "rate", "taux"
-        ]
-
-        if any(keyword in query_lower for keyword in observability_keywords):
-            return "observability"
-
-        # Check for questions that require observability data
-        question_indicators = ["?", "what", "how", "why", "when", "where", "which",
-                               "quoi", "comment", "pourquoi", "quand", "où", "quel"]
-        if any(indicator in query_lower for indicator in question_indicators):
-            # If it contains a question but no observability keywords
+        # Simple heuristic fallback: treat short salutations as greetings, otherwise assume observability/general by punctuation
+        q = query.strip()
+        if len(q.split()) <= 3 and any(
+            w.lower() in q.lower() for w in ("hello", "hi", "bonjour", "salut", "hey")
+        ):
+            return "greeting"
+        if "?" in q:
             return "general"
-
-        # Default to general for other queries
-        return "general"
+        return "observability"
 
     def _extract_context(self, query: str) -> dict[str, Any]:
         """
@@ -332,29 +365,40 @@ class Orchestrator:
         Returns:
             Context dictionary
         """
-        context = {}
+        # Prefer LLM to extract structured context when available
+        context: dict[str, Any] = {}
+        if self.llm:
+            try:
+                prompt = (
+                    "Extract a JSON object with possible keys 'services' (list of service names) "
+                    "and 'focus' (e.g., 'errors', 'performance') from the user query. Return only JSON.\n\nQuery: {query}"
+                ).format(query=query)
+                response = self.llm.invoke(prompt)
+                text = (
+                    response.content if hasattr(response, "content") else str(response)
+                )
+                # Try to parse JSON
+                import json
 
-        # Extract service names
-        services = [
-            "customer",
-            "order",
-            "stock",
-            "supplier",
-            "ordermanagement",
-            "ordercheck",
-            "suppliercheck",
-        ]
-        mentioned_services = [s for s in services if s in query.lower()]
-        if mentioned_services:
-            context["services"] = mentioned_services
+                text = text.strip()
+                # Remove code fences if any
+                if text.startswith("```"):
+                    lines = text.splitlines()
+                    if len(lines) > 2:
+                        text = "\n".join(lines[1:-1])
+                    else:
+                        text = lines[1] if len(lines) > 1 else text
+                context = json.loads(text)
+                if not isinstance(context, dict):
+                    context = {}
+                return context
+            except Exception:
+                logger.debug(
+                    "LLM context extraction failed, using conservative fallback"
+                )
 
-        # Extract error keywords
-        error_keywords = ["error", "fail", "problem", "issue", "slow", "latency"]
-        has_errors = any(keyword in query.lower() for keyword in error_keywords)
-        if has_errors:
-            context["focus"] = "errors"
-
-        return context
+        # Conservative fallback: minimal context
+        return {}
 
     def _synthesize_responses(
         self,
@@ -382,7 +426,9 @@ class Orchestrator:
             try:
                 return self._synthesize_with_llm(query, logs, metrics, traces)
             except Exception as e:
-                logger.warning(f"LLM synthesis failed, falling back to basic synthesis: {e}")
+                logger.warning(
+                    f"LLM synthesis failed, falling back to basic synthesis: {e}"
+                )
 
         # Fallback to basic synthesis
         return self._basic_synthesis(query, logs, metrics, traces)
@@ -409,22 +455,68 @@ class Orchestrator:
         from datetime import datetime
 
         # Extract data from agent responses
-        logs_analysis = logs.get('analysis', 'No logs analysis available') if logs else 'Logs agent unavailable'
-        logs_confidence = logs.get('confidence', 0) if logs else 0
-        logs_total = logs.get('data', {}).get('total_logs', 0) if logs else 0
-        logs_errors = logs.get('data', {}).get('error_count', 0) if logs else 0
+        # Prefer structured data if agent returned JSON data object
+        if logs and isinstance(logs.get("data"), dict):
+            logs_analysis = logs.get("data", {}).get(
+                "summary", logs.get("analysis", "No logs analysis available")
+            )
+            logs_confidence = logs.get("confidence", 0)
+            logs_total = logs.get("data", {}).get("total_logs", 0)
+            logs_errors = logs.get("data", {}).get("error_count", 0)
+        else:
+            logs_analysis = (
+                logs.get("analysis", "No logs analysis available")
+                if logs
+                else "Logs agent unavailable"
+            )
+            logs_confidence = logs.get("confidence", 0) if logs else 0
+            logs_total = logs.get("data", {}).get("total_logs", 0) if logs else 0
+            logs_errors = logs.get("data", {}).get("error_count", 0) if logs else 0
 
-        metrics_analysis = metrics.get('analysis', 'No metrics analysis available') if metrics else 'Metrics agent unavailable'
-        metrics_confidence = metrics.get('confidence', 0) if metrics else 0
-        metrics_error_rate = f"{metrics.get('data', {}).get('error_rate', 0)*100:.1f}%" if metrics else "N/A"
-        metrics_request_rate = f"{metrics.get('data', {}).get('request_rate', 0):.1f}" if metrics else "N/A"
-        metrics_latency = f"{metrics.get('data', {}).get('latency_p95', 0)}ms" if metrics else "N/A"
+        if metrics and isinstance(metrics.get("data"), dict):
+            metrics_analysis = metrics.get("data", {}).get(
+                "summary", metrics.get("analysis", "No metrics analysis available")
+            )
+            metrics_confidence = metrics.get("confidence", 0)
+            metrics_error_rate = (
+                f"{metrics.get('data', {}).get('error_rate', 0)*100:.1f}%"
+            )
+            metrics_request_rate = (
+                f"{metrics.get('data', {}).get('request_rate', 0):.1f}"
+            )
+            metrics_latency = f"{metrics.get('data', {}).get('latency_p95', 0)}ms"
+        else:
+            metrics_analysis = (
+                metrics.get("analysis", "No metrics analysis available")
+                if metrics
+                else "Metrics agent unavailable"
+            )
+            metrics_confidence = metrics.get("confidence", 0) if metrics else 0
+            metrics_error_rate = (
+                f"{metrics.get('data', {}).get('error_rate', 0)*100:.1f}%"
+                if metrics
+                else "N/A"
+            )
+            metrics_request_rate = (
+                f"{metrics.get('data', {}).get('request_rate', 0):.1f}"
+                if metrics
+                else "N/A"
+            )
+            metrics_latency = (
+                f"{metrics.get('data', {}).get('latency_p95', 0)}ms"
+                if metrics
+                else "N/A"
+            )
 
-        traces_analysis = traces.get('analysis', 'No traces analysis available') if traces else 'Traces agent unavailable'
-        traces_confidence = traces.get('confidence', 0) if traces else 0
-        traces_total = traces.get('data', {}).get('total_traces', 0) if traces else 0
-        traces_slow = traces.get('data', {}).get('slow_traces', 0) if traces else 0
-        traces_failed = traces.get('data', {}).get('failed_traces', 0) if traces else 0
+        traces_analysis = (
+            traces.get("analysis", "No traces analysis available")
+            if traces
+            else "Traces agent unavailable"
+        )
+        traces_confidence = traces.get("confidence", 0) if traces else 0
+        traces_total = traces.get("data", {}).get("total_traces", 0) if traces else 0
+        traces_slow = traces.get("data", {}).get("slow_traces", 0) if traces else 0
+        traces_failed = traces.get("data", {}).get("failed_traces", 0) if traces else 0
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("synthesize_analysis.md")
@@ -449,7 +541,7 @@ class Orchestrator:
                 traces_analysis=traces_analysis,
                 traces_total=traces_total,
                 traces_slow=traces_slow,
-                traces_failed=traces_failed
+                traces_failed=traces_failed,
             )
         except KeyError as e:
             logger.error(f"Missing variable in synthesize_analysis.md template: {e}")
@@ -461,7 +553,7 @@ class Orchestrator:
             response = self.llm.invoke(prompt)
 
             # Extract text from response
-            if hasattr(response, 'content'):
+            if hasattr(response, "content"):
                 summary = response.content
             else:
                 summary = str(response)
@@ -470,32 +562,43 @@ class Orchestrator:
             recommendations = []
             if "recommendations" in summary.lower() or "recommend" in summary.lower():
                 # Parse recommendations from the LLM response
-                lines = summary.split('\n')
+                lines = summary.split("\n")
                 in_recommendations = False
                 for line in lines:
-                    if 'recommendation' in line.lower() or 'immediate action' in line.lower():
+                    if (
+                        "recommendation" in line.lower()
+                        or "immediate action" in line.lower()
+                    ):
                         in_recommendations = True
                         continue
-                    if in_recommendations and line.strip().startswith(('-', '*', '•')):
-                        recommendations.append(line.strip().lstrip('-*•').strip())
-                    elif in_recommendations and line.strip() and not line.strip().startswith('#'):
+                    if in_recommendations and line.strip().startswith(("-", "*", "•")):
+                        recommendations.append(line.strip().lstrip("-*•").strip())
+                    elif (
+                        in_recommendations
+                        and line.strip()
+                        and not line.strip().startswith("#")
+                    ):
                         recommendations.append(line.strip())
-                    elif in_recommendations and line.startswith('#'):
+                    elif in_recommendations and line.startswith("#"):
                         break
 
             # Add data-driven recommendations
-            if metrics and metrics.get('data', {}).get('anomalies'):
-                for anomaly in metrics['data']['anomalies']:
+            if metrics and metrics.get("data", {}).get("anomalies"):
+                for anomaly in metrics["data"]["anomalies"]:
                     recommendations.append(
                         f"Address {anomaly['severity']} severity anomaly in {anomaly['metric']}"
                     )
 
             return {
                 "summary": summary,
-                "recommendations": recommendations if recommendations else [
-                    "Monitor the situation closely",
-                    "Review Grafana dashboards for additional context"
-                ],
+                "recommendations": (
+                    recommendations
+                    if recommendations
+                    else [
+                        "Monitor the situation closely",
+                        "Review Grafana dashboards for additional context",
+                    ]
+                ),
                 "timestamp": datetime.now(),
             }
 

@@ -7,6 +7,8 @@ NO business logic - just MCP data retrieval + LLM analysis
 import logging
 import os
 from datetime import datetime
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Load prompts from markdown files
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+
 
 def load_prompt(filename: str) -> str:
     """Load a prompt template from a markdown file"""
@@ -67,6 +70,8 @@ class TracesAnalyzer:
             Analysis results
         """
         context = context or {}
+        # Ensure time_range is available in context for prompts and fallbacks
+        context["time_range"] = time_range
         logger.info(f"Analyzing traces for query: {query}")
 
         # Use LLM to build better TraceQL query if available
@@ -74,7 +79,7 @@ class TracesAnalyzer:
             traceql_query = await self._build_traceql_query_with_llm(query, context)
         else:
             traceql_query = self._build_traceql_query(query, context)
-        
+
         logger.info(f"Generated TraceQL: {traceql_query}")
 
         # Query Tempo via MCP
@@ -82,7 +87,9 @@ class TracesAnalyzer:
 
         # Analyze trace data with LLM if available
         if self.llm and traces_data.get("traces"):
-            analysis = await self._analyze_traces_with_llm(traces_data, query, context, time_range)
+            analysis = await self._analyze_traces_with_llm(
+                traces_data, query, context, time_range
+            )
         else:
             analysis = self._analyze_traces(traces_data, query, context)
 
@@ -188,12 +195,12 @@ class TracesAnalyzer:
         slow_traces = [t for t in traces if t.get("duration_ms", 0) > 300]
 
         # Find bottlenecks (slowest operations)
-        bottlenecks = {}
-        all_services = set()
+        bottlenecks: dict[str, dict] = {}
+        all_services: set[str] = set()
 
         for trace in traces:
             for span in trace.get("spans", []):
-                service = span.get("service", "unknown")
+                service = span.get("service", span.get("service_name", "unknown"))
                 operation = span.get("operation", "unknown")
                 duration = span.get("duration_ms", 0)
 
@@ -210,7 +217,11 @@ class TracesAnalyzer:
         # Calculate average durations for bottlenecks
         bottleneck_list = []
         for key, data in bottlenecks.items():
-            avg_dur = sum(data["durations"]) / len(data["durations"])
+            avg_dur = (
+                sum(data["durations"]) / len(data["durations"])
+                if data["durations"]
+                else 0
+            )
             if avg_dur > 100:  # Only include slow operations
                 bottleneck_list.append(
                     {
@@ -224,11 +235,12 @@ class TracesAnalyzer:
         bottleneck_list.sort(key=lambda x: x["avg_duration_ms"], reverse=True)
 
         # Build summary
+        time_range_checked = context.get("time_range", "1h")
         summary_parts = [
-            f"Analyzed {total_count} traces over the last {context.get('time_range', '1h')}."
+            f"Analyzed {total_count} traces over the last {time_range_checked}."
         ]
 
-        if failed_count > 0:
+        if failed_count > 0 and total_count > 0:
             summary_parts.append(
                 f"Found {failed_count} failed traces ({failed_count/total_count*100:.1f}% failure rate)."
             )
@@ -258,6 +270,7 @@ class TracesAnalyzer:
                 "avg_duration_ms": int(avg_duration),
                 "bottlenecks": bottleneck_list[:5],  # Top 5 bottlenecks
                 "service_dependencies": sorted(all_services),
+                "time_range_checked": time_range_checked,
             },
             "confidence": 0.85 if total_count > 10 else 0.5,
         }
@@ -302,7 +315,11 @@ class TracesAnalyzer:
         # Simple statistics (no complex calculations!)
         slow_count = sum(1 for t in traces if t.get("duration_ms", 0) > 500)
         failed_count = sum(1 for t in traces if t.get("error", False))
-        avg_duration = sum(t.get("duration_ms", 0) for t in traces) / total_traces if total_traces > 0 else 0
+        avg_duration = (
+            sum(t.get("duration_ms", 0) for t in traces) / total_traces
+            if total_traces > 0
+            else 0
+        )
 
         # Extract unique services (simple set operation)
         services = set()
@@ -317,7 +334,9 @@ class TracesAnalyzer:
             duration = trace.get("duration_ms", 0)
             spans = len(trace.get("spans", []))
             error = trace.get("error", False)
-            trace_samples_text.append(f"- {trace_id}: {duration}ms, {spans} spans, error={error}")
+            trace_samples_text.append(
+                f"- {trace_id}: {duration}ms, {spans} spans, error={error}"
+            )
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("analyze_traces.md")
@@ -334,24 +353,63 @@ class TracesAnalyzer:
             slow_traces=slow_count,
             failed_traces=failed_count,
             services_count=len(services),
-            trace_samples="\n".join(trace_samples_text) if trace_samples_text else "No traces found"
+            trace_samples=(
+                "\n".join(trace_samples_text)
+                if trace_samples_text
+                else "No traces found"
+            ),
         )
 
         try:
             response = self.llm.invoke(prompt)
-            llm_analysis = response.content if hasattr(response, "content") else str(response)
+            llm_analysis = (
+                response.content if hasattr(response, "content") else str(response)
+            )
             logger.info("LLM traces analysis complete")
 
-            # Return raw MCP data + LLM analysis (no calculations!)
-            return {
-                "summary": llm_analysis,
-                "data": {
-                    "total_traces": total_traces,
-                    "avg_duration_ms": avg_duration,
-                    "sample_traces": traces[:5],  # Raw samples from MCP
-                },
-                "confidence": 0.95 if total_traces > 0 else 0.5,
-            }
+            # Try to extract JSON object from LLM response
+            text = llm_analysis.strip()
+            m = re.search(r"(\{.*\})", text, re.DOTALL)
+            if m:
+                json_text = m.group(1)
+                try:
+                    parsed = json.loads(json_text)
+                    logger.info("Parsed JSON from LLM traces analysis")
+                    parsed.setdefault("time_range_checked", time_range)
+                    parsed.setdefault("insights", parsed.get("insights", ""))
+                    return {
+                        "summary": parsed.get("summary", ""),
+                        "data": parsed,
+                        "confidence": (
+                            0.95 if parsed.get("total_traces", 0) > 0 else 0.5
+                        ),
+                    }
+                except Exception:
+                    logger.warning(
+                        "Failed to parse JSON from LLM response, falling back"
+                    )
+
+            # If no traces and user asked for last 5 minutes, return structured fallback
+            if total_traces == 0 and (
+                "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
+            ):
+                return {
+                    "summary": f"Found 0 traces in the last {time_range}.",
+                    "data": {
+                        "total_traces": 0,
+                        "failed_traces": 0,
+                        "slow_traces": 0,
+                        "avg_duration_ms": 0,
+                        "top_bottlenecks": [],
+                        "service_dependencies": [],
+                        "time_range_checked": time_range,
+                        "insights": "insufficient traces for requested window",
+                    },
+                    "confidence": 0.3,
+                }
+
+            # Fallback to local analyzer
+            return self._analyze_traces(traces_data, query, context)
 
         except Exception as e:
             logger.warning(f"LLM analysis failed: {e}, using fallback")
@@ -372,7 +430,9 @@ class TracesAnalyzer:
         """
         services = context.get("services", [])
         services_context = (
-            f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
+            f"Available services: {', '.join(services)}"
+            if services
+            else "No specific services mentioned"
         )
 
         # Load prompt template from markdown file
@@ -384,8 +444,7 @@ class TracesAnalyzer:
         # Replace variables in template
         try:
             prompt = prompt_template.format(
-                query=query,
-                services_context=services_context
+                query=query, services_context=services_context
             )
         except KeyError as e:
             logger.error(f"Missing variable in build_traceql.md template: {e}")
@@ -393,7 +452,9 @@ class TracesAnalyzer:
 
         try:
             response = self.llm.invoke(prompt)
-            traceql = response.content if hasattr(response, "content") else str(response)
+            traceql = (
+                response.content if hasattr(response, "content") else str(response)
+            )
             traceql = traceql.strip().strip("`").strip()
             # Remove markdown code block markers if present
             if traceql.startswith("```"):
@@ -401,12 +462,12 @@ class TracesAnalyzer:
                 traceql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
                 traceql = traceql.strip()
             logger.info(f"LLM generated TraceQL: {traceql}")
-            
+
             # If LLM returned empty string, use fallback
             if not traceql:
                 logger.warning("LLM generated empty TraceQL, using fallback")
                 return self._build_traceql_query(query, context)
-                
+
             return traceql
         except Exception as e:
             logger.warning(f"LLM query generation failed: {e}, using fallback")

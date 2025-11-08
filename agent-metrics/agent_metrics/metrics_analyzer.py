@@ -7,6 +7,8 @@ NO business logic - just MCP data retrieval + LLM analysis
 import logging
 import os
 from datetime import datetime
+import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Load prompts from markdown files
 PROMPTS_DIR = Path(__file__).parent / "prompts"
+
 
 def load_prompt(filename: str) -> str:
     """Load a prompt template from a markdown file"""
@@ -67,6 +70,8 @@ class MetricsAnalyzer:
             Analysis results
         """
         context = context or {}
+        # Ensure time_range is available in context for prompts and fallbacks
+        context["time_range"] = time_range
         logger.info(f"Analyzing metrics for query: {query}")
 
         # Use LLM to build better PromQL query if available
@@ -74,7 +79,7 @@ class MetricsAnalyzer:
             promql_queries = await self._build_promql_queries_with_llm(query, context)
         else:
             promql_queries = self._build_promql_queries(query, context)
-        
+
         logger.info(f"Generated PromQL queries: {len(promql_queries)}")
 
         # Query Mimir via MCP
@@ -82,7 +87,9 @@ class MetricsAnalyzer:
 
         # Analyze metrics data with LLM if available
         if self.llm and metrics_data:
-            analysis = await self._analyze_metrics_with_llm(metrics_data, query, context, time_range)
+            analysis = await self._analyze_metrics_with_llm(
+                metrics_data, query, context, time_range
+            )
         else:
             analysis = self._analyze_metrics(metrics_data, query, context)
 
@@ -337,9 +344,13 @@ class MetricsAnalyzer:
         # Prepare anomalies text (simple formatting, no logic)
         anomalies_text = []
         if error_rate > 0.05:
-            anomalies_text.append(f"- Error rate: {error_rate*100:.1f}% (threshold: <5%)")
+            anomalies_text.append(
+                f"- Error rate: {error_rate*100:.1f}% (threshold: <5%)"
+            )
         if latency_p95 > 200:
-            anomalies_text.append(f"- Latency P95: {latency_p95:.0f}ms (threshold: <200ms)")
+            anomalies_text.append(
+                f"- Latency P95: {latency_p95:.0f}ms (threshold: <200ms)"
+            )
         if cpu_usage > 80:
             anomalies_text.append(f"- CPU usage: {cpu_usage:.1f}% (threshold: <80%)")
 
@@ -359,20 +370,57 @@ class MetricsAnalyzer:
             latency_p95=f"{latency_p95:.0f}",
             cpu_usage=f"{cpu_usage:.1f}",
             memory_mb=f"{memory_mb:.0f}",
-            anomalies="\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
+            anomalies=(
+                "\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
+            ),
         )
 
         try:
             response = self.llm.invoke(prompt)
-            llm_analysis = response.content if hasattr(response, "content") else str(response)
+            llm_analysis = (
+                response.content if hasattr(response, "content") else str(response)
+            )
             logger.info("LLM metrics analysis complete")
 
-            # Return raw MCP data + LLM analysis (no calculations!)
-            return {
-                "summary": llm_analysis,
-                "data": metrics_data,  # Raw data from MCP
-                "confidence": 0.95 if error_rate > 0 or latency_p95 > 0 else 0.8,
-            }
+            # Try to extract JSON object from LLM response
+            text = llm_analysis.strip()
+            m = re.search(r"(\{.*\})", text, re.DOTALL)
+            if m:
+                json_text = m.group(1)
+                try:
+                    parsed = json.loads(json_text)
+                    logger.info("Parsed JSON from LLM metrics analysis")
+                    # Ensure essential fields exist
+                    parsed.setdefault("metrics", metrics_data)
+                    parsed.setdefault("time_range_checked", time_range)
+                    parsed.setdefault("insights", parsed.get("insights", ""))
+                    return {
+                        "summary": parsed.get("summary", ""),
+                        "data": parsed,
+                        "confidence": 0.95 if parsed.get("anomalies") else 0.8,
+                    }
+                except Exception:
+                    logger.warning(
+                        "Failed to parse JSON from LLM response, falling back to local analysis"
+                    )
+
+            # If metrics_data is empty and user asked for last 5 minutes, return structured fallback
+            if not metrics_data and (
+                "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
+            ):
+                return {
+                    "summary": f"No metrics available for the last {time_range}.",
+                    "data": {
+                        "metrics": {},
+                        "anomalies": [],
+                        "time_range_checked": time_range,
+                        "insights": "insufficient metrics for requested window",
+                    },
+                    "confidence": 0.3,
+                }
+
+            # Fallback to local analyzer
+            return self._analyze_metrics(metrics_data, query, context)
 
         except Exception as e:
             logger.warning(f"LLM analysis failed: {e}, using fallback")
@@ -408,7 +456,9 @@ class MetricsAnalyzer:
         """
         services = context.get("services", [])
         services_context = (
-            f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
+            f"Available services: {', '.join(services)}"
+            if services
+            else "No specific services mentioned"
         )
 
         # Load prompt template from markdown file
@@ -420,8 +470,7 @@ class MetricsAnalyzer:
         # Replace variables in template
         try:
             prompt = prompt_template.format(
-                query=query,
-                services_context=services_context
+                query=query, services_context=services_context
             )
         except KeyError as e:
             logger.error(f"Missing variable in build_promql.md template: {e}")
@@ -437,12 +486,12 @@ class MetricsAnalyzer:
                 promql = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
                 promql = promql.strip()
             logger.info(f"LLM generated PromQL: {promql}")
-            
+
             # If LLM returned empty string, use fallback
             if not promql:
                 logger.warning("LLM generated empty PromQL, using fallback")
                 return self._build_promql_queries(query, context)
-                
+
             return [promql]
         except Exception as e:
             logger.warning(f"LLM query generation failed: {e}, using fallback")

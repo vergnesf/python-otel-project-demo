@@ -21,23 +21,29 @@ You are an expert SRE analyzing distributed traces from Tempo.
 {trace_samples}
 
 ## Your Task
+## Your Task
 
-Analyze these traces and provide:
+You MUST return a JSON object only (no surrounding text) with the following schema:
 
-1. **Performance Assessment** (1-2 sentences):
-   - Are the traces showing good or poor performance?
-   - What is the overall latency trend?
+```
+{
+  "summary": "short 1-2 sentence summary",
+  "total_traces": integer,
+  "failed_traces": integer,
+  "slow_traces": integer,
+  "avg_duration_ms": number,
+  "top_bottlenecks": [
+    {"service": "svc", "operation": "op", "avg_duration_ms": integer, "count": integer}
+  ],
+  "service_dependencies": ["svcA","svcB"],
+  "insights": "one-line actionable insight",
+  "time_range_checked": "string - exact time range analyzed"
+}
+```
 
-2. **Bottlenecks Identified**:
-   - Which services are slowest?
-   - Which spans take the most time?
+Behavioral rules:
+- If `time_range` contains a 5-minute window in the user query, ensure the analysis focuses on that window and set `time_range_checked` accordingly. If traces provided do not cover requested window, set `failed_traces`/`slow_traces` to 0 and set `insights` to "insufficient traces for requested window".
+- Use only the trace data provided — do not hallucinate extra spans or services.
+- Keep `summary` and `insights` concise and actionable.
 
-3. **Error Patterns** (if failed traces exist):
-   - What types of errors are occurring?
-   - Which services are failing?
-
-4. **Recommendations**:
-   - What should be optimized first?
-   - Are there any obvious performance issues?
-
-**Important**: Be concise (2-3 sentences max). Focus on identifying bottlenecks and actionable improvements.
+Return only the JSON object and ensure it parses as valid JSON.

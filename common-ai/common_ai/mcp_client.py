@@ -101,13 +101,13 @@ class MCPGrafanaClient:
         self._tools_cache = [
             {
                 "name": tool.name,
-                "description": tool.description if hasattr(tool, 'description') else "",
-                "inputSchema": tool.inputSchema if hasattr(tool, 'inputSchema') else {}
+                "description": tool.description if hasattr(tool, "description") else "",
+                "inputSchema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
             }
             for tool in result.tools
         ]
 
-        logger.info(f"Available MCP tools: {[t['name'] for t in self._tools_cache]}")
+        logger.debug(f"Available MCP tools: {[t['name'] for t in self._tools_cache]}")
         return self._tools_cache
 
     async def _fetch_datasource_uids(self):
@@ -122,8 +122,9 @@ class MCPGrafanaClient:
             # Parse response to extract UIDs
             if result.content:
                 import json
+
                 for content_item in result.content:
-                    if hasattr(content_item, 'text'):
+                    if hasattr(content_item, "text"):
                         datasources = json.loads(content_item.text)
 
                         # Map datasources by type
@@ -134,13 +135,19 @@ class MCPGrafanaClient:
 
                             if ds_type == "loki" and not self.loki_uid:
                                 self.loki_uid = ds_uid
-                                logger.info(f"Found Loki datasource: {ds_name} (uid: {ds_uid})")
+                                logger.info(
+                                    f"Found Loki datasource: {ds_name} (uid: {ds_uid})"
+                                )
                             elif ds_type == "prometheus" and not self.prometheus_uid:
                                 self.prometheus_uid = ds_uid
-                                logger.info(f"Found Prometheus/Mimir datasource: {ds_name} (uid: {ds_uid})")
+                                logger.info(
+                                    f"Found Prometheus/Mimir datasource: {ds_name} (uid: {ds_uid})"
+                                )
                             elif ds_type == "tempo" and not self.tempo_uid:
                                 self.tempo_uid = ds_uid
-                                logger.info(f"Found Tempo datasource: {ds_name} (uid: {ds_uid})")
+                                logger.info(
+                                    f"Found Tempo datasource: {ds_name} (uid: {ds_uid})"
+                                )
 
         except Exception as e:
             logger.warning(f"Failed to fetch datasource UIDs: {e}")
@@ -152,36 +159,36 @@ class MCPGrafanaClient:
     def _parse_time_range(self, time_range: str) -> tuple[str, str]:
         """
         Parse time range string into start and end timestamps
-        
+
         Args:
             time_range: Time range like '1h', '24h', '7d'
-            
+
         Returns:
             Tuple of (start, end) in RFC3339 format (UTC) for MCP compatibility
         """
         from datetime import datetime, timedelta, timezone
-        
+
         now = datetime.now(timezone.utc)
-        
+
         # Parse time range
-        if time_range.endswith('h'):
+        if time_range.endswith("h"):
             hours = int(time_range[:-1])
             start = now - timedelta(hours=hours)
-        elif time_range.endswith('d'):
+        elif time_range.endswith("d"):
             days = int(time_range[:-1])
             start = now - timedelta(days=days)
-        elif time_range.endswith('m'):
+        elif time_range.endswith("m"):
             minutes = int(time_range[:-1])
             start = now - timedelta(minutes=minutes)
         else:
             # Default to 1 hour
             start = now - timedelta(hours=1)
-        
+
         # Convert to RFC3339 format with timezone (e.g., 2025-11-08T16:09:20Z)
         # Use isoformat() and replace microseconds, then add Z suffix
-        start_rfc = start.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
-        end_rfc = now.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
-        
+        start_rfc = start.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        end_rfc = now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
         return start_rfc, end_rfc
 
     async def query_logs(
@@ -221,15 +228,16 @@ class MCPGrafanaClient:
                     "logql": query,
                     "startRfc3339": start_rfc,
                     "endRfc3339": end_rfc,
-                    "limit": limit
-                }
+                    "limit": limit,
+                },
             )
 
             # Extract logs from MCP response
             if result.content:
                 import json
+
                 for content_item in result.content:
-                    if hasattr(content_item, 'text'):
+                    if hasattr(content_item, "text"):
                         logs_data = json.loads(content_item.text)
                         # MCP peut retourner soit une liste directe, soit un dict
                         if isinstance(logs_data, list):
@@ -286,15 +294,16 @@ class MCPGrafanaClient:
                     "queryType": "range",
                     "startTime": start_rfc,
                     "endTime": end_rfc,
-                    "stepSeconds": step_seconds
-                }
+                    "stepSeconds": step_seconds,
+                },
             )
 
             # Extract metrics from MCP response
             if result.content:
                 import json
+
                 for content_item in result.content:
-                    if hasattr(content_item, 'text'):
+                    if hasattr(content_item, "text"):
                         metrics_data = json.loads(content_item.text)
                         # MCP peut retourner soit une liste directe, soit un dict
                         if isinstance(metrics_data, list):
@@ -313,18 +322,18 @@ class MCPGrafanaClient:
     def _parse_step_to_seconds(self, step: str) -> int:
         """
         Parse step string to seconds
-        
+
         Args:
             step: Step interval like '1m', '5m', '1h'
-            
+
         Returns:
             Step in seconds
         """
-        if step.endswith('s'):
+        if step.endswith("s"):
             return int(step[:-1])
-        elif step.endswith('m'):
+        elif step.endswith("m"):
             return int(step[:-1]) * 60
-        elif step.endswith('h'):
+        elif step.endswith("h"):
             return int(step[:-1]) * 3600
         else:
             # Default to 60 seconds
@@ -338,7 +347,7 @@ class MCPGrafanaClient:
     ) -> dict[str, Any]:
         """
         Query traces from Tempo via MCP
-        
+
         Note: Tempo support in MCP Grafana requires proxied tools which may not
         be available. This method is prepared for future use or when proxied tools
         are enabled.
@@ -372,15 +381,16 @@ class MCPGrafanaClient:
                     "query": query,
                     "start": start_rfc,
                     "end": end_rfc,
-                    "limit": limit
-                }
+                    "limit": limit,
+                },
             )
 
             # Extract traces from MCP response
             if result.content:
                 import json
+
                 for content_item in result.content:
-                    if hasattr(content_item, 'text'):
+                    if hasattr(content_item, "text"):
                         traces_data = json.loads(content_item.text)
                         return traces_data
 
@@ -389,12 +399,17 @@ class MCPGrafanaClient:
         except Exception as e:
             error_msg = str(e)
             # If tool not found, it means proxied tools are disabled
-            if "tempo_traceql-search" in error_msg.lower() or "unknown tool" in error_msg.lower():
-                logger.warning("Tempo proxied tools not available. Enable with MCP server flag.")
+            if (
+                "tempo_traceql-search" in error_msg.lower()
+                or "unknown tool" in error_msg.lower()
+            ):
+                logger.warning(
+                    "Tempo proxied tools not available. Enable with MCP server flag."
+                )
                 return {
                     "error": "Tempo tools not available - proxied tools may be disabled in MCP server",
                     "traces": [],
-                    "suggestion": "Remove --disable-proxied flag from MCP server or use direct Tempo API"
+                    "suggestion": "Remove --disable-proxied flag from MCP server or use direct Tempo API",
                 }
             logger.error(f"Failed to query traces via MCP: {e}")
             return {"error": str(e), "traces": []}
