@@ -5,7 +5,8 @@ services:
   broker:
     image: ${DOCKER_REGISTRY}${IMG_KAFKA}
     container_name: broker
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "9092:9092"
     deploy:
@@ -38,11 +39,18 @@ services:
       - kafka-data:/var/lib/kafka/data
     networks:
       - otel-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   akhq:
     image: ${DOCKER_REGISTRY}${IMG_AKHQ}
     container_name: akhq
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "8081:8080"
     environment:
@@ -53,7 +61,8 @@ services:
               properties:
                 bootstrap.servers: "broker:29092"
     depends_on:
-      - broker
+      broker:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -63,7 +72,8 @@ services:
   grafana:
     image: ${DOCKER_REGISTRY}${IMG_GRAFANA}
     container_name: grafana
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
@@ -75,11 +85,7 @@ services:
       - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana-data:/var/lib/grafana
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1",
-        ]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -98,7 +104,8 @@ services:
   otel-collector:
     image: ${DOCKER_REGISTRY}${IMG_OTEL}
     container_name: otel-collector
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     command: ["--config=/etc/otel-conf.yml"]
     ports:
       - "4317:4317"
@@ -114,16 +121,26 @@ services:
     volumes:
       - ./config/otel/otel-conf.yml:/etc/otel-conf.yml
     depends_on:
-      - mimir
-      - loki
-      - tempo
+      mimir:
+        condition: service_started
+      loki:
+        condition: service_started
+      tempo:
+        condition: service_started
     networks:
       - otel-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   loki:
     image: ${DOCKER_REGISTRY}${IMG_LOKI}
     container_name: loki
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     command: ["-config.file=/etc/config/loki.yaml"]
     user: "0:0"
     volumes:
@@ -139,11 +156,18 @@ services:
           memory: 64M
     networks:
       - otel-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   tempo:
     image: ${DOCKER_REGISTRY}${IMG_TEMPO}
     container_name: tempo
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     command: ["-config.file=/etc/tempo.yaml"]
     user: "0:0"
     volumes:
@@ -159,11 +183,18 @@ services:
           memory: 64M
     networks:
       - otel-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   mimir:
     image: ${DOCKER_REGISTRY}${IMG_MIMIR}
     container_name: mimir
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     command: ["-config.file=/etc/mimir-config.yml"]
     volumes:
       - ./config/mimir/mimir-config.yml:/etc/mimir-config.yml
@@ -178,6 +209,12 @@ services:
           memory: 64M
     networks:
       - otel-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # =====================
   # APPLICATION STACK
@@ -192,10 +229,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}customer:latest
-      cache_to:
-        - type=inline
     container_name: customer
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -217,8 +253,10 @@ services:
       - OTEL_PYTHON_LOG_CORRELATION=true
       - OTEL_METRICS_EXPORTER=otlp
     depends_on:
-      - broker
-      - otel-collector
+      broker:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -232,10 +270,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}supplier:latest
-      cache_to:
-        - type=inline
     container_name: supplier
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -257,8 +294,10 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=broker:29092
       - OTEL_METRICS_EXPORTER=otlp
     depends_on:
-      - broker
-      - otel-collector
+      broker:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -272,10 +311,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}order:latest
-      cache_to:
-        - type=inline
     container_name: order
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -300,7 +338,7 @@ services:
         condition: service_healthy
         restart: true
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -314,10 +352,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}stock:latest
-      cache_to:
-        - type=inline
     container_name: stock
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -342,7 +379,7 @@ services:
         condition: service_healthy
         restart: true
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -356,10 +393,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}ordercheck:latest
-      cache_to:
-        - type=inline
     container_name: ordercheck
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -381,9 +417,12 @@ services:
       - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
       - OTEL_LOGS_EXPORTER=otlp
     depends_on:
-      - broker
-      - order
-      - otel-collector
+      broker:
+        condition: service_healthy
+      order:
+        condition: service_started
+      otel-collector:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -397,10 +436,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}suppliercheck:latest
-      cache_to:
-        - type=inline
     container_name: suppliercheck
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -408,7 +446,7 @@ services:
           memory: 128M
         reservations:
           cpus: "0.05"
-          memory: 32M
+          memory: 64M
     environment:
       - OTEL_LOGS_EXPORTER=otlp
       - LOG_LEVEL=DEBUG
@@ -422,9 +460,12 @@ services:
       - OTEL_TRACES_EXPORTER=otlp
       - KAFKA_BOOTSTRAP_SERVERS=broker:29092
     depends_on:
-      - broker
-      - stock
-      - otel-collector
+      broker:
+        condition: service_healthy
+      stock:
+        condition: service_started
+      otel-collector:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -438,10 +479,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}ordermanagement:latest
-      cache_to:
-        - type=inline
     container_name: ordermanagement
     pull_policy: build
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -464,9 +504,12 @@ services:
       - OTEL_SERVICE_NAME=ordermanagement
       - API_URL_ORDERS=http://order:5000
     depends_on:
-      - order
-      - stock
-      - otel-collector
+      order:
+        condition: service_started
+      stock:
+        condition: service_started
+      otel-collector:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -476,7 +519,8 @@ services:
   postgres:
     image: ${DOCKER_REGISTRY}${IMG_POSTGRES}
     container_name: postgres
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
@@ -505,14 +549,16 @@ services:
   adminer:
     image: ${DOCKER_REGISTRY}${IMG_ADMINER}
     container_name: adminer
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       - ADMINER_DEFAULT_SERVER=postgres
       - ADMINER_DEFAULT_DB_DRIVER=pgsql
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -522,13 +568,15 @@ services:
   grafana-mcp:
     image: ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
     container_name: grafana-mcp
-    pull_policy: daily
+    pull_policy: always
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       - GRAFANA_URL=http://grafana:3000
     depends_on:
-      - grafana
+      grafana:
+        condition: service_healthy
     networks:
       - otel-network
 
@@ -545,10 +593,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}agent-orchestrator:latest
-      cache_to:
-        - type=inline
     container_name: agent-orchestrator
     pull_policy: build
+    restart: unless-stopped
     ports:
       - "8001:8001"
     deploy:
@@ -584,10 +631,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}agent-logs:latest
-      cache_to:
-        - type=inline
     container_name: agent-logs
     pull_policy: build
+    restart: unless-stopped
     ports:
       - "8002:8002"
     deploy:
@@ -621,10 +667,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}agent-metrics:latest
-      cache_to:
-        - type=inline
     container_name: agent-metrics
     pull_policy: build
+    restart: unless-stopped
     ports:
       - "8003:8003"
     deploy:
@@ -658,10 +703,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}agent-traces:latest
-      cache_to:
-        - type=inline
     container_name: agent-traces
     pull_policy: build
+    restart: unless-stopped
     ports:
       - "8004:8004"
     deploy:
@@ -695,10 +739,9 @@ services:
         IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
       cache_from:
         - ${DOCKER_REGISTRY}agents-ui:latest
-      cache_to:
-        - type=inline
     container_name: agents-ui
     pull_policy: build
+    restart: unless-stopped
     ports:
       - "3002:3002"
       - "8005:8000"
