@@ -69,7 +69,7 @@
 2. Check if data exists in datasources:
    ```bash
    # Query Loki directly
-   curl 'http://localhost:3100/loki/api/v1/query?query={job="varlogs"}'
+   curl 'http://localhost:3100/loki/api/v1/query?query={service_name="varlogs"}'
 
    # Query Mimir directly
    curl 'http://localhost:9009/prometheus/api/v1/query?query=up'

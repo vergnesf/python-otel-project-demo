@@ -22,13 +22,13 @@ Generate a LogQL query to answer the user's question.
 - **DO NOT include time range** - time is handled by API parameters
 
 ### Examples:
-- Errors in all services: `{{job=~".+"}} |= "error"`
+- Errors in all services: `{{service_name=~".+"}} |= "error"`
 - Errors in customer service: `{{service_name="customer"}} |= "error"`
-- Database errors: `{{job=~".+"}} |~ "(?i)(database|db).*error"`
+- Database errors: `{{service_name=~".+"}} |~ "(?i)(database|db).*error"`
 
 ### WRONG Examples (do NOT do this):
-- ❌ `{{job=~".+"}} |= "error" LIMIT 5` (LIMIT is not LogQL syntax)
-- ❌ `{{job=~".+"}} |= "error" limit 10` (limit is an API parameter, not query syntax)
+- ❌ `{{service_name=~".+"}} |= "error" LIMIT 5` (LIMIT is not LogQL syntax)
+- ❌ `{{service_name=~".+"}} |= "error" limit 10` (limit is an API parameter, not query syntax)
 
 **Respond with ONLY the LogQL query, no explanation, no LIMIT clause.**
 

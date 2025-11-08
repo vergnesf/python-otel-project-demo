@@ -120,7 +120,7 @@ class LogsAnalyzer:
             service_filter = "|".join(services)
             logql = f'{{service_name=~"{service_filter}"}}'
         else:
-            logql = '{job=~".+"}'
+            logql = '{service_name=~".+"}'
 
         # Add error filter if needed
         query_lower = query.lower()

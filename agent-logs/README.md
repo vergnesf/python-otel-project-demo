@@ -131,7 +131,7 @@ The agent generates LogQL queries for Loki:
 
 ### Count Errors by Service
 ```logql
-sum by (service_name) (count_over_time({job=~".+"} |= "error" [1h]))
+sum by (service_name) (count_over_time({service_name=~".+"} |= "error" [1h]))
 ```
 
 ### Trace Correlation
