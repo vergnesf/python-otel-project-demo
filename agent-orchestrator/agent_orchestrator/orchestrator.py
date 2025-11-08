@@ -8,8 +8,6 @@ import os
 from typing import Any
 
 import httpx
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, SystemMessage
 
 from common_ai import get_llm
 

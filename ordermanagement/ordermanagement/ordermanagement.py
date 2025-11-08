@@ -1,7 +1,6 @@
 import random
 import os
 import time
-import json
 import logging
 import requests
 from common_models.models import OrderStatus

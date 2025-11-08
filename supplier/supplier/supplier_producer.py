@@ -2,8 +2,6 @@ import os
 import random
 import json
 import logging
-import os
-import random
 import time
 
 from confluent_kafka import Producer

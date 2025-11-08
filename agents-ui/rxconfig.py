@@ -3,7 +3,6 @@ Reflex configuration
 """
 
 import reflex as rx
-import os
 
 
 config = rx.Config(

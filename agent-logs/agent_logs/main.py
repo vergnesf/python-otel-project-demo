@@ -78,7 +78,7 @@ async def analyze(request: AnalyzeRequest):
             time_range=request.time_range,
             context=request.context,
         )
-        logger.info(f"Logs analysis completed")
+        logger.info("Logs analysis completed")
         return result
     except Exception as e:
         logger.error(f"Logs analysis failed: {e}")

@@ -7,7 +7,6 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -83,7 +82,7 @@ async def analyze(request: AnalyzeRequest):
             query=request.query,
             time_range=request.time_range,
         )
-        logger.info(f"Analysis completed successfully")
+        logger.info("Analysis completed successfully")
         return result
     except Exception as e:
         logger.error(f"Analysis failed: {e}")

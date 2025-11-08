@@ -233,7 +233,7 @@ def decrease_stock_route():
     data = request.json
     try:
         stock_data = StockDecrease(**data)
-    except ValidationError as e:
+    except ValidationError:
         return jsonify({"error": "Invalid input"}), 400
 
     db = next(get_db())

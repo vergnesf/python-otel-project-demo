@@ -22,10 +22,10 @@ def create_app():
 
     db.init_app(app)
 
-    swagger = Swagger(app)
+    swagger = Swagger(app)  # noqa: F841
 
     with app.app_context():
-        from .models import Order
+        from .models import Order  # noqa: F401
 
         db.create_all()
         from .routes.orders import orders_bp

@@ -3,7 +3,6 @@ Main Reflex application for the Agents UI - Professional dark theme
 """
 
 import reflex as rx
-from pydantic import BaseModel
 
 from .state import ChatState, QA
 
