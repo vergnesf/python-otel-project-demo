@@ -1,13 +1,13 @@
 # Use an official Python base image
 ARG DOCKER_REGISTRY=""
-ARG IMG_PYTHON="python:3.13-slim"
+ARG IMG_PYTHON="python:3.14-slim"
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root
 
-# Install Node.js (required for Reflex)
+# Install Node.js and unzip (required for Reflex)
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y curl unzip && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
@@ -19,11 +19,11 @@ WORKDIR /app
 COPY agents-ui/pyproject.toml /app/
 COPY agents-ui/agents_ui /app/agents_ui
 COPY agents-ui/rxconfig.py /app/
-COPY agents-common/agents_common/ /app/agents_common
+COPY common/common/ /app/common/common
 
-# Install uv and dependencies
+# Install uv and dependencies (excluding dev dependencies)
 RUN pip install uv && \
-    uv add pip
+    uv sync --no-dev
 
 # Initialize Reflex (downloads frontend dependencies)
 RUN uv run reflex init

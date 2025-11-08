@@ -1,15 +1,31 @@
 # Claude Instructions - Python OpenTelemetry Observability Project
 
+## Documentation Structure
+
+The project uses a **modular documentation approach**:
+
+- **`README.md`** - Quick start guide for getting the project running (keep it concise!)
+- **`docs/`** - Detailed documentation:
+  - `architecture.md` - System architecture, components, technology stack
+  - `agents.md` - AI agentic network architecture and usage
+  - `development.md` - Local development guide, common module, LLM integrations
+  - `configuration.md` - Environment variables, Grafana setup, customization
+  - `troubleshooting.md` - Common issues and solutions
+  - `contributing.md` - Contributing guidelines, code style, PR process
+
+**Important**: When updating documentation, place detailed content in the appropriate `docs/` file and keep the README focused on quick start.
+
 ## Project Overview
 
 This is a comprehensive microservices demonstration project showcasing Python auto-instrumentation with OpenTelemetry. It implements an order and stock management system with a complete observability stack and an AI-powered agentic network for intelligent observability analysis.
 
 **Key Characteristics:**
-- Python 3.12+ using **UV** package manager
+- **Python 3.14+** using **UV** package manager
 - Multiple microservices with FastAPI
 - OpenTelemetry auto-instrumentation
 - MCP (Model Context Protocol) integration for AI agents
 - Complete Grafana stack (Loki, Mimir, Tempo)
+- Unified `common` module for shared code (business models + agent utilities)
 
 ## Architecture
 
@@ -43,12 +59,13 @@ This is a comprehensive microservices demonstration project showcasing Python au
 ## Technology Stack
 
 ### Python Ecosystem
-- **Python 3.12+** - Required minimum version
+- **Python 3.14+** - Latest stable version (required minimum)
 - **uv** - Fast Python package installer and resolver (`uv sync` to install dependencies)
 - **FastAPI** - Web framework for REST APIs and agents
 - **Pydantic** - Data validation and settings management
 - **SQLAlchemy** - ORM for database interactions
 - **Kafka-python** - Kafka client library
+- **LangChain** - Framework for LLM applications (agents only)
 
 ### Package Management with UV
 Each service uses `pyproject.toml` for dependency management:
@@ -56,6 +73,31 @@ Each service uses `pyproject.toml` for dependency management:
 - **Add dependency**: Edit `dependencies` array in `pyproject.toml`, then run `uv sync`
 - **Dev dependencies**: Use `[dependency-groups].dev` section
 - **Run commands**: Prefix with `uv run` (e.g., `uv run pytest`, `uv run python -m service.main`)
+
+### Common Module (Unified)
+
+The `common` module is the shared codebase for both microservices and AI agents:
+
+**Location**: `common/common/`
+
+**Business Models** (for microservices):
+- `models.py` - WoodType, OrderStatus, Stock, Order, OrderTracking
+
+**Agent Utilities** (for AI agents):
+- `agent_models.py` - AgentRequest, AgentResponse, AgentType, OrchestratorResponse
+- `mcp_client.py` - MCPGrafanaClient for querying Loki/Mimir/Tempo
+- `llm_config.py` - get_llm() helper for LangChain configuration
+
+**Usage**:
+```python
+# Import business models
+from common import WoodType, OrderStatus, Stock, Order
+
+# Import agent utilities
+from common import MCPGrafanaClient, get_llm, AgentRequest, AgentResponse
+```
+
+**Important**: All agents depend on `common` in their `pyproject.toml`. The old `agents-common` module has been merged into `common`.
 
 ### Observability
 - **OpenTelemetry** - Auto-instrumentation for traces, metrics, and logs
@@ -72,16 +114,46 @@ Each service uses `pyproject.toml` for dependency management:
 ## Development Guidelines
 
 ### Code Structure
-Each microservice and agent follows this structure:
+
+### Microservice Structure
 ```
 service-name/
-├── pyproject.toml          # Dependencies and metadata
+├── pyproject.toml          # Dependencies and metadata (Python 3.14+)
 ├── README.md               # Service-specific documentation
+├── Dockerfile              # Container build (python:3.14-slim)
 ├── service_name/           # Main package directory
 │   ├── __init__.py
-│   ├── main.py            # Entry point
+│   ├── main.py            # Entry point (FastAPI app)
 │   └── ...                # Service logic
 └── tests/                 # Test suite
+    └── __init__.py
+```
+
+### Agent Structure
+```
+agent-{name}/
+├── pyproject.toml          # Dependencies (includes common)
+├── README.md               # Agent-specific documentation
+├── Dockerfile              # Container build (python:3.14-slim)
+├── agent_{name}/           # Main package directory
+│   ├── __init__.py
+│   ├── main.py            # FastAPI app with /analyze and /health
+│   └── {name}_analyzer.py # Analysis logic using MCPGrafanaClient
+└── tests/                 # Test suite
+    └── __init__.py
+```
+
+### Common Module Structure
+```
+common/
+├── pyproject.toml          # Shared dependencies
+├── common/
+│   ├── __init__.py        # Exports all public symbols
+│   ├── models.py          # Business models (microservices)
+│   ├── agent_models.py    # Agent communication models
+│   ├── mcp_client.py      # MCP Grafana client
+│   └── llm_config.py      # LLM configuration helper
+└── tests/
     └── __init__.py
 ```
 
@@ -276,7 +348,6 @@ The MCP server (`grafana-mcp`) acts as a unified gateway for AI agents to query 
 - Grafana: http://localhost:3000 (admin/admin)
 - AKHQ (Kafka UI): http://localhost:8080
 - Adminer (DB): http://localhost:8081
-- n8n: http://localhost:5678
 
 ### Documentation
 - OpenTelemetry Python: https://opentelemetry.io/docs/languages/python/
@@ -316,12 +387,28 @@ The orchestrator executes specialized agents in parallel:
 6. Add to architecture diagrams
 
 ### Adding New Agent
-1. Create in `agent-*` directory structure
-2. Use `agents-common` for shared code
-3. Implement MCP client integration
-4. Register with orchestrator
-5. Add tests for agent logic
-6. Update architecture documentation
+1. Create `agent-{name}` directory with standard structure
+2. Add `common` as dependency in `pyproject.toml`
+3. Create analyzer class using `MCPGrafanaClient` from common
+4. Implement FastAPI app with `/analyze` and `/health` endpoints
+5. Create Dockerfile (copy pattern from existing agents)
+6. Add service to `docker-compose.yml`
+7. Update `agent-orchestrator` to include new agent
+8. Add tests for agent logic
+9. Update architecture documentation in README.md
+
+**Example pyproject.toml for new agent**:
+```toml
+[project]
+name = "agent-{name}"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "common",  # Includes MCPGrafanaClient, get_llm, agent models
+]
+```
 
 ### Modifying Configuration
 1. Update `.env.example` with new variables

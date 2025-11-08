@@ -1,6 +1,6 @@
 # Use an official Python base image
 ARG DOCKER_REGISTRY=""
-ARG IMG_PYTHON="python:3.13-slim"
+ARG IMG_PYTHON="python:3.14-slim"
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root
@@ -11,11 +11,11 @@ WORKDIR /app
 # Copy uv configuration files
 COPY agent-traces/pyproject.toml /app/
 COPY agent-traces/agent_traces /app/agent_traces
-COPY agents-common/agents_common/ /app/agents_common
+COPY common/common/ /app/common/common
 
-# Install uv
+# Install uv and dependencies (excluding dev dependencies)
 RUN pip install uv && \
-    uv add pip
+    uv sync --no-dev
 
 EXPOSE 8004
 

@@ -1,6 +1,6 @@
 # Use an official Python base image
 ARG DOCKER_REGISTRY=""
-ARG IMG_PYTHON="python:3.13-slim"
+ARG IMG_PYTHON="python:3.14-slim"
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root
@@ -13,9 +13,9 @@ COPY supplier/pyproject.toml /app/
 COPY supplier/supplier /app
 COPY common/common/ /app/common/common
 
-# Install uv
+# Install uv and dependencies (excluding dev dependencies)
 RUN pip install uv && \
-    uv add pip && \
+    uv sync --no-dev && \
     uv run opentelemetry-bootstrap -a install
 
 # Set the default command to run the producer
