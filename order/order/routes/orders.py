@@ -88,7 +88,8 @@ def create_order_route():
     order_data = schemas.OrderCreate(**data)
     try:
         new_order = create_order(db=db, order=order_data)
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order creation")
         return (
             jsonify({"error": "Unexpected error during order creation"}),
             500,
@@ -142,7 +143,8 @@ def read_orders_route():
     db = next(get_db())
     try:
         orders = get_orders(db=db, skip=skip, limit=limit)
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order list")
         return (
             jsonify({"error": "Unexpected error during order list"}),
             500,
@@ -202,7 +204,8 @@ def read_orders_by_status_route(status):
         orders = get_orders_by_status(
             db=db, order_status=OrderStatus(status), skip=skip, limit=limit
         )
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order list by status")
         return (
             jsonify({"error": "Unexpected error during order list by status"}),
             500,
@@ -248,7 +251,8 @@ def read_order_route(order_id):
     db = next(get_db())
     try:
         db_order = get_order(db=db, order_id=order_id)
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order read")
         return (
             jsonify({"error": "Unexpected error during order read"}),
             500,
@@ -314,7 +318,8 @@ def update_order_status_route(order_id):
     db = next(get_db())
     try:
         order = get_order(db, order_id=order_id)
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order fetch for update")
         return (
             jsonify({"error": "Unexpected error during order fetch for update"}),
             500,
@@ -326,13 +331,14 @@ def update_order_status_route(order_id):
         updated_order = update_order_status(
             db, order_id=order_id, order_status=order_status
         )
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception("Unexpected error during order status update")
         return (
             jsonify({"error": "Unexpected error during order status update"}),
             500,
         )
-    
+
     if updated_order is None:
         return jsonify({"error": "Order not found"}), 404
-    
+
     return jsonify(updated_order.to_dict()), 200
