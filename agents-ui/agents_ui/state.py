@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class QA(BaseModel):
     """A question and answer pair."""
+
     question: str
     answer: str = ""
 
@@ -25,7 +26,7 @@ class ChatState(rx.State):
     @rx.var
     def messages(self) -> list[dict]:
         """Get messages in the format expected by the UI.
-        
+
         Returns:
             List of messages with role and content
         """
@@ -39,7 +40,7 @@ class ChatState(rx.State):
     @rx.var
     def is_loading(self) -> bool:
         """Check if we are currently processing.
-        
+
         Returns:
             True if processing
         """
@@ -48,7 +49,7 @@ class ChatState(rx.State):
     @rx.event
     async def send_message(self, form_data: dict[str, Any]):
         """Process a new message.
-        
+
         Args:
             form_data: Form data containing the question
         """
@@ -69,8 +70,10 @@ class ChatState(rx.State):
 
         # TODO: Call orchestrator API here
         # For now, just echo back
-        answer = f"You asked: {question}\n\nThis will be connected to the orchestrator API."
-        
+        answer = (
+            f"You asked: {question}\n\nThis will be connected to the orchestrator API."
+        )
+
         self.chats[-1].answer = answer
         self.processing = False
         yield

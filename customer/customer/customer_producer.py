@@ -55,9 +55,7 @@ if __name__ == "__main__":
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < ERROR_RATE:
-            logger.error(
-                "failed to send order (Kafka/network failure)"
-            )
+            logger.error("failed to send order (Kafka/network failure)")
             time.sleep(int(interval_seconds))
             continue
 

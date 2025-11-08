@@ -35,7 +35,9 @@ producer = Producer(
 
 
 def send_stock(stock: Stock):
-    producer.produce("stocks", value=json.dumps(stock.model_dump()), callback=delivery_report)
+    producer.produce(
+        "stocks", value=json.dumps(stock.model_dump()), callback=delivery_report
+    )
     producer.poll(0)
 
 
@@ -53,9 +55,7 @@ if __name__ == "__main__":
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < ERROR_RATE:
-            logger.error(
-                "failed to send stock (Kafka/network failure)"
-            )
+            logger.error("failed to send stock (Kafka/network failure)")
             time.sleep(interval_seconds)
             continue
 

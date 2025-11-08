@@ -72,9 +72,7 @@ def process_registered_order():
             # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
             if random.random() < ERROR_RATE:
                 # Simulate an external API or DB failure
-                raise Exception(
-                    "external API or DB failure during order processing"
-                )
+                raise Exception("external API or DB failure during order processing")
 
             logger.info("Processing order: %s", order)
             decrease_stock(order)
