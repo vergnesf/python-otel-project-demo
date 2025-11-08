@@ -23,7 +23,13 @@ RUN pip install --no-cache-dir uv && \
 # ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
-USER root
+# Update OS packages
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Enable Python 3.14 JIT compiler for performance optimization
 ENV PYTHON_JIT=1
@@ -36,6 +42,12 @@ COPY --from=builder /app/common /app/common
 
 # Copy application code
 COPY suppliercheck/suppliercheck /app
+
+# Set ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Set PATH to use venv
 ENV PATH="/app/.venv/bin:$PATH"

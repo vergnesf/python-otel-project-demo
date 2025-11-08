@@ -57,14 +57,20 @@ COPY agents-ui/rxconfig.py /app/rxconfig.py
 
 # Initialize Reflex (install frontend deps and build)
 # Use uv run reflex init to prepare static assets
-RUN uv run reflex init
+RUN uv run --no-dev reflex init
 
 # ============================================
 # Runtime stage: slim image with venv and app
 # ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
-USER root
+# Update OS packages
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Enable Python JIT for performance parity
 ENV PYTHON_JIT=1
@@ -78,6 +84,12 @@ COPY --from=builder /app/common /app/common
 # Copy application code and Reflex built assets
 COPY --from=builder /app/agents_ui /app/agents_ui
 COPY --from=builder /app/rxconfig.py /app/rxconfig.py
+
+# Set ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
 
 # Ensure venv is used
 ENV PATH="/app/.venv/bin:$PATH"
