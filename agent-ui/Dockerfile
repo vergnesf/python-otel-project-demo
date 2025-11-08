@@ -21,10 +21,7 @@ COPY agent-ui/pyproject.toml /app/pyproject.toml
 
 # Install uv and Python dependencies into a venv
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
-    find /app/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/.venv -type f -name "*.pyc" -delete 2>/dev/null || true && \
-    find /app/.venv -type f -name "*.pyo" -delete 2>/dev/null || true
+    uv sync --no-dev 
 
 # Copy app code and Reflex config
 COPY agent-ui/agent_ui /app/agent_ui

@@ -5,11 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "confluent-kafka>=2.6.0",
+    "confluent-kafka>=2.12.2",
     "opentelemetry-distro>=0.59b0",
     "opentelemetry-exporter-otlp>=1.38.0",
     "pydantic>=2.12.4",
-    "requests>=2.32.3",
+    "requests>=2.32.5",
 ]
 
 [dependency-groups]
