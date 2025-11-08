@@ -1,3 +1,37 @@
+# =====================
+# YAML EXTENSIONS (réutilisables)
+# =====================
+x-common-otel-env: &common-otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+  OTEL_PYTHON_LOG_CORRELATION: "true"
+  LOG_LEVEL: DEBUG
+  ERROR_RATE: "0.1"
+
+x-common-llm-env: &common-llm-env
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+  LLM_API_KEY: ${LLM_API_KEY:-not-needed}
+  LLM_MODEL: ${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+  LOG_LEVEL: INFO
+
+x-python-build: &python-build
+  args:
+    DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+    IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+
+x-common-settings: &common-settings
+  pull_policy: always
+  restart: unless-stopped
+  networks:
+    - otel-network
+
+x-app-settings: &app-settings
+  <<: *common-settings
+  pull_policy: build
+
 services:
   # =====================
   # KAFKA STACK
@@ -5,18 +39,9 @@ services:
   broker:
     image: ${DOCKER_REGISTRY}${IMG_KAFKA}
     container_name: broker
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "9092:9092"
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
-          memory: 256M
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
@@ -37,20 +62,17 @@ services:
     volumes:
       - kafka-secrets:/etc/kafka/secrets
       - kafka-data:/var/lib/kafka/data
-    networks:
-      - otel-network
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 3
       start_period: 60s
 
   akhq:
     image: ${DOCKER_REGISTRY}${IMG_AKHQ}
     container_name: akhq
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "8081:8080"
     environment:
@@ -63,8 +85,6 @@ services:
     depends_on:
       broker:
         condition: service_healthy
-    networks:
-      - otel-network
 
   # =====================
   # OBSERVABILITY STACK
@@ -72,15 +92,14 @@ services:
   grafana:
     image: ${DOCKER_REGISTRY}${IMG_GRAFANA}
     container_name: grafana
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "3000:3000"
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_FEATURE_TOGGLES_ENABLE=tempoServiceGraph,traceToMetrics
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_FEATURE_TOGGLES_ENABLE: tempoServiceGraph,traceToMetrics
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
       - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana-data:/var/lib/grafana
@@ -90,131 +109,59 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-    networks:
-      - otel-network
 
   otel-collector:
     image: ${DOCKER_REGISTRY}${IMG_OTEL}
     container_name: otel-collector
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     command: ["--config=/etc/otel-conf.yml"]
     ports:
       - "4317:4317"
       - "4318:4318"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
     volumes:
       - ./config/otel/otel-conf.yml:/etc/otel-conf.yml
     depends_on:
       mimir:
         condition: service_started
       loki:
-        condition: service_started
+        condition: service_healthy
       tempo:
         condition: service_started
-    networks:
-      - otel-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
   loki:
     image: ${DOCKER_REGISTRY}${IMG_LOKI}
     container_name: loki
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     command: ["-config.file=/etc/config/loki.yaml"]
     user: "0:0"
     volumes:
       - ./config/loki/loki-config.yml:/etc/config/loki.yaml
       - loki-data:/tmp/loki
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
-    networks:
-      - otel-network
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 20s
 
   tempo:
     image: ${DOCKER_REGISTRY}${IMG_TEMPO}
     container_name: tempo
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     command: ["-config.file=/etc/tempo.yaml"]
     user: "0:0"
     volumes:
       - ./config/tempo/tempo.yml:/etc/tempo.yaml
       - tempo-data:/tmp/tempo
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
-    networks:
-      - otel-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3200/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   mimir:
     image: ${DOCKER_REGISTRY}${IMG_MIMIR}
     container_name: mimir
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     command: ["-config.file=/etc/mimir-config.yml"]
     volumes:
       - ./config/mimir/mimir-config.yml:/etc/mimir-config.yml
       - mimir-data:/tmp/mimir
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
-    networks:
-      - otel-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   # =====================
   # APPLICATION STACK
@@ -224,294 +171,140 @@ services:
     build:
       context: .
       dockerfile: customer/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}customer:latest
+      <<: *python-build
     container_name: customer
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
+    <<: *app-settings
     environment:
-      - INTERVAL_SECONDS=5
-      - OTEL_LOGS_EXPORTER=otlp
-      - LOG_LEVEL=DEBUG
-      - ERROR_RATE=0.1
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
-      - OTEL_SERVICE_NAME=customer
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - OTEL_METRICS_EXPORTER=otlp
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: customer
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      INTERVAL_SECONDS: 5
     depends_on:
       broker:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   supplier:
     image: ${DOCKER_REGISTRY:-}supplier:latest
     build:
       context: .
       dockerfile: supplier/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}supplier:latest
+      <<: *python-build
     container_name: supplier
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
+    <<: *app-settings
     environment:
-      - LOG_LEVEL=DEBUG
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - INTERVAL_SECONDS=5
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_LOGS_EXPORTER=otlp
-      - ERROR_RATE=0.1
-      - OTEL_SERVICE_NAME=supplier
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
-      - OTEL_METRICS_EXPORTER=otlp
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: supplier
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      INTERVAL_SECONDS: 5
     depends_on:
       broker:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   order:
     image: ${DOCKER_REGISTRY:-}order:latest
     build:
       context: .
       dockerfile: order/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}order:latest
+      <<: *python-build
     container_name: order
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
+    <<: *app-settings
     environment:
-      - OTEL_SERVICE_NAME=order
-      - ERROR_RATE=0.1
-      - OTEL_LOGS_EXPORTER=otlp
-      - DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
-      - LOG_LEVEL=DEBUG
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_METRICS_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_PYTHON_LOG_CORRELATION=true
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: order
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     depends_on:
       postgres:
         condition: service_healthy
         restart: true
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   stock:
     image: ${DOCKER_REGISTRY:-}stock:latest
     build:
       context: .
       dockerfile: stock/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}stock:latest
+      <<: *python-build
     container_name: stock
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
+    <<: *app-settings
     environment:
-      - OTEL_SERVICE_NAME=stock
-      - OTEL_TRACES_EXPORTER=otlp
-      - LOG_LEVEL=DEBUG
-      - OTEL_LOGS_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - ERROR_RATE=0.1
-      - DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
-      - OTEL_METRICS_EXPORTER=otlp
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: stock
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     depends_on:
       postgres:
         condition: service_healthy
         restart: true
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   ordercheck:
     image: ${DOCKER_REGISTRY:-}ordercheck:latest
     build:
       context: .
       dockerfile: ordercheck/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}ordercheck:latest
+      <<: *python-build
     container_name: ordercheck
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: 128M
-        reservations:
-          cpus: "0.05"
-          memory: 32M
+    <<: *app-settings
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
-      - OTEL_TRACES_EXPORTER=otlp
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - API_URL=http://order:5000
-      - OTEL_SERVICE_NAME=ordercheck
-      - ERROR_RATE=0.1
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - LOG_LEVEL=DEBUG
-      - OTEL_METRICS_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_LOGS_EXPORTER=otlp
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: ordercheck
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      API_URL: http://order:5000
     depends_on:
       broker:
         condition: service_healthy
       order:
         condition: service_started
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   suppliercheck:
     image: ${DOCKER_REGISTRY:-}suppliercheck:latest
     build:
       context: .
       dockerfile: suppliercheck/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}suppliercheck:latest
+      <<: *python-build
     container_name: suppliercheck
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: 128M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
+    <<: *app-settings
     environment:
-      - OTEL_LOGS_EXPORTER=otlp
-      - LOG_LEVEL=DEBUG
-      - ERROR_RATE=0.1
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - OTEL_SERVICE_NAME=suppliercheck
-      - OTEL_METRICS_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - API_URL=http://stock:5001
-      - OTEL_TRACES_EXPORTER=otlp
-      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: suppliercheck
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      API_URL: http://stock:5001
     depends_on:
       broker:
         condition: service_healthy
       stock:
         condition: service_started
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   ordermanagement:
     image: ${DOCKER_REGISTRY:-}ordermanagement:latest
     build:
       context: .
       dockerfile: ordermanagement/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}ordermanagement:latest
+      <<: *python-build
     container_name: ordermanagement
-    pull_policy: build
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.2"
-          memory: 128M
-        reservations:
-          cpus: "0.05"
-          memory: 32M
+    <<: *app-settings
     environment:
-      - OTEL_LOGS_EXPORTER=otlp
-      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - ERROR_RATE=0.1
-      - OTEL_METRICS_EXPORTER=otlp
-      - OTEL_PYTHON_LOG_CORRELATION=true
-      - OTEL_TRACES_EXPORTER=otlp
-      - API_URL_STOCKS=http://stock:5001
-      - INTERVAL_SECONDS=5
-      - LOG_LEVEL=DEBUG
-      - OTEL_SERVICE_NAME=ordermanagement
-      - API_URL_ORDERS=http://order:5000
+      <<: *common-otel-env
+      OTEL_SERVICE_NAME: ordermanagement
+      API_URL_ORDERS: http://order:5000
+      API_URL_STOCKS: http://stock:5001
+      INTERVAL_SECONDS: 5
     depends_on:
       order:
         condition: service_started
       stock:
         condition: service_started
       otel-collector:
-        condition: service_healthy
-    networks:
-      - otel-network
+        condition: service_started
 
   # =====================
   # DATABASE STACK
@@ -519,14 +312,13 @@ services:
   postgres:
     image: ${DOCKER_REGISTRY}${IMG_POSTGRES}
     container_name: postgres
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=yourpassword
-      - POSTGRES_DB=mydatabase
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: mydatabase
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
@@ -535,32 +327,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-    networks:
-      - otel-network
 
   adminer:
     image: ${DOCKER_REGISTRY}${IMG_ADMINER}
     container_name: adminer
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "8080:8080"
     environment:
-      - ADMINER_DEFAULT_SERVER=postgres
-      - ADMINER_DEFAULT_DB_DRIVER=pgsql
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DEFAULT_DB_DRIVER: pgsql
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - otel-network
 
   # =====================
   # MCP STACK
@@ -568,17 +347,14 @@ services:
   grafana-mcp:
     image: ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
     container_name: grafana-mcp
-    pull_policy: always
-    restart: unless-stopped
+    <<: *common-settings
     ports:
       - "8000:8000"
     environment:
-      - GRAFANA_URL=http://grafana:3000
+      GRAFANA_URL: http://grafana:3000
     depends_on:
       grafana:
         condition: service_healthy
-    networks:
-      - otel-network
 
   # =====================
   # AGENTIC NETWORK
@@ -588,36 +364,18 @@ services:
     build:
       context: .
       dockerfile: agent-orchestrator/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}agent-orchestrator:latest
+      <<: *python-build
     container_name: agent-orchestrator
-    pull_policy: build
-    restart: unless-stopped
+    <<: *app-settings
     ports:
       - "8001:8001"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
     environment:
-      - LOG_LEVEL=INFO
-      - AGENT_LOGS_URL=http://agent-logs:8002
-      - AGENT_METRICS_URL=http://agent-metrics:8003
-      - AGENT_TRACES_URL=http://agent-traces:8004
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
-      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
-      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+      <<: *common-llm-env
+      AGENT_LOGS_URL: http://agent-logs:8002
+      AGENT_METRICS_URL: http://agent-metrics:8003
+      AGENT_TRACES_URL: http://agent-traces:8004
     depends_on:
       - grafana-mcp
-    networks:
-      - otel-network
     models:
       - ai-qwen3
 
@@ -626,34 +384,16 @@ services:
     build:
       context: .
       dockerfile: agent-logs/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}agent-logs:latest
+      <<: *python-build
     container_name: agent-logs
-    pull_policy: build
-    restart: unless-stopped
+    <<: *app-settings
     ports:
       - "8002:8002"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
     environment:
-      - LOG_LEVEL=INFO
-      - MCP_GRAFANA_URL=http://grafana-mcp:8000
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
-      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
-      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+      <<: *common-llm-env
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
-    networks:
-      - otel-network
     models:
       - ai-qwen3
 
@@ -662,34 +402,16 @@ services:
     build:
       context: .
       dockerfile: agent-metrics/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}agent-metrics:latest
+      <<: *python-build
     container_name: agent-metrics
-    pull_policy: build
-    restart: unless-stopped
+    <<: *app-settings
     ports:
       - "8003:8003"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
     environment:
-      - LOG_LEVEL=INFO
-      - MCP_GRAFANA_URL=http://grafana-mcp:8000
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
-      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
-      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+      <<: *common-llm-env
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
-    networks:
-      - otel-network
     models:
       - ai-qwen3
 
@@ -698,34 +420,16 @@ services:
     build:
       context: .
       dockerfile: agent-traces/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}agent-traces:latest
+      <<: *python-build
     container_name: agent-traces
-    pull_policy: build
-    restart: unless-stopped
+    <<: *app-settings
     ports:
       - "8004:8004"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: 256M
-        reservations:
-          cpus: "0.05"
-          memory: 64M
     environment:
-      - LOG_LEVEL=INFO
-      - MCP_GRAFANA_URL=http://grafana-mcp:8000
-      - LLM_BASE_URL=${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
-      - LLM_API_KEY=${LLM_API_KEY:-not-needed}
-      - LLM_MODEL=${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+      <<: *common-llm-env
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
     depends_on:
       - grafana-mcp
-    networks:
-      - otel-network
     models:
       - ai-qwen3
 
@@ -734,31 +438,16 @@ services:
     build:
       context: .
       dockerfile: agents-ui/Dockerfile
-      args:
-        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-      cache_from:
-        - ${DOCKER_REGISTRY}agents-ui:latest
+      <<: *python-build
     container_name: agents-ui
-    pull_policy: build
-    restart: unless-stopped
+    <<: *app-settings
     ports:
       - "3002:3002"
       - "8005:8000"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
     environment:
-      - ORCHESTRATOR_URL=http://agent-orchestrator:8001
+      ORCHESTRATOR_URL: http://agent-orchestrator:8001
     depends_on:
       - agent-orchestrator
-    networks:
-      - otel-network
 
 models:
   ai-qwen3:
@@ -766,24 +455,13 @@ models:
 
 volumes:
   kafka-secrets:
-    driver: local
   kafka-data:
-    driver: local
   grafana-data:
-    driver: local
   loki-data:
-    driver: local
   tempo-data:
-    driver: local
   mimir-data:
-    driver: local
   postgres-data:
-    driver: local
 
 networks:
   otel-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.enable_icc: "true"
-      com.docker.network.bridge.enable_ip_masquerade: "true"
-    enable_ipv6: false
