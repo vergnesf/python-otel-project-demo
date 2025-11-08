@@ -13,4 +13,6 @@ config = rx.Config(
     api_url="http://localhost:8005",
     # Disable sitemap plugin to remove warnings
     disable_plugins=["reflex.plugins.sitemap.SitemapPlugin"],
+    # Use npm instead of bun
+    frontend_packages_install_command="npm install",
 )

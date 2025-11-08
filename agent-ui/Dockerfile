@@ -35,7 +35,7 @@ RUN uv run --no-dev reflex init
 # ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
-# Update OS packages and install only Node.js and unzip (for Reflex runtime)
+# Update OS packages and install Node.js and unzip (for Reflex runtime with npm)
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y ca-certificates curl gnupg unzip && \

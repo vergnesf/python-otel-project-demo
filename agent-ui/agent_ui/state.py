@@ -2,9 +2,11 @@
 State management for Agents UI
 """
 
+import os
 import reflex as rx
 from typing import Any
 from pydantic import BaseModel
+import httpx
 
 
 class QA(BaseModel):
@@ -68,11 +70,34 @@ class ChatState(rx.State):
         self.processing = True
         yield
 
-        # TODO: Call orchestrator API here
-        # For now, just echo back
-        answer = (
-            f"You asked: {question}\n\nThis will be connected to the orchestrator API."
+        # Call orchestrator API
+        orchestrator_url = os.getenv(
+            "ORCHESTRATOR_URL", "http://agent-orchestrator:8001"
         )
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    f"{orchestrator_url}/analyze",
+                    json={"query": question, "time_range": "1h"},
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                # Format the response
+                answer_parts = [f"**Summary:**\n{result['summary']}"]
+
+                if result.get("recommendations"):
+                    answer_parts.append("\n\n**Recommendations:**")
+                    for rec in result["recommendations"]:
+                        answer_parts.append(f"- {rec}")
+
+                answer = "\n".join(answer_parts)
+
+        except httpx.HTTPError as e:
+            answer = f"❌ Error connecting to orchestrator: {str(e)}\n\nPlease ensure the orchestrator service is running."
+        except Exception as e:
+            answer = f"❌ Unexpected error: {str(e)}"
 
         self.chats[-1].answer = answer
         self.processing = False

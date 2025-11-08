@@ -1,27 +1,48 @@
 # pyright: reportMissingImports=false
 """
-Metrics analysis logic using MCP Grafana client
+Metrics analysis logic using MCP Grafana client and LLM
+NO business logic - just MCP data retrieval + LLM analysis
 """
 
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-from common_ai import MCPGrafanaClient
+from common_ai import MCPGrafanaClient, get_llm
 
 logger = logging.getLogger(__name__)
+
+# Load prompts from markdown files
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+def load_prompt(filename: str) -> str:
+    """Load a prompt template from a markdown file"""
+    prompt_path = PROMPTS_DIR / filename
+    if prompt_path.exists():
+        return prompt_path.read_text()
+    logger.warning(f"Prompt file not found: {filename}")
+    return ""
 
 
 class MetricsAnalyzer:
     """
-    Analyzer for metrics data from Mimir via MCP
+    Analyzer for metrics data from Mimir via MCP with LLM-powered analysis
     """
 
     def __init__(self):
-        """Initialize metrics analyzer with MCP client"""
+        """Initialize metrics analyzer with MCP client and LLM"""
         self.mcp_url = os.getenv("MCP_GRAFANA_URL", "http://grafana-mcp:8000")
         self.mcp_client = MCPGrafanaClient(base_url=self.mcp_url)
+
+        # Initialize LLM for intelligent analysis
+        try:
+            self.llm = get_llm()
+            logger.info("LLM initialized for metrics analysis")
+        except Exception as e:
+            logger.warning(f"LLM not available, using basic analysis: {e}")
+            self.llm = None
 
     async def close(self):
         """Close MCP client"""
@@ -52,11 +73,14 @@ class MetricsAnalyzer:
         promql_queries = self._build_promql_queries(query, context)
         logger.info(f"Generated PromQL queries: {len(promql_queries)}")
 
-        # Query Mimir via MCP (mock for now)
+        # Query Mimir via MCP
         metrics_data = await self._query_mimir(promql_queries, time_range)
 
-        # Analyze metrics data
-        analysis = self._analyze_metrics(metrics_data, query, context)
+        # Analyze metrics data with LLM if available
+        if self.llm and metrics_data:
+            analysis = await self._analyze_metrics_with_llm(metrics_data, query, context, time_range)
+        else:
+            analysis = self._analyze_metrics(metrics_data, query, context)
 
         return {
             "agent_name": "metrics",
@@ -276,6 +300,79 @@ class MetricsAnalyzer:
             },
             "confidence": 0.85 if anomalies else 0.7,
         }
+
+    async def _analyze_metrics_with_llm(
+        self,
+        metrics_data: dict[str, Any],
+        query: str,
+        context: dict[str, Any],
+        time_range: str,
+    ) -> dict[str, Any]:
+        """
+        Use LLM to analyze metrics data - NO calculations, just LLM analysis
+
+        Args:
+            metrics_data: Raw metrics from Mimir (via MCP)
+            query: Original user query
+            context: Request context
+            time_range: Time range
+
+        Returns:
+            Analysis with summary and raw data from MCP
+        """
+        # Extract raw metrics from MCP (no calculations!)
+        error_rate = metrics_data.get("error_rate", 0)
+        request_rate = metrics_data.get("request_rate", 0)
+        latency_p95 = metrics_data.get("latency_p95", 0)
+        cpu_usage = metrics_data.get("cpu_usage", 0)
+        memory_mb = metrics_data.get("memory_mb", 0)
+
+        services = context.get("services", ["services"])
+        service_name = services[0] if services else "services"
+
+        # Prepare anomalies text (simple formatting, no logic)
+        anomalies_text = []
+        if error_rate > 0.05:
+            anomalies_text.append(f"- Error rate: {error_rate*100:.1f}% (threshold: <5%)")
+        if latency_p95 > 200:
+            anomalies_text.append(f"- Latency P95: {latency_p95:.0f}ms (threshold: <200ms)")
+        if cpu_usage > 80:
+            anomalies_text.append(f"- CPU usage: {cpu_usage:.1f}% (threshold: <80%)")
+
+        # Load prompt template from markdown file
+        prompt_template = load_prompt("analyze_metrics.md")
+        if not prompt_template:
+            # Fallback
+            return self._analyze_metrics(metrics_data, query, context)
+
+        # Replace variables in template
+        prompt = prompt_template.format(
+            query=query,
+            service_name=service_name,
+            time_range=time_range,
+            error_rate=f"{error_rate*100:.1f}%",
+            request_rate=f"{request_rate:.1f}",
+            latency_p95=f"{latency_p95:.0f}",
+            cpu_usage=f"{cpu_usage:.1f}",
+            memory_mb=f"{memory_mb:.0f}",
+            anomalies="\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
+        )
+
+        try:
+            response = self.llm.invoke(prompt)
+            llm_analysis = response.content if hasattr(response, "content") else str(response)
+            logger.info("LLM metrics analysis complete")
+
+            # Return raw MCP data + LLM analysis (no calculations!)
+            return {
+                "summary": llm_analysis,
+                "data": metrics_data,  # Raw data from MCP
+                "confidence": 0.95 if error_rate > 0 or latency_p95 > 0 else 0.8,
+            }
+
+        except Exception as e:
+            logger.warning(f"LLM analysis failed: {e}, using fallback")
+            return self._analyze_metrics(metrics_data, query, context)
 
     def _generate_grafana_links(self, promql: str, time_range: str) -> list[str]:
         """

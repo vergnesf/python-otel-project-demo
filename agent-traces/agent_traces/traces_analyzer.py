@@ -1,27 +1,48 @@
 # pyright: reportMissingImports=false
 """
-Traces analysis logic using MCP Grafana client
+Traces analysis logic using MCP Grafana client and LLM
+NO business logic - just MCP data retrieval + LLM analysis
 """
 
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
-from common_ai import MCPGrafanaClient
+from common_ai import MCPGrafanaClient, get_llm
 
 logger = logging.getLogger(__name__)
+
+# Load prompts from markdown files
+PROMPTS_DIR = Path(__file__).parent / "prompts"
+
+def load_prompt(filename: str) -> str:
+    """Load a prompt template from a markdown file"""
+    prompt_path = PROMPTS_DIR / filename
+    if prompt_path.exists():
+        return prompt_path.read_text()
+    logger.warning(f"Prompt file not found: {filename}")
+    return ""
 
 
 class TracesAnalyzer:
     """
-    Analyzer for distributed traces from Tempo via MCP
+    Analyzer for distributed traces from Tempo via MCP with LLM-powered analysis
     """
 
     def __init__(self):
-        """Initialize traces analyzer with MCP client"""
+        """Initialize traces analyzer with MCP client and LLM"""
         self.mcp_url = os.getenv("MCP_GRAFANA_URL", "http://grafana-mcp:8000")
         self.mcp_client = MCPGrafanaClient(base_url=self.mcp_url)
+
+        # Initialize LLM for intelligent analysis
+        try:
+            self.llm = get_llm()
+            logger.info("LLM initialized for traces analysis")
+        except Exception as e:
+            logger.warning(f"LLM not available, using basic analysis: {e}")
+            self.llm = None
 
     async def close(self):
         """Close MCP client"""
@@ -52,11 +73,14 @@ class TracesAnalyzer:
         traceql_query = self._build_traceql_query(query, context)
         logger.info(f"Generated TraceQL: {traceql_query}")
 
-        # Query Tempo via MCP (mock for now)
+        # Query Tempo via MCP
         traces_data = await self._query_tempo(traceql_query, time_range)
 
-        # Analyze trace data
-        analysis = self._analyze_traces(traces_data, query, context)
+        # Analyze trace data with LLM if available
+        if self.llm and traces_data.get("traces"):
+            analysis = await self._analyze_traces_with_llm(traces_data, query, context, time_range)
+        else:
+            analysis = self._analyze_traces(traces_data, query, context)
 
         return {
             "agent_name": "traces",
@@ -248,6 +272,86 @@ class TracesAnalyzer:
         # TODO: Generate actual Grafana Explore URLs
         base_url = "http://grafana:3000/explore"
         return [f"{base_url}?query={traceql}&range={time_range}"]
+
+    async def _analyze_traces_with_llm(
+        self,
+        traces_data: dict[str, Any],
+        query: str,
+        context: dict[str, Any],
+        time_range: str,
+    ) -> dict[str, Any]:
+        """
+        Use LLM to analyze trace data - NO calculations, just LLM analysis
+
+        Args:
+            traces_data: Raw traces from Tempo (via MCP)
+            query: Original user query
+            context: Request context
+            time_range: Time range
+
+        Returns:
+            Analysis with summary and raw data from MCP
+        """
+        traces = traces_data.get("traces", [])
+        total_traces = len(traces)
+
+        # Simple statistics (no complex calculations!)
+        slow_count = sum(1 for t in traces if t.get("duration_ms", 0) > 500)
+        failed_count = sum(1 for t in traces if t.get("error", False))
+        avg_duration = sum(t.get("duration_ms", 0) for t in traces) / total_traces if total_traces > 0 else 0
+
+        # Extract unique services (simple set operation)
+        services = set()
+        for trace in traces:
+            for span in trace.get("spans", []):
+                services.add(span.get("service_name", "unknown"))
+
+        # Prepare trace samples for LLM
+        trace_samples_text = []
+        for trace in traces[:5]:
+            trace_id = trace.get("trace_id", "")[:16]
+            duration = trace.get("duration_ms", 0)
+            spans = len(trace.get("spans", []))
+            error = trace.get("error", False)
+            trace_samples_text.append(f"- {trace_id}: {duration}ms, {spans} spans, error={error}")
+
+        # Load prompt template from markdown file
+        prompt_template = load_prompt("analyze_traces.md")
+        if not prompt_template:
+            # Fallback
+            return self._analyze_traces(traces_data, query, context)
+
+        # Replace variables in template
+        prompt = prompt_template.format(
+            query=query,
+            time_range=time_range,
+            total_traces=total_traces,
+            avg_duration=f"{avg_duration:.0f}",
+            slow_traces=slow_count,
+            failed_traces=failed_count,
+            services_count=len(services),
+            trace_samples="\n".join(trace_samples_text) if trace_samples_text else "No traces found"
+        )
+
+        try:
+            response = self.llm.invoke(prompt)
+            llm_analysis = response.content if hasattr(response, "content") else str(response)
+            logger.info("LLM traces analysis complete")
+
+            # Return raw MCP data + LLM analysis (no calculations!)
+            return {
+                "summary": llm_analysis,
+                "data": {
+                    "total_traces": total_traces,
+                    "avg_duration_ms": avg_duration,
+                    "sample_traces": traces[:5],  # Raw samples from MCP
+                },
+                "confidence": 0.95 if total_traces > 0 else 0.5,
+            }
+
+        except Exception as e:
+            logger.warning(f"LLM analysis failed: {e}, using fallback")
+            return self._analyze_traces(traces_data, query, context)
 
     async def check_mcp_health(self) -> bool:
         """

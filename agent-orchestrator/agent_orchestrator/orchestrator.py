@@ -55,6 +55,38 @@ class Orchestrator:
         """
         logger.info(f"Analyzing query: {query}")
 
+        # First, understand the query intent
+        intent = self._understand_query_intent(query)
+        logger.info(f"Query intent: {intent}")
+
+        # Handle non-observability queries (greetings, etc.)
+        if intent == "greeting":
+            from datetime import datetime
+            return {
+                "query": query,
+                "summary": "👋 Bonjour ! Je suis votre assistant d'observabilité. Je peux vous aider à analyser la santé de vos services en examinant les logs, métriques et traces. N'hésitez pas à me poser des questions sur vos applications !",
+                "agent_responses": {},
+                "recommendations": [
+                    "Demandez-moi par exemple : 'Quelle est la santé de mes services ?'",
+                    "Ou : 'Y a-t-il des erreurs dans le service customer ?'",
+                    "Ou : 'Quels services ont des problèmes de performance ?'"
+                ],
+                "timestamp": datetime.now(),
+            }
+        elif intent == "general":
+            from datetime import datetime
+            return {
+                "query": query,
+                "summary": "Je suis spécialisé dans l'analyse d'observabilité (logs, métriques, traces). Pourriez-vous reformuler votre question pour qu'elle concerne la santé ou les performances de vos services ?",
+                "agent_responses": {},
+                "recommendations": [
+                    "Posez des questions sur les erreurs, la performance, ou la santé des services",
+                    "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'"
+                ],
+                "timestamp": datetime.now(),
+            }
+
+        # For observability queries, proceed with agent coordination
         # Prepare request for agents
         agent_request = {
             "query": query,
@@ -135,6 +167,50 @@ class Orchestrator:
             logger.error(f"Failed to query agent at {agent_url}: {e}")
             raise
 
+    def _understand_query_intent(self, query: str) -> str:
+        """
+        Understand the intent of the user query
+
+        Args:
+            query: User query
+
+        Returns:
+            Intent type: "greeting", "general", or "observability"
+        """
+        query_lower = query.lower().strip()
+
+        # Check for greetings
+        greetings = [
+            "hello", "hi", "hey", "bonjour", "salut", "bonsoir",
+            "good morning", "good afternoon", "good evening"
+        ]
+        if any(greeting in query_lower for greeting in greetings):
+            # Check if it's just a greeting or a greeting + question
+            if len(query_lower.split()) <= 3:
+                return "greeting"
+
+        # Check for observability-related keywords
+        observability_keywords = [
+            "error", "erreur", "log", "metric", "métrique", "trace",
+            "performance", "latency", "latence", "service", "health", "santé",
+            "status", "statut", "slow", "lent", "fast", "rapide",
+            "issue", "problème", "problem", "fail", "échec",
+            "availability", "disponibilité", "rate", "taux"
+        ]
+
+        if any(keyword in query_lower for keyword in observability_keywords):
+            return "observability"
+
+        # Check for questions that require observability data
+        question_indicators = ["?", "what", "how", "why", "when", "where", "which",
+                               "quoi", "comment", "pourquoi", "quand", "où", "quel"]
+        if any(indicator in query_lower for indicator in question_indicators):
+            # If it contains a question but no observability keywords
+            return "general"
+
+        # Default to general for other queries
+        return "general"
+
     def _extract_context(self, query: str) -> dict[str, Any]:
         """
         Extract context from user query
@@ -177,7 +253,7 @@ class Orchestrator:
         traces: dict | None,
     ) -> dict[str, Any]:
         """
-        Synthesize responses from all agents into a coherent summary
+        Synthesize responses from all agents into a coherent summary using LLM
 
         Args:
             query: Original user query
@@ -187,6 +263,149 @@ class Orchestrator:
 
         Returns:
             Synthesized summary and recommendations
+        """
+        from datetime import datetime
+
+        # If LLM is available, use it for intelligent synthesis
+        if self.llm:
+            try:
+                return self._synthesize_with_llm(query, logs, metrics, traces)
+            except Exception as e:
+                logger.warning(f"LLM synthesis failed, falling back to basic synthesis: {e}")
+
+        # Fallback to basic synthesis
+        return self._basic_synthesis(query, logs, metrics, traces)
+
+    def _synthesize_with_llm(
+        self,
+        query: str,
+        logs: dict | None,
+        metrics: dict | None,
+        traces: dict | None,
+    ) -> dict[str, Any]:
+        """
+        Use LLM to synthesize agent responses intelligently
+
+        Args:
+            query: Original user query
+            logs: Response from logs agent
+            metrics: Response from metrics agent
+            traces: Response from traces agent
+
+        Returns:
+            Synthesized summary and recommendations
+        """
+        from datetime import datetime
+
+        # Prepare context for LLM
+        context_parts = ["## User Question", query, "", "## Agent Analysis Results", ""]
+
+        if logs and "analysis" in logs:
+            context_parts.append(f"### Logs Agent (Confidence: {logs.get('confidence', 0):.0%})")
+            context_parts.append(logs['analysis'])
+            if logs.get('data'):
+                context_parts.append(f"- Total logs: {logs['data'].get('total_logs', 0)}")
+                context_parts.append(f"- Error count: {logs['data'].get('error_count', 0)}")
+            context_parts.append("")
+
+        if metrics and "analysis" in metrics:
+            context_parts.append(f"### Metrics Agent (Confidence: {metrics.get('confidence', 0):.0%})")
+            context_parts.append(metrics['analysis'])
+            if metrics.get('data'):
+                context_parts.append(f"- Error rate: {metrics['data'].get('error_rate', 0):.1%}")
+                context_parts.append(f"- Request rate: {metrics['data'].get('request_rate', 0):.1f} req/s")
+                context_parts.append(f"- Latency p95: {metrics['data'].get('latency_p95', 0)}ms")
+            context_parts.append("")
+
+        if traces and "analysis" in traces:
+            context_parts.append(f"### Traces Agent (Confidence: {traces.get('confidence', 0):.0%})")
+            context_parts.append(traces['analysis'])
+            if traces.get('data'):
+                context_parts.append(f"- Total traces: {traces['data'].get('total_traces', 0)}")
+                context_parts.append(f"- Slow traces: {traces['data'].get('slow_traces', 0)}")
+                context_parts.append(f"- Failed traces: {traces['data'].get('failed_traces', 0)}")
+            context_parts.append("")
+
+        context = "\n".join(context_parts)
+
+        # Create prompt for LLM
+        prompt = f"""{context}
+
+## Your Task
+You are an expert Site Reliability Engineer analyzing observability data from multiple sources.
+
+Based on the analysis from the Logs, Metrics, and Traces agents above, provide:
+
+1. **A coherent synthesis** that combines insights from all three agents to answer the user's question
+2. **Key findings** with severity levels (Critical, High, Medium, Low)
+3. **Root cause analysis** if patterns emerge across multiple signals
+4. **Actionable recommendations** prioritized by impact
+
+Format your response in markdown with clear sections. Be concise but thorough.
+Focus on correlations between logs, metrics, and traces to identify real issues.
+"""
+
+        # Call LLM
+        logger.info("Synthesizing agent responses with LLM...")
+        response = self.llm.invoke(prompt)
+
+        # Extract text from response
+        if hasattr(response, 'content'):
+            summary = response.content
+        else:
+            summary = str(response)
+
+        # Extract recommendations from the LLM response
+        recommendations = []
+        if "recommendations" in summary.lower() or "recommend" in summary.lower():
+            # Parse recommendations from the LLM response
+            lines = summary.split('\n')
+            in_recommendations = False
+            for line in lines:
+                if 'recommendation' in line.lower():
+                    in_recommendations = True
+                    continue
+                if in_recommendations and line.strip().startswith(('-', '*', '•')):
+                    recommendations.append(line.strip().lstrip('-*•').strip())
+                elif in_recommendations and line.strip() and not line.strip().startswith('#'):
+                    recommendations.append(line.strip())
+                elif in_recommendations and line.startswith('#'):
+                    break
+
+        # Add data-driven recommendations
+        if metrics and metrics.get('data', {}).get('anomalies'):
+            for anomaly in metrics['data']['anomalies']:
+                recommendations.append(
+                    f"Address {anomaly['severity']} severity anomaly in {anomaly['metric']}"
+                )
+
+        return {
+            "summary": summary,
+            "recommendations": recommendations if recommendations else [
+                "Monitor the situation closely",
+                "Review Grafana dashboards for additional context"
+            ],
+            "timestamp": datetime.now(),
+        }
+
+    def _basic_synthesis(
+        self,
+        query: str,
+        logs: dict | None,
+        metrics: dict | None,
+        traces: dict | None,
+    ) -> dict[str, Any]:
+        """
+        Basic synthesis without LLM (fallback)
+
+        Args:
+            query: Original user query
+            logs: Response from logs agent
+            metrics: Response from metrics agent
+            traces: Response from traces agent
+
+        Returns:
+            Basic synthesized summary and recommendations
         """
         from datetime import datetime
 
