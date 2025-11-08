@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 from pydantic import BaseModel, Field
 
 from common_models.models import WoodType

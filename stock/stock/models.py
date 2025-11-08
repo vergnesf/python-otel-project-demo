@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 from sqlalchemy import Column, Enum, Integer
 
 from common_models.models import WoodType

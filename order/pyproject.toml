@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "common-models",
     "flasgger>=0.9.7.1",
     "flask>=3.0.3",
     "flask-sqlalchemy>=3.1.1",
@@ -20,3 +21,6 @@ dev = [
     "black",
     "pyright",
 ]
+
+[tool.uv.sources]
+common-models = { path = "../common-models" }

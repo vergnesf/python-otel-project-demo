@@ -28,7 +28,7 @@ COPY agents-ui/agents_ui /app/agents_ui
 COPY agents-ui/rxconfig.py /app/rxconfig.py
 
 # Initialize Reflex (install frontend deps and build)
-RUN uv run reflex init
+RUN uv run --no-dev reflex init
 
 # ============================================
 # Runtime stage: slim image with venv and app

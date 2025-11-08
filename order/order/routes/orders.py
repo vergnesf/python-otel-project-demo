@@ -82,6 +82,8 @@ def create_order_route():
     if random.random() < ERROR_RATE:
         return jsonify({"error": "Simulated DB insertion error"}), 500
     data = request.json
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
     db = next(get_db())
     order_data = schemas.OrderCreate(**data)
     try:
@@ -301,7 +303,7 @@ def update_order_status_route(order_id):
             502,
         )
     data = request.json
-    if "order_status" not in data:
+    if not data or "order_status" not in data:
         return jsonify({"error": "Missing 'order_status' in request body"}), 400
 
     try:
@@ -329,4 +331,8 @@ def update_order_status_route(order_id):
             jsonify({"error": "Unexpected error during order status update"}),
             500,
         )
+    
+    if updated_order is None:
+        return jsonify({"error": "Order not found"}), 404
+    
     return jsonify(updated_order.to_dict()), 200

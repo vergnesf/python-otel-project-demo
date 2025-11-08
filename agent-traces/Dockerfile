@@ -1,28 +1,7 @@
-# Multi-stage build for minimal image size
+# Single-stage build - simpler and avoids shebang issues
 ARG DOCKER_REGISTRY=""
 ARG IMG_PYTHON="python:3.14-slim"
 
-# ============================================
-# Builder stage: Install dependencies
-# ============================================
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS builder
-
-WORKDIR /app
-
-# Copy dependency files
-COPY agent-traces/pyproject.toml /app/pyproject.toml
-COPY common-ai/common_ai/ /app/common-ai/common_ai
-COPY common-ai/pyproject.toml /app/common-ai/pyproject.toml
-
-# Install uv and dependencies
-RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
-    
-    uv pip install -e /app/common-ai
-
-# ============================================
-# Runtime stage: Minimal image
-# ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 # Update OS packages
@@ -36,14 +15,18 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 # Enable Python 3.14 JIT compiler for performance optimization
 ENV PYTHON_JIT=1
 
-WORKDIR /app
+WORKDIR /app/agent-traces
 
-# Copy only the virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/common-ai /app/common-ai
+# Copy dependency files from root context
+COPY agent-traces/pyproject.toml ./pyproject.toml
+COPY common-ai ../common-ai
+
+# Install uv and dependencies
+RUN pip install --no-cache-dir uv && \
+    uv sync --no-dev
 
 # Copy application code
-COPY agent-traces/agent_traces /app/agent_traces
+COPY agent-traces/agent_traces ../agent_traces
 
 # Set ownership to non-root user
 RUN chown -R appuser:appuser /app
@@ -52,10 +35,10 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Set PATH to use venv
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/agent-traces/.venv/bin:$PATH"
 ENV PYTHONPATH="/app:$PYTHONPATH"
 
 EXPOSE 8004
 
-# Set the default command to run the traces agent
-CMD ["uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
+# Set the default command
+CMD ["uv", "run", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]

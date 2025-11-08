@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 from sqlalchemy.orm import Session
 
 from common_models.models import WoodType
@@ -16,7 +17,7 @@ def create_stock(db: Session, stock: schemas.StockCreate):
 
     if db_stock:
         # Mettre à jour le stock existant
-        db_stock.quantity += stock.quantity
+        db_stock.quantity += stock.quantity  # type: ignore[misc]
     else:
         # Créer un nouveau stock
         db_stock = models.Stock(wood_type=stock.wood_type, quantity=stock.quantity)
@@ -33,8 +34,8 @@ def get_stock_by_wood_type(db: Session, wood_type: WoodType):
 
 def decrease_stock_quantity(db: Session, wood_type: str, quantity: int) -> None:
     stock = get_stock_by_wood_type(db, wood_type)
-    if stock and stock.quantity >= quantity:
-        stock.quantity -= quantity
+    if stock and stock.quantity is not None and stock.quantity >= quantity:  # type: ignore[misc]
+        stock.quantity -= quantity  # type: ignore[misc]
         db.commit()
     else:
         raise ValueError("Insufficient stock or stock not found")

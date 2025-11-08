@@ -31,7 +31,7 @@ class LogsAnalyzer:
         self,
         query: str,
         time_range: str = "1h",
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Analyze logs based on user query

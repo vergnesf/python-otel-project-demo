@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize analyzer (will be set in lifespan)
-analyzer = None
+analyzer: LogsAnalyzer | None = None
 
 
 @asynccontextmanager
@@ -37,7 +37,8 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("Logs Agent shutting down...")
-    await analyzer.close()
+    if analyzer:
+        await analyzer.close()
 
 
 app = FastAPI(
@@ -71,6 +72,9 @@ async def analyze(request: AnalyzeRequest):
 
     Uses MCP Grafana server to query Loki and provides intelligent analysis.
     """
+    if not analyzer:
+        raise HTTPException(status_code=503, detail="Analyzer not initialized")
+    
     try:
         logger.info(f"Logs agent received query: {request.query}")
         result = await analyzer.analyze(
@@ -92,6 +96,13 @@ async def health():
 
     Checks connectivity to MCP Grafana server.
     """
+    if not analyzer:
+        return HealthResponse(
+            status="unhealthy",
+            mcp_server="unreachable",
+            timestamp=datetime.now(),
+        )
+    
     mcp_status = await analyzer.check_mcp_health()
 
     return HealthResponse(

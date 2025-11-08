@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize orchestrator (will be set in lifespan)
-orchestrator = None
+orchestrator: Orchestrator | None = None
 
 
 @asynccontextmanager

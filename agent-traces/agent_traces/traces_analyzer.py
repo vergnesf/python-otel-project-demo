@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """
 Traces analysis logic using MCP Grafana client
 """
@@ -31,7 +32,7 @@ class TracesAnalyzer:
         self,
         query: str,
         time_range: str = "1h",
-        context: dict[str, Any] = None,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Analyze distributed traces based on user query

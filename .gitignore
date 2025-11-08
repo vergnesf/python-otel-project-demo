@@ -20,3 +20,6 @@
 uv.lock
 
 .env
+
+*.egg-info
+build/
