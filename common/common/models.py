@@ -27,7 +27,7 @@ class Stock(BaseModel):
     quantity: int
 
     def to_json(self):
-        return self.json()
+        return self.model_dump_json()
 
 
 class Order(BaseModel):
@@ -35,7 +35,7 @@ class Order(BaseModel):
     quantity: int
 
     def to_json(self):
-        return self.json()
+        return self.model_dump_json()
 
 
 class OrderTracking(BaseModel):
@@ -46,4 +46,4 @@ class OrderTracking(BaseModel):
     date: datetime
 
     def to_json(self):
-        return self.json()
+        return self.model_dump_json()

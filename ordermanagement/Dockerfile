@@ -5,18 +5,24 @@ FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root
 
+# Enable Python 3.14 JIT compiler for performance optimization
+ENV PYTHON_JIT=1
+
 # Set the working directory
 WORKDIR /app
 
-# Copy uv configuration files
-COPY ordermanagement/pyproject.toml /app/
-COPY ordermanagement/ordermanagement /app
+# Copy only dependency files first (for better layer caching)
+COPY ordermanagement/pyproject.toml /app/pyproject.toml
 COPY common/common/ /app/common/common
 
 # Install uv and dependencies (excluding dev dependencies)
+# This layer will be cached unless dependencies change
 RUN pip install uv && \
     uv sync --no-dev && \
     uv run opentelemetry-bootstrap -a install
+
+# Copy application code (invalidates cache only when code changes)
+COPY ordermanagement/ordermanagement /app
 
 # Set the default command to run the producer
 CMD ["uv", "run", "opentelemetry-instrument", "python", "/app/ordermanagement.py"]

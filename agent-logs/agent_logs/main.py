@@ -4,6 +4,7 @@ FastAPI application for the Logs Agent
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
@@ -19,14 +20,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize analyzer (will be set in lifespan)
+analyzer = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    global analyzer
+    # Startup
+    logger.info("Logs Agent starting up...")
+    logger.info(
+        f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}"
+    )
+    analyzer = LogsAnalyzer()
+    yield
+    # Shutdown
+    logger.info("Logs Agent shutting down...")
+    await analyzer.close()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Logs Agent API",
     description="Specialized agent for analyzing logs from Loki via MCP",
     version="0.1.0",
 )
-
-# Initialize analyzer
-analyzer = LogsAnalyzer()
 
 
 class AnalyzeRequest(BaseModel):
@@ -80,19 +99,3 @@ async def health():
         mcp_server="reachable" if mcp_status else "unreachable",
         timestamp=datetime.now(),
     )
-
-
-@app.on_event("startup")
-async def startup():
-    """Application startup"""
-    logger.info("Logs Agent starting up...")
-    logger.info(
-        f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}"
-    )
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    """Application shutdown"""
-    logger.info("Logs Agent shutting down...")
-    await analyzer.close()
