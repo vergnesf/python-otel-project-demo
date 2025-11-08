@@ -11,11 +11,14 @@ WORKDIR /app
 
 # Copy dependency files
 COPY agent-logs/pyproject.toml /app/pyproject.toml
-COPY common/common/ /app/common/common
+COPY common-ai/common_ai/ /app/common-ai/common_ai
+COPY common-ai/pyproject.toml /app/common-ai/pyproject.toml
 
 # Install uv and dependencies
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev
+    uv sync --no-dev && \
+    
+    uv pip install -e /app/common-ai
 
 # ============================================
 # Runtime stage: Minimal image
@@ -28,7 +31,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
 # Enable Python 3.14 JIT compiler for performance optimization
 ENV PYTHON_JIT=1
@@ -37,7 +40,7 @@ WORKDIR /app
 
 # Copy only the virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/common /app/common
+COPY --from=builder /app/common-ai /app/common-ai
 
 # Copy application code
 COPY agent-logs/agent_logs /app/agent_logs
@@ -50,6 +53,7 @@ USER appuser
 
 # Set PATH to use venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app:$PYTHONPATH"
 
 EXPOSE 8002
 

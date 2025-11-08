@@ -484,7 +484,7 @@ services:
       - POSTGRES_PASSWORD=yourpassword
       - POSTGRES_DB=mydatabase
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s

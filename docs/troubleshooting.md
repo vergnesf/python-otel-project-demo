@@ -92,25 +92,34 @@
 
 ### Common Module Not Found
 
-**Symptoms**: `ModuleNotFoundError: No module named 'common'` when running locally
+**Symptoms**: 
+- `ModuleNotFoundError: No module named 'common_models'` in business services
+- `ModuleNotFoundError: No module named 'common_ai'` in AI agents
 
 **Solutions**:
 
-**Option 1: Install common as editable**
+**For Business Services** (order, stock, customer, etc.):
+```bash
+cd order/
+uv pip install -e ../common-models/
+uv run uvicorn order.main:app --reload
+```
+
+**For AI Agents** (agent-logs, agent-orchestrator, etc.):
 ```bash
 cd agent-logs/
-uv pip install -e ../common/
+uv pip install -e ../common-ai/
 uv run uvicorn agent_logs.main:app --reload
 ```
 
-**Option 2: Use PYTHONPATH**
+**Using PYTHONPATH**:
 ```bash
 export PYTHONPATH=/path/to/project:$PYTHONPATH
 cd agent-logs/
 uv run uvicorn agent_logs.main:app --reload
 ```
 
-**Option 3: Use Docker** (recommended for development)
+**Using Docker** (recommended for development):
 ```bash
 docker-compose up agent-logs
 ```
@@ -132,9 +141,24 @@ docker-compose up agent-logs
 
    If not available, temporarily revert to Python 3.13 in Dockerfiles and pyproject.toml
 
-3. Verify `common` module is copied correctly in Dockerfile:
+3. Verify shared modules are copied correctly in Dockerfile:
    ```dockerfile
-   COPY common/common/ /app/common/common
+   # For business services
+   COPY common-models/pyproject.toml /app/common-models/pyproject.toml
+   COPY common-models/common_models/ /app/common-models/common_models
+   
+   # For AI agents
+   COPY common-ai/pyproject.toml /app/common-ai/pyproject.toml
+   COPY common-ai/common_ai/ /app/common-ai/common_ai
+   ```
+
+4. Check modules are installed in builder stage:
+   ```dockerfile
+   # Business services
+   RUN uv pip install -e /app/common-models
+   
+   # AI agents
+   RUN uv pip install -e /app/common-ai
    ```
 
 ### Kafka Connection Issues

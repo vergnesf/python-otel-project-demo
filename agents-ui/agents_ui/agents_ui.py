@@ -1,151 +1,169 @@
 """
-Main Reflex application for the Agents UI
+Main Reflex application for the Agents UI - Professional dark theme
 """
 
 import reflex as rx
+from pydantic import BaseModel
 
-from .state import ChatState
+from .state import ChatState, QA
 
 
-def message_box(message: dict) -> rx.Component:
-    """
-    Render a single chat message
+def message_content(text: str, is_user: bool = False) -> rx.Component:
+    """Create a message content component.
 
     Args:
-        message: Message dictionary with 'role' and 'content'
+        text: The text to display.
+        is_user: Whether this is a user message.
 
     Returns:
-        Reflex component for the message
+        A component displaying the message.
     """
-    is_user = message["role"] == "user"
+    return rx.markdown(
+        text,
+        background_color="#2563EB" if is_user else "#1F2937",
+        color="white",
+        display="inline-block",
+        padding="12px 16px",
+        border_radius="12px",
+    )
 
+
+def message(qa: QA) -> rx.Component:
+    """A single question/answer message.
+
+    Args:
+        qa: The question/answer pair.
+
+    Returns:
+        A component displaying the question/answer pair.
+    """
     return rx.box(
-        rx.hstack(
-            rx.box(
-                rx.text(
-                    "You" if is_user else "🤖 Agent",
-                    font_weight="bold",
-                    font_size="sm",
-                    color="blue.600" if is_user else "purple.600",
-                ),
-                rx.text(
-                    message["content"],
-                    white_space="pre-wrap",
-                    margin_top="2",
-                ),
-                padding="4",
-                border_radius="lg",
-                background_color="blue.50" if is_user else "purple.50",
-                border=f"1px solid {'var(--blue-200)' if is_user else 'var(--purple-200)'}",
-                width="100%",
-            ),
-            justify_content="flex-start" if not is_user else "flex-end",
-            width="100%",
+        rx.box(
+            message_content(qa.question, is_user=True),
+            text_align="right",
+            margin_bottom="12px",
         ),
-        margin_bottom="4",
+        rx.cond(
+            qa.answer != "",
+            rx.box(
+                message_content(qa.answer, is_user=False),
+                text_align="left",
+                margin_bottom="12px",
+            ),
+        ),
+        max_width="50em",
+        margin_inline="auto",
+    )
+
+
+def chat_area() -> rx.Component:
+    """List all the messages in a single conversation."""
+    return rx.auto_scroll(
+        rx.foreach(ChatState.chats, message),
+        flex="1",
+        padding="16px",
+        background_color="#0F172A",
+    )
+
+
+def action_bar() -> rx.Component:
+    """The action bar to send a new message."""
+    return rx.center(
+        rx.vstack(
+            rx.form(
+                rx.hstack(
+                    rx.input(
+                        placeholder="Ask about your microservices...",
+                        id="question",
+                        flex="1",
+                        background_color="#1F2937",
+                        border="1px solid #374151",
+                        color="white",
+                        _placeholder={"color": "#9CA3AF"},
+                        _focus={
+                            "border_color": "#2563EB",
+                            "outline": "none",
+                        },
+                    ),
+                    rx.button(
+                        "Send",
+                        loading=ChatState.processing,
+                        disabled=ChatState.processing,
+                        type="submit",
+                        background_color="#2563EB",
+                        color="white",
+                        _hover={
+                            "background_color": "#1D4ED8",
+                        },
+                    ),
+                    max_width="50em",
+                    margin="0 auto",
+                    align_items="center",
+                    spacing="3",
+                ),
+                reset_on_submit=True,
+                on_submit=ChatState.send_message,
+            ),
+            rx.text(
+                "Observability Assistant - Ask questions about logs, metrics, and traces",
+                text_align="center",
+                font_size="14px",
+                color="#6B7280",
+            ),
+            width="100%",
+            padding_x="16px",
+            align="stretch",
+            spacing="2",
+        ),
+        position="sticky",
+        bottom="0",
+        left="0",
+        padding_y="16px",
+        backdrop_filter="auto",
+        backdrop_blur="lg",
+        border_top="1px solid #1F2937",
+        background_color="#111827",
+        align="stretch",
         width="100%",
     )
 
 
-def chat_interface() -> rx.Component:
-    """
-    Main chat interface component
-
-    Returns:
-        Reflex component for the chat UI
-    """
-    return rx.box(
-        # Header
-        rx.box(
-            rx.heading(
-                "🤖 Observability Agent Network",
-                size="xl",
-                margin_bottom="2",
-            ),
-            rx.text(
-                "Ask questions about your microservices observability",
-                color="gray.600",
-                font_size="sm",
-            ),
-            padding="6",
-            border_bottom="1px solid var(--gray-200)",
+def navbar() -> rx.Component:
+    """Simple navbar with title."""
+    return rx.hstack(
+        rx.heading(
+            "🔍 Observability Assistant",
+            size="6",
+            color="white",
         ),
-        # Chat messages
-        rx.box(
-            rx.foreach(
-                ChatState.messages,
-                message_box,
-            ),
-            rx.cond(
-                ChatState.is_loading,
-                rx.hstack(
-                    rx.spinner(size="sm", color="purple.500"),
-                    rx.text(
-                        "Agents are analyzing...", color="gray.600", font_size="sm"
-                    ),
-                    padding="4",
-                ),
-            ),
-            flex="1",
-            overflow_y="auto",
-            padding="6",
-        ),
-        # Input
-        rx.box(
-            rx.form(
-                rx.hstack(
-                    rx.input(
-                        placeholder="Ask about logs, metrics, or traces...",
-                        name="query",
-                        width="100%",
-                        size="lg",
-                        disabled=ChatState.is_loading,
-                    ),
-                    rx.button(
-                        "Send",
-                        type="submit",
-                        size="lg",
-                        color_scheme="purple",
-                        disabled=ChatState.is_loading,
-                    ),
-                    spacing="2",
-                    width="100%",
-                ),
-                on_submit=ChatState.send_message,
-                width="100%",
-            ),
-            padding="6",
-            border_top="1px solid var(--gray-200)",
-        ),
-        display="flex",
-        flex_direction="column",
-        height="100vh",
-        max_width="1200px",
-        margin="0 auto",
+        justify_content="center",
+        align_items="center",
+        padding="16px",
+        border_bottom="1px solid #1F2937",
+        background_color="#111827",
     )
 
 
 def index() -> rx.Component:
-    """
-    Main page component
-
-    Returns:
-        Reflex component for the main page
-    """
-    return rx.container(
-        chat_interface(),
-        padding="0",
-        max_width="100%",
+    """The main app."""
+    return rx.vstack(
+        navbar(),
+        chat_area(),
+        action_bar(),
+        background_color="#0F172A",
+        color="white",
+        height="100dvh",
+        align_items="stretch",
+        spacing="0",
     )
 
 
 # Create the app
 app = rx.App(
     theme=rx.theme(
-        appearance="light",
-        accent_color="purple",
+        appearance="dark",
+        accent_color="blue",
     ),
 )
 
-# Add the index page
-app.add_page(index, title="Observability Agents", route="/")
+app.add_page(index, title="Observability Assistant", route="/")

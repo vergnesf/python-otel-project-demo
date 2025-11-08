@@ -116,6 +116,7 @@ docker-compose down -v
 - **[Development](docs/development.md)** - Local development guide and best practices
 - **[Configuration](docs/configuration.md)** - Environment variables and customization
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+- **[Docker Security](docs/DOCKER_SECURITY.md)** - Security best practices and non-root execution
 - **[Contributing](docs/contributing.md)** - Contribution guidelines and code style
 
 ## Architecture Overview
@@ -153,7 +154,8 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 ## Project Structure
 
 ```
-├── common/              # Shared module (business models + agent utilities)
+├── common-models/       # Shared business models (WoodType, Order, Stock)
+├── common-ai/           # Shared AI utilities (MCP client, LLM config, agent models)
 ├── customer/            # Microservice: Customer orders (Kafka producer)
 ├── order/               # Microservice: Order management API
 ├── stock/               # Microservice: Stock management API

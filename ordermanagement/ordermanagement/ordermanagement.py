@@ -4,7 +4,7 @@ import time
 import json
 import logging
 import requests
-from common.common.models import OrderStatus
+from common_models.models import OrderStatus
 
 # Configure logging with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()

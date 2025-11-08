@@ -42,28 +42,47 @@ The complete application is containerized. The `docker-compose.yml` file builds 
 
 ```
 python-otel-project-demo/
-├── common/                      # Shared module (business models + agent utilities)
-│   ├── common/
-│   │   ├── models.py           # Business models (WoodType, Order, Stock)
-│   │   ├── agent_models.py     # Agent models (AgentRequest, AgentResponse)
-│   │   ├── mcp_client.py       # MCP client for Grafana datasources
-│   │   └── llm_config.py       # LLM configuration helper
-│   └── pyproject.toml
-├── customer/                    # Microservice: Kafka producer (customer orders)
-├── order/                       # Microservice: Order management API
-├── stock/                       # Microservice: Stock management API
-├── supplier/                    # Microservice: Kafka producer (supplier)
-├── ordercheck/                  # Microservice: Kafka consumer (order processing)
-├── suppliercheck/               # Microservice: Kafka consumer (stock updates)
-├── ordermanagement/             # Microservice: Order status updates
-├── agent-orchestrator/          # AI Agent: Main coordinator
-├── agent-logs/                  # AI Agent: Loki log analysis
-├── agent-metrics/               # AI Agent: Mimir metrics analysis
-├── agent-traces/                # AI Agent: Tempo traces analysis
-├── agents-ui/                   # Web UI for agents
-├── docs/                        # Documentation
-└── docker-compose.yml           # Complete stack orchestration
+├── common-models/                # Shared business models (for all business services)
+│   ├── common_models/
+│   │   ├── __init__.py
+│   │   └── models.py            # Business models (WoodType, Order, Stock, OrderTracking)
+│   ├── pyproject.toml
+│   └── README.md
+├── common-ai/                    # Shared AI utilities (for AI agents only)
+│   ├── common_ai/
+│   │   ├── __init__.py
+│   │   ├── agent_models.py      # Agent models (AgentRequest, AgentResponse, AgentType)
+│   │   ├── mcp_client.py        # MCP client for Grafana datasources
+│   │   └── llm_config.py        # LLM configuration helper
+│   ├── pyproject.toml
+│   └── README.md
+├── customer/                     # Microservice: Kafka producer (customer orders)
+├── order/                        # Microservice: Order management API
+├── stock/                        # Microservice: Stock management API
+├── supplier/                     # Microservice: Kafka producer (supplier)
+├── ordercheck/                   # Microservice: Kafka consumer (order processing)
+├── suppliercheck/                # Microservice: Kafka consumer (stock updates)
+├── ordermanagement/              # Microservice: Order status updates
+├── agent-orchestrator/           # AI Agent: Main coordinator
+├── agent-logs/                   # AI Agent: Loki log analysis
+├── agent-metrics/                # AI Agent: Mimir metrics analysis
+├── agent-traces/                 # AI Agent: Tempo traces analysis
+├── agents-ui/                    # Web UI for agents
+├── docs/                         # Documentation
+└── docker-compose.yml            # Complete stack orchestration
 ```
+
+### Shared Modules
+
+**common-models/** - Business domain models shared across microservices:
+- Used by: `order`, `stock`, `customer`, `supplier`, `ordercheck`, `suppliercheck`, `ordermanagement`
+- Contains: `WoodType`, `OrderStatus`, `Stock`, `Order`, `OrderTracking`
+- Dependencies: Only `pydantic` (lightweight)
+
+**common-ai/** - AI utilities for intelligent agents:
+- Used by: `agent-orchestrator`, `agent-logs`, `agent-metrics`, `agent-traces`
+- Contains: MCP client, LLM config, agent models
+- Dependencies: `httpx`, `langchain`, `langchain-openai`, `pydantic`
 
 ## Technology Stack
 

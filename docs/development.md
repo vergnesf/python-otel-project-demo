@@ -1,27 +1,39 @@
 # Local Development Guide
 
-## Common Module
+## Shared Modules
 
-The `common` module is the heart of code sharing in this project. It contains:
+This project uses two shared modules for code reuse:
 
-**Business Models** (used by microservices):
+### common-models/
+
+**Business domain models** used by all business microservices:
+
 - `WoodType` - Enum of wood types (oak, maple, birch, elm, pine)
-- `OrderStatus` - Order lifecycle states
+- `OrderStatus` - Order lifecycle states  
 - `Stock`, `Order`, `OrderTracking` - Core business entities
 
-**Agent Utilities** (used by AI agents):
+```python
+# Import in business services
+from common_models import WoodType, OrderStatus, Stock, Order
+```
+
+**Used by**: `order`, `stock`, `customer`, `supplier`, `ordercheck`, `suppliercheck`, `ordermanagement`
+
+### common-ai/
+
+**AI utilities** used exclusively by intelligent agents:
+
 - `MCPGrafanaClient` - Unified client for querying Loki/Mimir/Tempo via MCP
 - `get_llm()` - LLM configuration helper for LangChain
-- `AgentRequest`, `AgentResponse` - Agent communication models
+- `AgentRequest`, `AgentResponse`, `AgentType` - Agent communication models
 - `OrchestratorResponse` - Synthesized responses from orchestrator
 
 ```python
-# Import business models
-from common import WoodType, OrderStatus, Stock, Order
-
-# Import agent utilities
-from common import MCPGrafanaClient, get_llm, AgentRequest
+# Import in AI agents
+from common_ai import MCPGrafanaClient, get_llm, AgentRequest
 ```
+
+**Used by**: `agent-orchestrator`, `agent-logs`, `agent-metrics`, `agent-traces`
 
 ## Running Services Locally
 
@@ -59,22 +71,27 @@ uv run opentelemetry-instrument \
 ```bash
 cd agent-logs/
 
-# Install dependencies (including common)
+# Install dependencies (including common-ai)
 uv sync
 
 # Run the agent
 uv run uvicorn agent_logs.main:app --reload --port 8002
 ```
 
-## Development with Common Module
+## Development with Shared Modules
 
-When developing locally, the `common` module must be available:
+When developing locally, shared modules must be available:
 
-**Option 1: Install common as editable**
+**Option 1: Install as editable (recommended)**
 ```bash
+# For business services
+cd order/
+uv pip install -e ../common-models/
+
+# For AI agents
 cd agent-logs/
-uv pip install -e ../common/
-uv run uvicorn agent_logs.main:app --reload
+uv pip install -e ../common-models/  # If needed
+uv pip install -e ../common-ai/
 ```
 
 **Option 2: Use PYTHONPATH**
@@ -83,6 +100,8 @@ export PYTHONPATH=/path/to/project:$PYTHONPATH
 cd agent-logs/
 uv run uvicorn agent_logs.main:app --reload
 ```
+
+**Note**: In Docker, shared modules are installed automatically during build via `uv pip install -e`.
 
 ## Adding Dependencies
 
@@ -100,6 +119,11 @@ Then run:
 ```bash
 uv sync  # Install new dependencies
 ```
+
+**Important**: 
+- Business services should NOT add `common-ai` dependencies (httpx, langchain)
+- AI agents should NOT need `common-models` (it's already in `common-ai` if needed)
+- Keep dependencies minimal and separated by concern
 
 ## Code Quality
 

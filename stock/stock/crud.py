@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from common.common.models import WoodType
+from common_models.models import WoodType
 
 from . import models, schemas
 

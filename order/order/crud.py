@@ -4,7 +4,7 @@ This module provides CRUD operations for orders.
 
 from sqlalchemy.orm import Session
 
-from common.common.models import OrderStatus
+from common_models.models import OrderStatus
 
 from . import models, schemas
 

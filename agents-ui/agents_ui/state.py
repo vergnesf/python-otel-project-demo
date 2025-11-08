@@ -1,136 +1,76 @@
 """
-State management for the Agents UI
+State management for Agents UI
 """
 
-import os
-from typing import List
-
-import httpx
 import reflex as rx
+from typing import Any
+from pydantic import BaseModel
+
+
+class QA(BaseModel):
+    """A question and answer pair."""
+    question: str
+    answer: str = ""
 
 
 class ChatState(rx.State):
-    """
-    State management for the chat interface
-    """
+    """The app state."""
 
-    messages: List[dict] = []
-    is_loading: bool = False
+    # List of chat messages
+    chats: list[QA] = []
 
-    async def send_message(self, form_data: dict):
+    # Whether we are processing the question
+    processing: bool = False
+
+    @rx.var
+    def messages(self) -> list[dict]:
+        """Get messages in the format expected by the UI.
+        
+        Returns:
+            List of messages with role and content
         """
-        Send a message to the orchestrator and get response
+        result = []
+        for qa in self.chats:
+            result.append({"role": "user", "content": qa.question})
+            if qa.answer:
+                result.append({"role": "assistant", "content": qa.answer})
+        return result
 
+    @rx.var
+    def is_loading(self) -> bool:
+        """Check if we are currently processing.
+        
+        Returns:
+            True if processing
+        """
+        return self.processing
+
+    @rx.event
+    async def send_message(self, form_data: dict[str, Any]):
+        """Process a new message.
+        
         Args:
-            form_data: Form data containing the user query
+            form_data: Form data containing the question
         """
-        query = form_data.get("query", "").strip()
+        # Get the question from the form
+        question = form_data.get("question", "")
 
-        if not query:
+        # Check if the question is empty
+        if not question:
             return
 
-        # Add user message
-        self.messages.append(
-            {
-                "role": "user",
-                "content": query,
-            }
-        )
+        # Add the question to the chat
+        qa = QA(question=question, answer="")
+        self.chats.append(qa)
 
-        # Set loading state
-        self.is_loading = True
+        # Start processing
+        self.processing = True
+        yield
 
-        try:
-            # Call orchestrator
-            orchestrator_url = os.getenv(
-                "ORCHESTRATOR_URL", "http://agent-orchestrator:8001"
-            )
-
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{orchestrator_url}/analyze",
-                    json={
-                        "query": query,
-                        "time_range": "1h",
-                    },
-                )
-                response.raise_for_status()
-                result = response.json()
-
-            # Format response
-            formatted_response = self._format_response(result)
-
-            # Add agent response
-            self.messages.append(
-                {
-                    "role": "assistant",
-                    "content": formatted_response,
-                }
-            )
-
-        except Exception as e:
-            # Add error message
-            self.messages.append(
-                {
-                    "role": "assistant",
-                    "content": f"❌ Error: {str(e)}\n\nPlease check that all agents are running.",
-                }
-            )
-
-        finally:
-            # Clear loading state
-            self.is_loading = False
-
-    def _format_response(self, result: dict) -> str:
-        """
-        Format the orchestrator response for display
-
-        Args:
-            result: Response from orchestrator
-
-        Returns:
-            Formatted string for display
-        """
-        lines = []
-
-        # Add summary
-        lines.append("**Summary**")
-        lines.append(result.get("summary", "No summary available"))
-        lines.append("")
-
-        # Add agent-specific responses
-        agent_responses = result.get("agent_responses", {})
-
-        if "logs" in agent_responses:
-            logs = agent_responses["logs"]
-            if "error" not in logs:
-                lines.append("📜 **Logs Analysis**")
-                lines.append(logs.get("analysis", "No logs analysis"))
-                lines.append("")
-
-        if "metrics" in agent_responses:
-            metrics = agent_responses["metrics"]
-            if "error" not in metrics:
-                lines.append("📊 **Metrics Analysis**")
-                lines.append(metrics.get("analysis", "No metrics analysis"))
-                lines.append("")
-
-        if "traces" in agent_responses:
-            traces = agent_responses["traces"]
-            if "error" not in traces:
-                lines.append("🛤️ **Traces Analysis**")
-                lines.append(traces.get("analysis", "No traces analysis"))
-                lines.append("")
-
-        # Add recommendations
-        recommendations = result.get("recommendations", [])
-        if recommendations:
-            lines.append("💡 **Recommendations**")
-            for i, rec in enumerate(recommendations, 1):
-                lines.append(f"{i}. {rec}")
-            lines.append("")
-
-        # Add Grafana link hint
-        lines.append("📊 View detailed data in Grafana: http://localhost:3000")
-
-        return "\n".join(lines)
+        # TODO: Call orchestrator API here
+        # For now, just echo back
+        answer = f"You asked: {question}\n\nThis will be connected to the orchestrator API."
+        
+        self.chats[-1].answer = answer
+        self.processing = False
+        yield

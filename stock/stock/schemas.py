@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from common.common.models import WoodType
+from common_models.models import WoodType
 
 
 class StockBase(BaseModel):

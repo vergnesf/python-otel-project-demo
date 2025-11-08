@@ -4,7 +4,7 @@ This module contains the SQLAlchemy model for the Order entity.
 
 from sqlalchemy import Column, Enum, Integer
 
-from common.common.models import OrderStatus, WoodType
+from common_models.models import OrderStatus, WoodType
 
 from .database import db
 

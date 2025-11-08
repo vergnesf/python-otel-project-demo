@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-from common import MCPGrafanaClient
+from common_ai import MCPGrafanaClient
 
 logger = logging.getLogger(__name__)
 

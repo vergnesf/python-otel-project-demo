@@ -8,10 +8,10 @@ import os
 from typing import Any
 
 import httpx
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, SystemMessage
 
-from common import get_llm
+from common_ai import get_llm
 
 logger = logging.getLogger(__name__)
 
