@@ -8,15 +8,15 @@ dependencies = [
     "flasgger>=0.9.7.1",
     "flask>=3.0.3",
     "flask-sqlalchemy>=3.1.1",
-    "opentelemetry-distro>=0.48b0",
-    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-distro>=0.59b0",
+    "opentelemetry-exporter-otlp>=1.38.0",
     "psycopg2-binary>=2.9.2",
-    "pydantic>=2.9.2",
+    "pydantic>=2.12.4",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.8.4",
-    "black>=24.10.0",
-    "pyright>=1.1.390",
+    "ruff",
+    "black",
+    "pyright",
 ]
