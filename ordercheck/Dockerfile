@@ -1,6 +1,26 @@
-# Use an official Python base image
+# Multi-stage build for minimal image size
 ARG DOCKER_REGISTRY=""
 ARG IMG_PYTHON="python:3.14-slim"
+
+# ============================================
+# Builder stage: Install dependencies
+# ============================================
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS builder
+
+WORKDIR /app
+
+# Copy dependency files
+COPY ordercheck/pyproject.toml /app/pyproject.toml
+COPY common/common/ /app/common/common
+
+# Install uv and dependencies
+RUN pip install --no-cache-dir uv && \
+    uv sync --no-dev && \
+    uv run opentelemetry-bootstrap -a install
+
+# ============================================
+# Runtime stage: Minimal image
+# ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 USER root
@@ -8,21 +28,17 @@ USER root
 # Enable Python 3.14 JIT compiler for performance optimization
 ENV PYTHON_JIT=1
 
-# Set the working directory
 WORKDIR /app
 
-# Copy only dependency files first (for better layer caching)
-COPY ordercheck/pyproject.toml /app/pyproject.toml
-COPY common/common/ /app/common/common
+# Copy only the virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/common /app/common
 
-# Install uv and dependencies (excluding dev dependencies)
-# This layer will be cached unless dependencies change
-RUN pip install uv && \
-    uv sync --no-dev && \
-    uv run opentelemetry-bootstrap -a install
-
-# Copy application code (invalidates cache only when code changes)
+# Copy application code
 COPY ordercheck/ordercheck /app
 
-# Set the default command to run the producer
-CMD ["uv", "run", "opentelemetry-instrument", "python", "/app/ordercheck_consumer.py"]
+# Set PATH to use venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Set the default command to run the consumer
+CMD ["opentelemetry-instrument", "python", "/app/ordercheck_consumer.py"]
