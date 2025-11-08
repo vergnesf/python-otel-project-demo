@@ -1,0 +1,14 @@
+[project]
+name = "agent-metrics"
+version = "0.1.0"
+description = "Metrics analysis agent specialized in querying Mimir via MCP"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "pydantic>=2.9.2",
+    "httpx>=0.27.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+]
