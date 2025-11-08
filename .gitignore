@@ -17,3 +17,6 @@
 
 .venv
 /poetry.toml
+uv.lock
+
+.env

@@ -1,5 +1,3 @@
-# Do not use this configuration in production.
-# It is for demonstration purposes only.
 multitenancy_enabled: false
 
 activity_tracker: {}
@@ -11,8 +9,6 @@ alertmanager_storage:
 
 server:
   http_listen_port: 9009
-
-  # Configure the server to allow messages up to 100MB.
   grpc_server_max_recv_msg_size: 104857600
   grpc_server_max_send_msg_size: 104857600
   grpc_server_max_concurrent_streams: 1000

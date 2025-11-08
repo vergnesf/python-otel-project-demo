@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy uv configuration files
 COPY stock/pyproject.toml /app/
-COPY stock/uv.lock  /app/
 COPY stock/stock /app/stock
 COPY common/common/ /app/common/common
 
@@ -19,7 +18,7 @@ RUN pip install uv && \
     uv add pip && \
     uv run opentelemetry-bootstrap -a install
 
-EXPOSE 5000
+EXPOSE 5001
 
 # Set the default command to run the producer
 CMD ["uv", "run", "opentelemetry-instrument", "python", "-m", "stock.main"]

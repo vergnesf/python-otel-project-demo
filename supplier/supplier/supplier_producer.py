@@ -54,7 +54,7 @@ if __name__ == "__main__":
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < ERROR_RATE:
             logger.error(
-                "Simulated error: failed to send stock (Kafka/network failure)"
+                "failed to send stock (Kafka/network failure)"
             )
             time.sleep(interval_seconds)
             continue

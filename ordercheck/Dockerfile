@@ -10,7 +10,6 @@ WORKDIR /app
 
 # Copy uv configuration files
 COPY ordercheck/pyproject.toml /app/
-COPY ordermanagement/uv.lock  /app/
 COPY ordercheck/ordercheck /app
 COPY common/common/ /app/common/common
 

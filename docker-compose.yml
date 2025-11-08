@@ -1,193 +1,50 @@
-volumes:
-  zookeeper-data:
-  zookeeper-log:
-  kafka-data:
-  postgres-data:
-  mimir_data:
-  grafana_data:
-  tempo_data:
-  loki_data:
-
 services:
-  # ###############################################################################################
-  # App Part
-  # ###############################################################################################
-  customer:
-    build:
-      context: .
-      dockerfile: customer/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: customer
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      INTERVAL_SECONDS: 5
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: customer
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    depends_on:
-      broker:
-        condition: service_healthy
-
-  supplier:
-    build:
-      context: .
-      dockerfile: supplier/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: supplier
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      INTERVAL_SECONDS: 5
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: supplier
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    depends_on:
-      broker:
-        condition: service_healthy
-
-  order:
-    build:
-      context: .
-      dockerfile: order/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: order
-    environment:
-      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: order
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
+  # =====================
+  # KAFKA STACK
+  # =====================
+  broker:
+    image: ${DOCKER_REGISTRY}${IMG_KAFKA}
+    container_name: broker
+    pull_policy: daily
     ports:
-      - 8005:5000
-    depends_on:
-      - postgres
-
-  stock:
-    build:
-      context: .
-      dockerfile: stock/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: stock
+      - "9092:9092"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     environment:
-      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: stock
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    ports:
-      - 8006:5000
-    depends_on:
-      - postgres
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@broker:29093"
+      KAFKA_LISTENERS: "PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+      CLUSTER_ID: "jm1kaYDGRR2EDm8ZaQT84w"
+    volumes:
+      - kafka-secrets:/etc/kafka/secrets
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - otel-network
 
-  ordercheck:
-    build:
-      context: .
-      dockerfile: ordercheck/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: ordercheck
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://order:5000
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: ordercheck
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    depends_on:
-      broker:
-        condition: service_healthy
-
-  suppliercheck:
-    build:
-      context: .
-      dockerfile: suppliercheck/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: suppliercheck
-    environment:
-      KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://stock:5000
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: suppliercheck
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    depends_on:
-      broker:
-        condition: service_healthy
-
-  ordermanagement:
-    build:
-      context: .
-      dockerfile: ordermanagement/Dockerfile
-      args:
-        DOCKER_REGISTRY: $DOCKER_REGISTRY
-        IMG_PYTHON: $IMG_PYTHON
-    container_name: ordermanagement
-    environment:
-      API_URL_ORDERS: http://order:5000
-      API_URL_STOCKS: http://stock:5000
-      INTERVAL_SECONDS: 5
-      ERROR_RATE: 0.1
-      LOG_LEVEL: DEBUG
-      OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: true
-      OTEL_PYTHON_LOG_CORRELATION: true
-      OTEL_SERVICE_NAME: ordermanagement
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4317
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-    depends_on:
-      - order
-      - stock
-
-  # ###############################################################################################
-  # Kafka part
-  # ###############################################################################################
   akhq:
     image: ${DOCKER_REGISTRY}${IMG_AKHQ}
-    restart: unless-stopped
     container_name: akhq
+    pull_policy: daily
+    ports:
+      - "8081:8080"
     environment:
       AKHQ_CONFIGURATION: |
         akhq:
@@ -195,173 +52,551 @@ services:
             docker-kafka-server:
               properties:
                 bootstrap.servers: "broker:29092"
-    ports:
-      - 8080:8080
     depends_on:
-      broker:
-        condition: service_healthy
+      - broker
+    networks:
+      - otel-network
 
-  zookeeper:
-    image: ${DOCKER_REGISTRY}${IMG_ZOOKEEPER}
-    hostname: zookeeper
-    container_name: zookeeper
-    volumes:
-      - zookeeper-data:/var/lib/zookeeper/data:Z
-      - zookeeper-log:/var/lib/zookeeper/log:Z
+  # =====================
+  # OBSERVABILITY STACK
+  # =====================
+  grafana:
+    image: ${DOCKER_REGISTRY}${IMG_GRAFANA}
+    container_name: grafana
+    pull_policy: daily
     ports:
-      - "2181:2181"
+      - "3000:3000"
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  broker:
-    image: ${DOCKER_REGISTRY}${IMG_KAFKA}
-    hostname: broker
-    container_name: broker
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=tempoServiceGraph,traceToMetrics
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
     volumes:
-      - kafka-data:/var/lib/kafka/data:Z
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "29092:29092"
-      - "9092:9092"
-      - "9101:9101"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
+      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafana-data:/var/lib/grafana
     healthcheck:
-      test: kafka-topics --bootstrap-server broker:9092 --list
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    networks:
+      - otel-network
 
-  # ###############################################################################################
-  # Bdd part
-  # ###############################################################################################
-  postgres:
-    image: ${DOCKER_REGISTRY}${IMG_POSTGRES}
-    container_name: postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: mydatabase
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  adminer:
-    image: ${DOCKER_REGISTRY}${IMG_ADMINER}
-    container_name: adminer
-    ports:
-      - 8081:8080
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # ###############################################################################################
-  # OpenTelemetry part
-  # ###############################################################################################
-  otel:
+  otel-collector:
     image: ${DOCKER_REGISTRY}${IMG_OTEL}
-    container_name: otel
-    command:
-      - "--config=/etc/otel-conf.yml"
-    volumes:
-      - ./config/otel-conf.yml:/etc/otel-conf.yml
+    container_name: otel-collector
+    pull_policy: daily
+    command: ["--config=/etc/otel-conf.yml"]
     ports:
-      - "10002:10002" # Prometheus metrics exposed by the collector
-      - "4318:4318" # OTLP http receiver
-      - "4317:4317" # OTLP grpc receiver
+      - "4317:4317"
+      - "4318:4318"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    volumes:
+      - ./config/otel/otel-conf.yml:/etc/otel-conf.yml
     depends_on:
       - mimir
       - loki
       - tempo
+    networks:
+      - otel-network
 
   loki:
-    container_name: loki
     image: ${DOCKER_REGISTRY}${IMG_LOKI}
+    container_name: loki
+    pull_policy: daily
+    command: ["-config.file=/etc/config/loki.yaml"]
+    user: "0:0"
     volumes:
-      - ./config/loki-config.yml:/etc/config/loki.yaml
-      - loki_data:/tmp/loki
-    user: "root"
-    command:
-      - -config.file=/etc/config/loki.yaml
-    ports:
-      - "3100:3100"
+      - ./config/loki/loki-config.yml:/etc/config/loki.yaml
+      - loki-data:/tmp/loki
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    networks:
+      - otel-network
 
   tempo:
-    container_name: tempo
     image: ${DOCKER_REGISTRY}${IMG_TEMPO}
-    user: "root"
-    command:
-      - -config.file=/etc/tempo.yaml
+    container_name: tempo
+    pull_policy: daily
+    command: ["-config.file=/etc/tempo.yaml"]
+    user: "0:0"
     volumes:
-      - ./config/tempo.yml:/etc/tempo.yaml
-      - tempo_data:/tmp/tempo
-    ports:
-      - "14268" # jaeger ingest
-      - "3200" # tempo
-      - "4317" # otlp grpc
-      - "4318" # otlp http
-      - "9411" # zipkin
+      - ./config/tempo/tempo.yml:/etc/tempo.yaml
+      - tempo-data:/tmp/tempo
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    networks:
+      - otel-network
 
   mimir:
     image: ${DOCKER_REGISTRY}${IMG_MIMIR}
     container_name: mimir
-    command:
-      - -config.file=/etc/mimir-config
+    pull_policy: daily
+    command: ["-config.file=/etc/mimir-config.yml"]
     volumes:
-      - ./config/mimir-config.yml:/etc/mimir-config
-      - mimir_data:/tmp/mimir
-    ports:
-      - "9009:9009" # LOCAL:CIBLE
+      - ./config/mimir/mimir-config.yml:/etc/mimir-config.yml
+      - mimir-data:/tmp/mimir
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    networks:
+      - otel-network
 
-  grafana:
-    image: ${DOCKER_REGISTRY}${IMG_GRAFANA}
-    container_name: grafana
-    ports:
-      - "3000:3000" # LOCAL:CIBLE
-    volumes:
-      - ./config/grafana-provisioning:/etc/grafana/provisioning
-      - grafana_data:/var/lib/grafana
+  # =====================
+  # APPLICATION STACK
+  # =====================
+  customer:
+    image: ${DOCKER_REGISTRY:-}customer:latest
+    build:
+      context: .
+      dockerfile: customer/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}customer:latest
+      cache_to:
+        - type=inline
+    container_name: customer
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
     environment:
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
-      GF_AUTH_DISABLE_LOGIN_FORM: "true"
-      GF_PATHS_PROVISIONING: "/etc/grafana/provisioning"
-      GF_FEATURE_TOGGLES_ENABLE: tempoServiceGraph,traceToMetrics
+      - INTERVAL_SECONDS=5
+      - OTEL_LOGS_EXPORTER=otlp
+      - LOG_LEVEL=DEBUG
+      - ERROR_RATE=0.1
+      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
+      - OTEL_SERVICE_NAME=customer
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_METRICS_EXPORTER=otlp
     depends_on:
-      - mimir
-      - loki
-      - tempo
-    
+      - broker
+      - otel-collector
+    networks:
+      - otel-network
+
+  supplier:
+    image: ${DOCKER_REGISTRY:-}supplier:latest
+    build:
+      context: .
+      dockerfile: supplier/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}supplier:latest
+      cache_to:
+        - type=inline
+    container_name: supplier
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - LOG_LEVEL=DEBUG
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - INTERVAL_SECONDS=5
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_LOGS_EXPORTER=otlp
+      - ERROR_RATE=0.1
+      - OTEL_SERVICE_NAME=supplier
+      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
+      - OTEL_METRICS_EXPORTER=otlp
+    depends_on:
+      - broker
+      - otel-collector
+    networks:
+      - otel-network
+
+  order:
+    image: ${DOCKER_REGISTRY:-}order:latest
+    build:
+      context: .
+      dockerfile: order/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}order:latest
+      cache_to:
+        - type=inline
+    container_name: order
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - OTEL_SERVICE_NAME=order
+      - ERROR_RATE=0.1
+      - OTEL_LOGS_EXPORTER=otlp
+      - DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      - LOG_LEVEL=DEBUG
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_PYTHON_LOG_CORRELATION=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      otel-collector:
+        condition: service_started
+    networks:
+      - otel-network
+
+  stock:
+    image: ${DOCKER_REGISTRY:-}stock:latest
+    build:
+      context: .
+      dockerfile: stock/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}stock:latest
+      cache_to:
+        - type=inline
+    container_name: stock
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+    environment:
+      - OTEL_SERVICE_NAME=stock
+      - OTEL_TRACES_EXPORTER=otlp
+      - LOG_LEVEL=DEBUG
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - ERROR_RATE=0.1
+      - DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      - OTEL_METRICS_EXPORTER=otlp
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      otel-collector:
+        condition: service_started
+    networks:
+      - otel-network
+
+  ordercheck:
+    image: ${DOCKER_REGISTRY:-}ordercheck:latest
+    build:
+      context: .
+      dockerfile: ordercheck/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}ordercheck:latest
+      cache_to:
+        - type=inline
+    container_name: ordercheck
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - API_URL=http://order:5000
+      - OTEL_SERVICE_NAME=ordercheck
+      - ERROR_RATE=0.1
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - LOG_LEVEL=DEBUG
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_LOGS_EXPORTER=otlp
+    depends_on:
+      - broker
+      - order
+      - otel-collector
+    networks:
+      - otel-network
+
+  suppliercheck:
+    image: ${DOCKER_REGISTRY:-}suppliercheck:latest
+    build:
+      context: .
+      dockerfile: suppliercheck/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}suppliercheck:latest
+      cache_to:
+        - type=inline
+    container_name: suppliercheck
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    environment:
+      - OTEL_LOGS_EXPORTER=otlp
+      - LOG_LEVEL=DEBUG
+      - ERROR_RATE=0.1
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_SERVICE_NAME=suppliercheck
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - API_URL=http://stock:5001
+      - OTEL_TRACES_EXPORTER=otlp
+      - KAFKA_BOOTSTRAP_SERVERS=broker:29092
+    depends_on:
+      - broker
+      - stock
+      - otel-collector
+    networks:
+      - otel-network
+
+  ordermanagement:
+    image: ${DOCKER_REGISTRY:-}ordermanagement:latest
+    build:
+      context: .
+      dockerfile: ordermanagement/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.13-slim}
+      cache_from:
+        - ${DOCKER_REGISTRY}ordermanagement:latest
+      cache_to:
+        - type=inline
+    container_name: ordermanagement
+    pull_policy: build
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    environment:
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - ERROR_RATE=0.1
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_PYTHON_LOG_CORRELATION=true
+      - OTEL_TRACES_EXPORTER=otlp
+      - API_URL_STOCKS=http://stock:5001
+      - INTERVAL_SECONDS=5
+      - LOG_LEVEL=DEBUG
+      - OTEL_SERVICE_NAME=ordermanagement
+      - API_URL_ORDERS=http://order:5000
+    depends_on:
+      - order
+      - stock
+      - otel-collector
+    networks:
+      - otel-network
+
+  # =====================
+  # DATABASE STACK
+  # =====================
+  postgres:
+    image: ${DOCKER_REGISTRY}${IMG_POSTGRES}
+    container_name: postgres
+    pull_policy: daily
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=yourpassword
+      - POSTGRES_DB=mydatabase
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    networks:
+      - otel-network
+
+  adminer:
+    image: ${DOCKER_REGISTRY}${IMG_ADMINER}
+    container_name: adminer
+    pull_policy: daily
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+      - ADMINER_DEFAULT_DB_DRIVER=pgsql
+    depends_on:
+      - postgres
+    networks:
+      - otel-network
+
+  # =====================
+  # MCP STACK
+  # =====================
   grafana-mcp:
-    image:  ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
+    image: ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
     container_name: grafana-mcp
+    pull_policy: daily
     ports:
       - "8000:8000"
     environment:
-      GRAFANA_URL: http://grafana:3000
-      GRAFANA_API_KEY: XXXXXX
+      - GRAFANA_URL=http://grafana:3000
     depends_on:
       - grafana
+    networks:
+      - otel-network
+
+  # =====================
+  # N8N STACK
+  # =====================
+  n8n:
+    image: ${DOCKER_REGISTRY}${IMG_N8N}
+    container_name: n8n
+    pull_policy: daily
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Europe/Paris
+      - TZ=Europe/Paris
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+  flowise:
+    image: ${DOCKER_REGISTRY}${IMG_FLOWISE}
+    container_name: flowise
+    pull_policy: daily
+    ports:
+      - "3001:3000"
+    environment:
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+    volumes:
+      - flowise-data:/usr/src/app
+    networks:
+      - otel-network
+    models:
+      - ai-qwen3
+
+models:
+  ai-qwen3:
+    model: ai/qwen3:0.6B-Q4_0
+
+volumes:
+  kafka-secrets:
+    driver: local
+  kafka-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local
+  tempo-data:
+    driver: local
+  mimir-data:
+    driver: local
+  postgres-data:
+    driver: local
+  n8n-data:
+    driver: local
+  flowise-data:
+    driver: local
+
+networks:
+  otel-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+    enable_ipv6: false
