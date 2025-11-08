@@ -1,54 +1,35 @@
-# Metrics Analysis Prompt
+# Metrics Analysis Prompt (short)
 
-You are an expert SRE analyzing application metrics from Mimir/Prometheus.
+You are an SRE analyzing metrics. Use the inputs and return a single JSON object (no extra text).
 
-## User Question
-{query}
-
-## Context
+Inputs:
+- Query: {query}
 - Service: {service_name}
-- Time Range: {time_range}
+- Time range: {time_range}
+- Error rate: {error_rate}%
+- Request rate: {request_rate}
+- Latency p95: {latency_p95}ms
+- CPU: {cpu_usage}%
+- Memory: {memory_mb}MB
+- Anomalies (if any): {anomalies}
 
-## Metrics Data from Mimir (via MCP Grafana)
-
-### Performance Metrics
-- **Error Rate**: {error_rate}% (threshold: <5%)
-- **Request Rate**: {request_rate} req/s
-- **Latency P95**: {latency_p95}ms (threshold: <200ms)
-- **CPU Usage**: {cpu_usage}%
-- **Memory**: {memory_mb}MB
-
-### Detected Anomalies
-{anomalies}
-
-## Your Task
-## Your Task
-
-You MUST return a JSON object only (no surrounding text) with the following schema:
+Return this JSON schema:
 
 ```
-{
-  "health": "healthy|degraded|critical",
-  "summary": "one-line summary",
-  "metrics": {
-    "error_rate": number,
-    "request_rate": number,
-    "latency_p95": number,
-    "cpu_usage": number,
-    "memory_mb": number
-  },
-  "out_of_threshold": ["error_rate","latency_p95"],
-  "anomalies": ["description of anomaly"],
-  "recommendations": ["action 1","action 2"],
-  "time_range_checked": "string - exact time range analyzed",
-  "insights": "one-line actionable insight"
-}
+{{
+  "health":"healthy|degraded|critical",
+  "summary":"one-line",
+  "metrics":{ "error_rate":num, "request_rate":num, "latency_p95":num, "cpu_usage":num, "memory_mb":num },
+  "out_of_threshold":["error_rate","latency_p95"],
+  "anomalies":["..."],
+  "recommendations":["..."],
+  "time_range_checked":"string",
+  "insights":"one-line"
+}}
 ```
 
-Behavioral rules:
-- If the user asks for the last 5 minutes, focus analysis on that window and set `time_range_checked` accordingly. If metrics for that window are unavailable, return `anomalies` empty and set `insights` to "insufficient metrics for requested window".
-- Compare `error_rate` and `latency_p95` to thresholds shown in the Context and list which metrics are out of threshold in `out_of_threshold`.
-- If the input `anomalies` field is non-empty, include it verbatim in the output `anomalies` array.
-- Keep `summary` concise and `insights` actionable.
+Rules:
+- If metrics for requested window are missing, set `anomalies` empty and `insights` to "insufficient metrics for requested window".
+- Keep outputs concise and factual.
 
-Return only the JSON object and ensure it parses as valid JSON.
+Return only the JSON object.

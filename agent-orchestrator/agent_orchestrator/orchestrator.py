@@ -28,6 +28,27 @@ def load_prompt(filename: str) -> str:
     return ""
 
 
+def _extract_text_from_response(response: object) -> str:
+    """
+    Normalize different LLM response types into a plain string.
+
+    Works safely with responses that may be LangChain objects, legacy
+    provider objects, or simple strings. Avoids accessing attributes
+    like `.model` which may not exist on some response wrappers.
+    """
+    try:
+        # Preferred: modern LangChain-like objects may expose `.content`
+        if hasattr(response, "content"):
+            return response.content if response.content is not None else ""
+        # Some providers use `.text` or `__str__`
+        if hasattr(response, "text"):
+            return response.text if response.text is not None else ""
+        # Fallback to string representation
+        return str(response)
+    except Exception:
+        return str(response)
+
+
 class Orchestrator:
     """
     Main orchestrator that coordinates specialized observability agents
@@ -44,10 +65,25 @@ class Orchestrator:
         )
 
         self.client = httpx.AsyncClient(timeout=60.0)
+        # Per-agent call timeout (seconds) - configurable to avoid UI timeouts
+        self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "60"))
 
         # Initialize LLM for synthesis (optional, can be None if LLM not available)
+        # If LLM_EPHEMERAL_PER_CALL is set to 'true', we will instantiate a fresh
+        # LLM client per call to avoid preserving conversation state between calls.
+        self.llm_ephemeral = (
+            os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
+        )
         try:
-            self.llm = get_llm()
+            # Keep a shared instance as a fallback when ephemeral is disabled
+            self.llm = None if self.llm_ephemeral else get_llm()
+            if self.llm:
+                logger.info("LLM initialized for orchestrator (shared instance)")
+            else:
+                logger.info(
+                    "LLM will be instantiated per call (ephemeral mode=%s)",
+                    self.llm_ephemeral,
+                )
         except Exception as e:
             logger.warning(f"LLM not available, using basic synthesis: {e}")
             self.llm = None
@@ -195,10 +231,11 @@ class Orchestrator:
             return query
 
         # If LLM available, ask it to translate
-        if self.llm:
+        if self.llm or self.llm_ephemeral:
             try:
                 prompt = f"Translate the following user question to English. Return only the translated sentence (no explanations):\n\n{query}"
-                response = self.llm.invoke(prompt)
+                llm_client = get_llm() if self.llm_ephemeral else self.llm
+                response = llm_client.invoke(prompt)
                 text = (
                     response.content if hasattr(response, "content") else str(response)
                 )
@@ -237,12 +274,29 @@ class Orchestrator:
             response = await self.client.post(
                 f"{agent_url}/analyze",
                 json=request,
-                timeout=30.0,
+                timeout=self.agent_call_timeout,
             )
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            logger.error(f"Failed to query agent at {agent_url}: {e}")
+            # Try to log response details if available for easier debugging
+            resp = getattr(e, "request", None)
+            try:
+                status = None
+                body = None
+                if hasattr(e, "response") and e.response is not None:
+                    status = e.response.status_code
+                    # read text safely
+                    body = e.response.text
+                logger.error(
+                    "Failed to query agent at %s: %s (status=%s, body=%s)",
+                    agent_url,
+                    e,
+                    status,
+                    body,
+                )
+            except Exception:
+                logger.error(f"Failed to query agent at {agent_url}: {e}")
             raise
 
     async def _route_query(self, query: str) -> dict[str, Any]:
@@ -256,7 +310,7 @@ class Orchestrator:
             Routing decision with agents to call
         """
         # If no LLM available, use conservative fallback routing
-        if not self.llm:
+        if not self.llm and not self.llm_ephemeral:
             logger.warning("LLM not available, using conservative fallback routing")
             return {
                 "agents_to_call": ["logs", "metrics", "traces"],
@@ -272,10 +326,9 @@ class Orchestrator:
 
         try:
             prompt = prompt_template.format(query=query)
-            response = self.llm.invoke(prompt)
-            response_text = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            response = llm_client.invoke(prompt)
+            response_text = _extract_text_from_response(response)
 
             # Clean response
             response_text = response_text.strip()
@@ -333,9 +386,7 @@ class Orchestrator:
                     "Return one word: 'greeting', 'observability', or 'general'.\n\nQuery: {query}"
                 ).format(query=query)
                 response = self.llm.invoke(prompt)
-                text = (
-                    response.content if hasattr(response, "content") else str(response)
-                )
+                text = _extract_text_from_response(response)
                 text = text.strip().lower()
                 for token in ("greeting", "observability", "general"):
                     if token in text:
@@ -367,16 +418,15 @@ class Orchestrator:
         """
         # Prefer LLM to extract structured context when available
         context: dict[str, Any] = {}
-        if self.llm:
+        if self.llm or self.llm_ephemeral:
             try:
                 prompt = (
                     "Extract a JSON object with possible keys 'services' (list of service names) "
                     "and 'focus' (e.g., 'errors', 'performance') from the user query. Return only JSON.\n\nQuery: {query}"
                 ).format(query=query)
-                response = self.llm.invoke(prompt)
-                text = (
-                    response.content if hasattr(response, "content") else str(response)
-                )
+                llm_client = get_llm() if self.llm_ephemeral else self.llm
+                response = llm_client.invoke(prompt)
+                text = _extract_text_from_response(response)
                 # Try to parse JSON
                 import json
 
@@ -422,7 +472,7 @@ class Orchestrator:
         from datetime import datetime
 
         # If LLM is available, use it for intelligent synthesis
-        if self.llm:
+        if self.llm or self.llm_ephemeral:
             try:
                 return self._synthesize_with_llm(query, logs, metrics, traces)
             except Exception as e:
@@ -548,15 +598,11 @@ class Orchestrator:
             return self._basic_synthesis(query, logs, metrics, traces)
 
         try:
-            # Call LLM
+            # Call LLM (ephemeral or shared instance)
             logger.info("Synthesizing agent responses with LLM...")
-            response = self.llm.invoke(prompt)
-
-            # Extract text from response
-            if hasattr(response, "content"):
-                summary = response.content
-            else:
-                summary = str(response)
+            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            response = llm_client.invoke(prompt)
+            summary = _extract_text_from_response(response)
 
             # Extract recommendations from the LLM response
             recommendations = []

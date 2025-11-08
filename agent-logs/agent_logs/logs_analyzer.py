@@ -337,9 +337,12 @@ class LogsAnalyzer:
         logs = logs_data.get("logs", [])
         total_logs = logs_data.get("total_count", len(logs))
 
-        # Prepare log samples for LLM (limit to avoid token overflow)
+        # Prepare log samples for LLM (limit to avoid token/window overflow)
+        # Start with a modest number of samples and shrink if the final prompt
+        # is still too large for the model context.
+        max_samples_initial = 5
         log_samples_text = []
-        for log in logs[:10]:  # Top 10 logs
+        for log in logs[:max_samples_initial]:
             timestamp = log.get("timestamp", "")
             service = log.get("service_name", "unknown")
             message = log.get("message", "")[:200]
@@ -370,6 +373,39 @@ class LogsAnalyzer:
             return self._analyze_logs(logs_data, query, context)
 
         try:
+            # Guard against sending a prompt that is too large for the LLM
+            # Use environment var LLM_MAX_PROMPT_CHARS to control maximum allowed prompt size
+            max_prompt_chars = int(os.getenv("LLM_MAX_PROMPT_CHARS", "9000"))
+
+            def build_prompt(samples):
+                return prompt_template.format(
+                    query=query,
+                    time_range=time_range,
+                    services=services_str,
+                    total_logs=total_logs,
+                    log_samples=("\n".join(samples) if samples else "No logs found"),
+                )
+
+            prompt = build_prompt(log_samples_text)
+
+            # Iteratively reduce samples until prompt fits within allowed size
+            while len(prompt) > max_prompt_chars and len(log_samples_text) > 0:
+                # reduce samples aggressively (halve)
+                new_count = max(1, len(log_samples_text) // 2)
+                log_samples_text = log_samples_text[:new_count]
+                prompt = build_prompt(log_samples_text)
+
+            # If still too large, replace samples with a short summary placeholder
+            if len(prompt) > max_prompt_chars:
+                summary_placeholder = "(truncated logs: too many characters to include samples; please rerun with narrower time range)"
+                prompt = prompt_template.format(
+                    query=query,
+                    time_range=time_range,
+                    services=services_str,
+                    total_logs=total_logs,
+                    log_samples=summary_placeholder,
+                )
+
             response = self.llm.invoke(prompt)
             llm_analysis = (
                 response.content if hasattr(response, "content") else str(response)

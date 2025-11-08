@@ -11,6 +11,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from math import ceil
 
 from common_ai import MCPGrafanaClient, get_llm
 
@@ -360,20 +361,38 @@ class MetricsAnalyzer:
             # Fallback
             return self._analyze_metrics(metrics_data, query, context)
 
-        # Replace variables in template
-        prompt = prompt_template.format(
-            query=query,
-            service_name=service_name,
-            time_range=time_range,
-            error_rate=f"{error_rate*100:.1f}%",
-            request_rate=f"{request_rate:.1f}",
-            latency_p95=f"{latency_p95:.0f}",
-            cpu_usage=f"{cpu_usage:.1f}",
-            memory_mb=f"{memory_mb:.0f}",
-            anomalies=(
-                "\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
-            ),
+        # Prepare variables for the template
+        anomalies_str = (
+            "\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
         )
+        vars = {
+            "query": query,
+            "service_name": service_name,
+            "time_range": time_range,
+            "error_rate": f"{error_rate*100:.1f}%",
+            "request_rate": f"{request_rate:.1f}",
+            "latency_p95": f"{latency_p95:.0f}",
+            "cpu_usage": f"{cpu_usage:.1f}",
+            "memory_mb": f"{memory_mb:.0f}",
+            "anomalies": anomalies_str,
+        }
+
+        # Guard prompt size to avoid model-runner rejections
+        max_chars = int(os.getenv("LLM_MAX_PROMPT_CHARS", "9000"))
+        try:
+            prompt = prompt_template.format(**vars)
+        except KeyError as e:
+            logger.error(f"Missing variable in analyze_metrics.md template: {e}")
+            return self._analyze_metrics(metrics_data, query, context)
+
+        if len(prompt) > max_chars:
+            # First shrink: remove anomalies details
+            vars["anomalies"] = "Anomalies omitted due to size"
+            prompt = prompt_template.format(**vars)
+
+        if len(prompt) > max_chars:
+            # Final fallback: use a minimal prompt indicating metrics are omitted
+            prompt = "Metrics data omitted due to size constraints. Provide a short summary request."
 
         try:
             response = self.llm.invoke(prompt)

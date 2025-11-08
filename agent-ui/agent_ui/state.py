@@ -84,7 +84,8 @@ class ChatState(rx.State):
             time_range = "5m"
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            orchestrator_timeout = int(os.getenv("ORCHESTRATOR_TIMEOUT", "120"))
+            async with httpx.AsyncClient(timeout=orchestrator_timeout) as client:
                 response = await client.post(
                     f"{orchestrator_url}/analyze",
                     json={"query": question, "time_range": time_range},

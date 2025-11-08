@@ -11,6 +11,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from math import ceil
 
 from common_ai import MCPGrafanaClient, get_llm
 
@@ -344,21 +345,37 @@ class TracesAnalyzer:
             # Fallback
             return self._analyze_traces(traces_data, query, context)
 
-        # Replace variables in template
-        prompt = prompt_template.format(
-            query=query,
-            time_range=time_range,
-            total_traces=total_traces,
-            avg_duration=f"{avg_duration:.0f}",
-            slow_traces=slow_count,
-            failed_traces=failed_count,
-            services_count=len(services),
-            trace_samples=(
-                "\n".join(trace_samples_text)
-                if trace_samples_text
-                else "No traces found"
-            ),
+        # Prepare variables for the template
+        trace_samples_str = (
+            "\n".join(trace_samples_text) if trace_samples_text else "No traces found"
         )
+        vars = {
+            "query": query,
+            "time_range": time_range,
+            "total_traces": total_traces,
+            "avg_duration": f"{avg_duration:.0f}",
+            "slow_traces": slow_count,
+            "failed_traces": failed_count,
+            "services_count": len(services),
+            "trace_samples": trace_samples_str,
+        }
+
+        # Guard prompt size to avoid model-runner rejections
+        max_chars = int(os.getenv("LLM_MAX_PROMPT_CHARS", "9000"))
+        try:
+            prompt = prompt_template.format(**vars)
+        except KeyError as e:
+            logger.error(f"Missing variable in analyze_traces.md template: {e}")
+            return self._analyze_traces(traces_data, query, context)
+
+        if len(prompt) > max_chars:
+            # Try to shrink by removing trace samples
+            vars["trace_samples"] = "Trace samples omitted due to size"
+            prompt = prompt_template.format(**vars)
+
+        if len(prompt) > max_chars:
+            # Final fallback: minimal prompt
+            prompt = "Trace data omitted due to size constraints. Provide a short summary request."
 
         try:
             response = self.llm.invoke(prompt)

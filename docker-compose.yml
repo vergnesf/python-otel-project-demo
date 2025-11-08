@@ -477,9 +477,25 @@ services:
     depends_on:
       - agent-orchestrator
 
+## Model configuration
+# This `models:` block is used as metadata for local model tooling (Docker Model Runner).
+# Configure models via Docker Model Runner (DMR) by following the docs:
+# https://docs.docker.com/ai/compose/models-and-compose/
+# You can declare model image, context_size, runtime flags and other settings here.
+#
+# Note: The model runtime enforces context window limits. To avoid server-side
+# rejections like "context shift is disabled", keep prompts below a safe threshold
+# using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
+# `context_size` and your model-runner capabilities (default used in code: 9000).
 models:
   ai-qwen3:
     model: ai/qwen3:0.6B-Q4_0
+    context_size: 16384
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
 
 volumes:
   kafka-secrets:
