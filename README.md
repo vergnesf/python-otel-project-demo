@@ -22,8 +22,6 @@
     - [Error Simulation](#error-simulation)
   - [AI/LLM Integrations](#aillm-integrations)
     - [Docker AI Model Runner](#docker-ai-model-runner)
-      - [Installation 📦](#installation-)
-      - [Updating DMR 🔄](#updating-dmr-)
     - [Integration with n8n](#integration-with-n8n)
     - [Integration with Flowise](#integration-with-flowise)
     - [MCP (Model Context Protocol) in n8n](#mcp-model-context-protocol-in-n8n)
@@ -197,26 +195,7 @@ ERROR_RATE=0.2  # 20% error rate for testing
 
 🤖 Docker Model Runner (DMR) lets you run and manage AI models locally using Docker. Particularly useful for the AI/LLM features in this project.
 
-#### Installation 📦
-
-For Docker Engine (Fedora/RPM):
-
-```bash
-# Install Docker Model Runner plugin
-sudo dnf install docker-model-plugin
-
-# Test the installation
-docker model version
-```
-
-#### Updating DMR 🔄
-
-To update Docker Model Runner in Docker Engine:
-
-```bash
-# Uninstall current version and reinstall (preserves local models)
-docker model uninstall-runner --images && docker model install-runner
-```
+For installation and setup instructions, refer to the [Docker Model Runner documentation](https://docs.docker.com/ai/model-runner/get-started/#docker-engine).
 
 ### Integration with n8n
 
