@@ -259,24 +259,24 @@ docker-compose up agent-logs
 **Symptoms**: http://localhost:3002 not accessible
 
 **Solutions**:
-1. Check agents-ui container is running:
+1. Check agent-ui container is running:
    ```bash
-   docker-compose ps agents-ui
+   docker-compose ps agent-ui
    ```
 
 2. View logs:
    ```bash
-   docker-compose logs -f agents-ui
+   docker-compose logs -f agent-ui
    ```
 
 3. Verify port mapping:
    ```bash
-   docker-compose port agents-ui 3000
+   docker-compose port agent-ui 3000
    ```
 
 4. Check if orchestrator is reachable from UI:
    ```bash
-   docker-compose exec agents-ui curl http://agent-orchestrator:8001/health
+   docker-compose exec agent-ui curl http://agent-orchestrator:8001/health
    ```
 
 ## Debugging Tips

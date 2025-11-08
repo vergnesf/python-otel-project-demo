@@ -44,7 +44,7 @@ This is a comprehensive microservices demonstration project showcasing Python au
 - **agent-metrics** - Specialized in Mimir metrics analysis (PromQL)
 - **agent-traces** - Specialized in Tempo trace analysis (TraceQL)
 - **agents-common** - Shared models, MCP client, and utilities
-- **agents-ui** - Web interface for interacting with the agentic network
+- **agent-ui** - Web interface for interacting with the agentic network
 
 ### Infrastructure Components
 - **Kafka** - Message broker for async communication

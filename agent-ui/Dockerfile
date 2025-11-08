@@ -17,15 +17,18 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files for caching
-COPY agents-ui/pyproject.toml /app/pyproject.toml
+COPY agent-ui/pyproject.toml /app/pyproject.toml
 
 # Install uv and Python dependencies into a venv
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev
+    uv sync --no-dev && \
+    find /app/.venv -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/.venv -type f -name "*.pyc" -delete 2>/dev/null || true && \
+    find /app/.venv -type f -name "*.pyo" -delete 2>/dev/null || true
 
 # Copy app code and Reflex config
-COPY agents-ui/agents_ui /app/agents_ui
-COPY agents-ui/rxconfig.py /app/rxconfig.py
+COPY agent-ui/agent_ui /app/agent_ui
+COPY agent-ui/rxconfig.py /app/rxconfig.py
 
 # Initialize Reflex (install frontend deps and build)
 RUN uv run --no-dev reflex init
@@ -35,12 +38,17 @@ RUN uv run --no-dev reflex init
 # ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
-# Update OS packages and install runtime dependencies
+# Update OS packages and install only Node.js and unzip (for Reflex runtime)
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y curl unzip && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y ca-certificates curl gnupg unzip && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
     apt-get install -y nodejs && \
+    apt-get remove -y curl gnupg && \
+    apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -55,7 +63,7 @@ WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code and Reflex built assets
-COPY --from=builder /app/agents_ui /app/agents_ui
+COPY --from=builder /app/agent_ui /app/agent_ui
 COPY --from=builder /app/rxconfig.py /app/rxconfig.py
 COPY --from=builder /app/.web /app/.web
 

@@ -1,5 +1,5 @@
 [project]
-name = "agents-ui"
+name = "agent-ui"
 version = "0.1.0"
 description = "Reflex-based web UI for the observability agentic network"
 readme = "README.md"

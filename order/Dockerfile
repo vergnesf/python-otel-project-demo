@@ -1,7 +1,26 @@
-# Single-stage build - simpler and avoids shebang issues
+# Multi-stage build for minimal image size
 ARG DOCKER_REGISTRY=""
 ARG IMG_PYTHON="python:3.14-slim"
 
+# ============================================
+# Build stage: Install dependencies
+# ============================================
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS builder
+
+WORKDIR /app/order
+
+# Copy dependency files from root context
+COPY order/pyproject.toml ./pyproject.toml
+COPY common-models ../common-models
+
+# Install uv and dependencies
+RUN pip install --no-cache-dir uv && \
+    uv sync --no-dev && \
+    uv run opentelemetry-bootstrap -a install
+
+# ============================================
+# Runtime stage: Minimal runtime image
+# ============================================
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 # Update OS packages
@@ -17,14 +36,9 @@ ENV PYTHON_JIT=1
 
 WORKDIR /app/order
 
-# Copy dependency files from root context
-COPY order/pyproject.toml ./pyproject.toml
-COPY common-models ../common-models
-
-# Install uv and dependencies
-RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
-    uv run opentelemetry-bootstrap -a install
+# Copy venv from builder
+COPY --from=builder /app/order/.venv .venv
+COPY --from=builder /app/common-models ../common-models
 
 # Copy application code
 COPY order/order ../order
@@ -40,4 +54,4 @@ ENV PATH="/app/order/.venv/bin:$PATH"
 ENV PYTHONPATH="/app:$PYTHONPATH"
 
 # Set the default command
-CMD ["uv", "run", "opentelemetry-instrument", "python", "/app/order/main.py"]
+CMD ["opentelemetry-instrument", "python", "/app/order/main.py"]

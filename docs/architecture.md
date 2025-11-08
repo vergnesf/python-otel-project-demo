@@ -67,7 +67,7 @@ python-otel-project-demo/
 ├── agent-logs/                   # AI Agent: Loki log analysis
 ├── agent-metrics/                # AI Agent: Mimir metrics analysis
 ├── agent-traces/                 # AI Agent: Tempo traces analysis
-├── agents-ui/                    # Web UI for agents
+├── agent-ui/                    # Web UI for agents
 ├── docs/                         # Documentation
 └── docker-compose.yml            # Complete stack orchestration
 ```

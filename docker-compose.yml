@@ -445,13 +445,13 @@ services:
     models:
       - ai-qwen3
 
-  agents-ui:
-    image: ${DOCKER_REGISTRY:-}agents-ui:latest
+  agent-ui:
+    image: ${DOCKER_REGISTRY:-}agent-ui:latest
     build:
       context: .
-      dockerfile: agents-ui/Dockerfile
+      dockerfile: agent-ui/Dockerfile
       <<: *python-build
-    container_name: agents-ui
+    container_name: agent-ui
     <<: *app-settings
     ports:
       - "3002:3002"

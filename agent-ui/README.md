@@ -48,7 +48,7 @@ uv run reflex run --env prod
 The UI is containerized and runs as part of the docker-compose stack:
 
 ```bash
-docker-compose up agents-ui
+docker-compose up agent-ui
 ```
 
 Access at: **http://localhost:3002**
@@ -133,10 +133,10 @@ The UI is fully responsive:
 ### File Structure
 
 ```
-agents-ui/
-├── agents_ui/
+agent-ui/
+├── agent_ui/
 │   ├── __init__.py
-│   ├── agents_ui.py      # Main Reflex app
+│   ├── agent_ui.py      # Main Reflex app
 │   ├── state.py          # State management
 │   └── components/       # UI components
 │       ├── chat.py
@@ -153,7 +153,7 @@ To extend the UI:
 
 1. Add new components in `components/`
 2. Update state in `state.py`
-3. Modify layout in `agents_ui.py`
+3. Modify layout in `agent_ui.py`
 4. Style with Tailwind classes
 
 ## 🎨 Styling
