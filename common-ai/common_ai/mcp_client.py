@@ -175,9 +175,10 @@ class MCPGrafanaClient:
             # Default to 1 hour
             start = now - timedelta(hours=1)
         
-        # Convert to RFC3339 format (ISO 8601 with Z suffix)
-        start_rfc = start.isoformat() + 'Z'
-        end_rfc = now.isoformat() + 'Z'
+        # Convert to RFC3339 format without microseconds (YYYY-MM-DDTHH:MM:SSZ)
+        # MCP server expects this specific format
+        start_rfc = start.strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_rfc = now.strftime('%Y-%m-%dT%H:%M:%SZ')
         
         return start_rfc, end_rfc
 
