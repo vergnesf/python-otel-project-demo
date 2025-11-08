@@ -8,7 +8,7 @@ x-common-otel-env: &common-otel-env
   OTEL_LOGS_EXPORTER: otlp
   OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
   OTEL_PYTHON_LOG_CORRELATION: "true"
-  LOG_LEVEL: DEBUG
+  LOG_LEVEL: INFO
   ERROR_RATE: "0.1"
 
 x-common-llm-env: &common-llm-env
@@ -63,7 +63,11 @@ services:
       - kafka-secrets:/etc/kafka/secrets
       - kafka-data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -104,7 +108,11 @@ services:
       - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana-data:/var/lib/grafana
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -138,7 +146,11 @@ services:
       - ./config/loki/loki-config.yml:/etc/config/loki.yaml
       - loki-data:/tmp/loki
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
