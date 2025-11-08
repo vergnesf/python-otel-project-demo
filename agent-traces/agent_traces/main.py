@@ -49,7 +49,7 @@ class HealthResponse(BaseModel):
 async def analyze(request: AnalyzeRequest):
     """
     Analyze distributed traces from Tempo based on user query
-    
+
     Uses MCP Grafana server to query Tempo and provides intelligent analysis.
     """
     try:
@@ -70,11 +70,11 @@ async def analyze(request: AnalyzeRequest):
 async def health():
     """
     Health check endpoint
-    
+
     Checks connectivity to MCP Grafana server.
     """
     mcp_status = await analyzer.check_mcp_health()
-    
+
     return HealthResponse(
         status="healthy" if mcp_status else "unhealthy",
         mcp_server="reachable" if mcp_status else "unreachable",
@@ -86,7 +86,9 @@ async def health():
 async def startup():
     """Application startup"""
     logger.info("Traces Agent starting up...")
-    logger.info(f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}")
+    logger.info(
+        f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}"
+    )
 
 
 @app.on_event("shutdown")

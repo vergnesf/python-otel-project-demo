@@ -10,15 +10,15 @@ from .state import ChatState
 def message_box(message: dict) -> rx.Component:
     """
     Render a single chat message
-    
+
     Args:
         message: Message dictionary with 'role' and 'content'
-        
+
     Returns:
         Reflex component for the message
     """
     is_user = message["role"] == "user"
-    
+
     return rx.box(
         rx.hstack(
             rx.box(
@@ -50,7 +50,7 @@ def message_box(message: dict) -> rx.Component:
 def chat_interface() -> rx.Component:
     """
     Main chat interface component
-    
+
     Returns:
         Reflex component for the chat UI
     """
@@ -80,7 +80,9 @@ def chat_interface() -> rx.Component:
                 ChatState.is_loading,
                 rx.hstack(
                     rx.spinner(size="sm", color="purple.500"),
-                    rx.text("Agents are analyzing...", color="gray.600", font_size="sm"),
+                    rx.text(
+                        "Agents are analyzing...", color="gray.600", font_size="sm"
+                    ),
                     padding="4",
                 ),
             ),
@@ -126,7 +128,7 @@ def chat_interface() -> rx.Component:
 def index() -> rx.Component:
     """
     Main page component
-    
+
     Returns:
         Reflex component for the main page
     """

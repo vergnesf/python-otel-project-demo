@@ -155,19 +155,19 @@ To use the intelligent observability agents:
 
 ### Useful URLs
 
-| Service                | URL                    | Description                           |
-| ---------------------- | ---------------------- | ------------------------------------- |
-| Grafana (Standard)     | http://localhost:3000/ | Main observability dashboard 📊        |
-| AKHQ                   | http://localhost:8080/ | Kafka management UI 🛠️                 |
-| Adminer                | http://localhost:8081/ | Database administration 🗃️             |
-| n8n                    | http://localhost:5678/ | Workflow automation 🔄                 |
-| Flowise                | http://localhost:3001/ | AI workflow builder 🤖                 |
-| **Agentic Network**    |                        |                                       |
-| Agents Web UI          | http://localhost:3002/ | Chat interface for agent queries 💬    |
-| Orchestrator API       | http://localhost:8001/ | Main agent coordinator API 🎯          |
-| Logs Agent API         | http://localhost:8002/ | Specialized logs analysis API 📜       |
-| Metrics Agent API      | http://localhost:8003/ | Specialized metrics analysis API 📊    |
-| Traces Agent API       | http://localhost:8004/ | Specialized traces analysis API 🛤️     |
+| Service             | URL                    | Description                        |
+| ------------------- | ---------------------- | ---------------------------------- |
+| Grafana (Standard)  | http://localhost:3000/ | Main observability dashboard 📊     |
+| AKHQ                | http://localhost:8080/ | Kafka management UI 🛠️              |
+| Adminer             | http://localhost:8081/ | Database administration 🗃️          |
+| n8n                 | http://localhost:5678/ | Workflow automation 🔄              |
+| Flowise             | http://localhost:3001/ | AI workflow builder 🤖              |
+| **Agentic Network** |                        |                                    |
+| Agents Web UI       | http://localhost:3002/ | Chat interface for agent queries 💬 |
+| Orchestrator API    | http://localhost:8001/ | Main agent coordinator API 🎯       |
+| Logs Agent API      | http://localhost:8002/ | Specialized logs analysis API 📜    |
+| Metrics Agent API   | http://localhost:8003/ | Specialized metrics analysis API 📊 |
+| Traces Agent API    | http://localhost:8004/ | Specialized traces analysis API 🛤️  |
 
 ## Configuration
 

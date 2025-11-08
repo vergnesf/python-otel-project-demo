@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class MCPGrafanaClient:
     """
     Client for communicating with Grafana MCP Server
-    
+
     The MCP server acts as a unified gateway to Loki (logs), Mimir (metrics), and Tempo (traces).
     """
 
@@ -25,7 +25,7 @@ class MCPGrafanaClient:
     ):
         """
         Initialize MCP Grafana client
-        
+
         Args:
             base_url: Base URL of the MCP server
             timeout: Request timeout in seconds
@@ -46,12 +46,12 @@ class MCPGrafanaClient:
     ) -> dict[str, Any]:
         """
         Query logs from Loki via MCP
-        
+
         Args:
             query: LogQL query (e.g., '{service_name="order"} |= "error"')
             time_range: Time range (e.g., '1h', '24h', '7d')
             limit: Maximum number of log lines to return
-            
+
         Returns:
             Dictionary containing log query results
         """
@@ -78,12 +78,12 @@ class MCPGrafanaClient:
     ) -> dict[str, Any]:
         """
         Query metrics from Mimir via MCP
-        
+
         Args:
             query: PromQL query (e.g., 'rate(http_requests_total[5m])')
             time_range: Time range (e.g., '1h', '24h', '7d')
             step: Step interval for range queries
-            
+
         Returns:
             Dictionary containing metric query results
         """
@@ -110,12 +110,12 @@ class MCPGrafanaClient:
     ) -> dict[str, Any]:
         """
         Query traces from Tempo via MCP
-        
+
         Args:
             query: TraceQL query (e.g., 'service.name="order" && status=error')
             time_range: Time range (e.g., '1h', '24h', '7d')
             limit: Maximum number of traces to return
-            
+
         Returns:
             Dictionary containing trace query results
         """
@@ -137,7 +137,7 @@ class MCPGrafanaClient:
     async def health_check(self) -> bool:
         """
         Check if MCP server is healthy
-        
+
         Returns:
             True if server is healthy, False otherwise
         """
