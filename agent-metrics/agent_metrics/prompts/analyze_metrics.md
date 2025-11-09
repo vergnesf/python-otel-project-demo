@@ -16,16 +16,16 @@ Inputs:
 Return this JSON schema:
 
 ```
-{{
+{{{{
   "health":"healthy|degraded|critical",
   "summary":"one-line",
-  "metrics":{ "error_rate":num, "request_rate":num, "latency_p95":num, "cpu_usage":num, "memory_mb":num },
+  "metrics":{{{{ "error_rate":num, "request_rate":num, "latency_p95":num, "cpu_usage":num, "memory_mb":num }}}},
   "out_of_threshold":["error_rate","latency_p95"],
   "anomalies":["..."],
   "recommendations":["..."],
   "time_range_checked":"string",
   "insights":"one-line"
-}}
+}}}}
 ```
 
 Rules:

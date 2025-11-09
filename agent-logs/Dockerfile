@@ -16,7 +16,7 @@ COPY common-ai ../common-ai
 # Install uv and dependencies
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev && \
-    uv run opentelemetry-bootstrap -a requirements > /tmp/otel-requirements.txt && \
+    uv run --no-dev opentelemetry-bootstrap -a requirements > /tmp/otel-requirements.txt && \
     uv pip install -r /tmp/otel-requirements.txt
 
 # ============================================

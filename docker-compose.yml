@@ -21,6 +21,7 @@ x-common-llm-otel-env: &common-llm-otel-env
   LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
   LLM_MODEL: ${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+  LLM_EPHEMERAL_PER_CALL: ${LLM_EPHEMERAL_PER_CALL:-true}
   LOG_LEVEL: INFO
 
 x-python-build: &python-build
@@ -399,7 +400,7 @@ services:
       - grafana-mcp
       - otel-collector
     models:
-      - ai-qwen3
+      - llama3.2-3b
 
   agent-logs:
     image: ${DOCKER_REGISTRY:-}agent-logs:latest
@@ -419,7 +420,7 @@ services:
       - grafana-mcp
       - otel-collector
     models:
-      - ai-qwen3
+      - llama3.2-3b
 
   agent-metrics:
     image: ${DOCKER_REGISTRY:-}agent-metrics:latest
@@ -439,7 +440,7 @@ services:
       - grafana-mcp
       - otel-collector
     models:
-      - ai-qwen3
+      - llama3.2-3b
 
   agent-traces:
     image: ${DOCKER_REGISTRY:-}agent-traces:latest
@@ -459,7 +460,7 @@ services:
       - grafana-mcp
       - otel-collector
     models:
-      - ai-qwen3
+      - llama3.2-3b
 
   agent-ui:
     image: ${DOCKER_REGISTRY:-}agent-ui:latest
@@ -488,8 +489,16 @@ services:
 # using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
 # `context_size` and your model-runner capabilities (default used in code: 9000).
 models:
-  ai-qwen3:
+  qwen3-0.6b:
     model: ai/qwen3:0.6B-Q4_0
+    context_size: 16384
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+  llama3.2-3b:
+    model: ai/llama3.2:3B-Q4_K_M
     context_size: 16384
     runtime_flags:
       - "--temp" # Temperature

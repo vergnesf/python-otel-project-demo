@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from common_ai import MCPGrafanaClient, get_llm
+from common_ai import MCPGrafanaClient, get_llm, extract_text_from_response
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +296,7 @@ class LogsAnalyzer:
 
         try:
             response = self.llm.invoke(prompt)
-            logql = response.content if hasattr(response, "content") else str(response)
+            logql = extract_text_from_response(response)
             logql = logql.strip().strip("`").strip()
             # Remove markdown code block markers if present
             if logql.startswith("```"):
@@ -407,9 +407,7 @@ class LogsAnalyzer:
                 )
 
             response = self.llm.invoke(prompt)
-            llm_analysis = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            llm_analysis = extract_text_from_response(response)
             logger.info("LLM logs analysis complete")
 
             # Try to extract JSON object from LLM response

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from math import ceil
 
-from common_ai import MCPGrafanaClient, get_llm
+from common_ai import MCPGrafanaClient, get_llm, extract_text_from_response
 
 logger = logging.getLogger(__name__)
 
@@ -396,9 +396,7 @@ class MetricsAnalyzer:
 
         try:
             response = self.llm.invoke(prompt)
-            llm_analysis = (
-                response.content if hasattr(response, "content") else str(response)
-            )
+            llm_analysis = extract_text_from_response(response)
             logger.info("LLM metrics analysis complete")
 
             # Try to extract JSON object from LLM response
@@ -497,7 +495,7 @@ class MetricsAnalyzer:
 
         try:
             response = self.llm.invoke(prompt)
-            promql = response.content if hasattr(response, "content") else str(response)
+            promql = extract_text_from_response(response)
             promql = promql.strip().strip("`").strip()
             # Remove markdown code block markers if present
             if promql.startswith("```"):

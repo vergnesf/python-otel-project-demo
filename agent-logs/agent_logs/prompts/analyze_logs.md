@@ -12,16 +12,16 @@ Inputs:
 Return this JSON schema:
 
 ```
-{{
+{{{{
   "summary": "short 1-line summary",
   "total_logs": integer,
   "error_count": integer,
   "affected_services": ["svc"],
-  "top_error_patterns": [{"pattern":"...","count":int,"examples":["...","..."]}],
+  "top_error_patterns": [{{"pattern":"...","count":int,"examples":["...","..."]}}],
   "severity": "low|medium|high|critical",
   "insights": "one-line actionable insight",
   "time_range_checked": "string"
-}}
+}}}}
 ```
 
 Rules:

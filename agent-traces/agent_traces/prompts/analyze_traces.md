@@ -15,17 +15,17 @@ Inputs:
 Return this JSON schema:
 
 ```
-{{
+{{{{
   "summary":"short 1-line summary",
   "total_traces":int,
   "slow_traces":int,
   "failed_traces":int,
   "affected_services":["svc"],
-  "top_span_patterns":[{"pattern":"...","count":int,"examples":["...","..."]}],
+  "top_span_patterns":[{{"pattern":"...","count":int,"examples":["...","..."]}}],
   "severity":"low|medium|high|critical",
   "insights":"one-line",
   "time_range_checked":"string"
-}}
+}}}}
 ```
 
 Rules:

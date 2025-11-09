@@ -16,7 +16,7 @@ COPY common-models ../common-models
 # Install uv and dependencies
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev && \
-    uv run opentelemetry-bootstrap -a install
+    uv run --no-dev opentelemetry-bootstrap -a install
 
 # ============================================
 # Runtime stage: Minimal runtime image
