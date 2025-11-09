@@ -199,8 +199,6 @@ services:
       OTEL_SERVICE_NAME: customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -230,8 +228,6 @@ services:
       OTEL_SERVICE_NAME: supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -260,8 +256,6 @@ services:
       <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: order
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -291,8 +285,6 @@ services:
       <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: stock
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -323,6 +315,16 @@ services:
       OTEL_SERVICE_NAME: ordercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://order:5000
+    develop:
+      watch:
+        - action: rebuild
+          path: ./ordercheck
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       broker:
         condition: service_healthy
@@ -344,6 +346,16 @@ services:
       OTEL_SERVICE_NAME: suppliercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://stock:5001
+    develop:
+      watch:
+        - action: rebuild
+          path: ./suppliercheck
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       broker:
         condition: service_healthy
@@ -366,8 +378,6 @@ services:
       API_URL_ORDERS: http://order:5000
       API_URL_STOCKS: http://stock:5001
       INTERVAL_SECONDS: 5
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -457,8 +467,6 @@ services:
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8003
       AGENT_TRACES_URL: http://agent-traces:8004
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -489,8 +497,6 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-logs
       MCP_GRAFANA_URL: http://grafana-mcp:8000
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -521,8 +527,6 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-metrics
       MCP_GRAFANA_URL: http://grafana-mcp:8000
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild
@@ -553,8 +557,6 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-traces
       MCP_GRAFANA_URL: http://grafana-mcp:8000
-    volumes:
-      - /app/.venv
     develop:
       watch:
         - action: rebuild

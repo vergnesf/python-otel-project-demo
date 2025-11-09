@@ -22,6 +22,8 @@ FROM base AS dev
 COPY stock/pyproject.toml /app/stock/
 COPY common-models /app/common-models/
 
+WORKDIR /app/stock
+
 RUN pip install --no-cache-dir uv && \
     uv add pip && \
     uv run --no-dev opentelemetry-bootstrap -a install
@@ -40,6 +42,8 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
 COPY stock/pyproject.toml /app/stock/
 COPY common-models /app/common-models/
+
+WORKDIR /app/stock
 
 RUN pip install --no-cache-dir uv && \
     uv add pip && \

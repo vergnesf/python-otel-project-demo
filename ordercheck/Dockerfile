@@ -28,7 +28,7 @@ RUN pip install --no-cache-dir uv && \
     uv add pip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ordercheck/ordercheck ./ordercheck/ordercheck/
+COPY ordercheck/ordercheck /app/ordercheck/ordercheck/
 
 
 CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
@@ -43,11 +43,13 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 COPY ordercheck/pyproject.toml ./ordercheck/
 COPY common-models ./common-models/
 
+WORKDIR /app/ordercheck
+
 RUN pip install --no-cache-dir uv && \
     uv sync --directory ordercheck --no-dev && \
     uv run --directory ordercheck --no-dev opentelemetry-bootstrap -a install
 
-COPY ordercheck/ordercheck ./ordercheck/ordercheck/
+COPY ordercheck/ordercheck /app/ordercheck/ordercheck/
 
 RUN chown -R appuser:appuser /app
 
