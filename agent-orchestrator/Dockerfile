@@ -24,7 +24,7 @@ COPY common-ai ./common-ai/
 
 RUN pip install --no-cache-dir uv && \
     uv sync --directory agent-orchestrator && \
-    uv run --directory agent-orchestrator opentelemetry-bootstrap -a install
+    uv run --directory agent-orchestrator --with pip opentelemetry-bootstrap -a install
 
 COPY agent-orchestrator/agent_orchestrator ./agent-orchestrator/agent_orchestrator/
 
@@ -44,7 +44,7 @@ COPY common-ai ./common-ai/
 
 RUN pip install --no-cache-dir uv && \
     uv sync --directory agent-orchestrator --no-dev && \
-    uv run --directory agent-orchestrator --no-dev opentelemetry-bootstrap -a install
+    uv run --directory agent-orchestrator --no-dev --with pip opentelemetry-bootstrap -a install
 
 COPY agent-orchestrator/agent_orchestrator ./agent-orchestrator/agent_orchestrator/
 

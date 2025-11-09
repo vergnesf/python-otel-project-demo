@@ -24,7 +24,7 @@ COPY common-ai ./common-ai/
 
 RUN pip install --no-cache-dir uv && \
     uv sync --directory agent-logs && \
-    uv run --directory agent-logs opentelemetry-bootstrap -a install
+    uv run --directory agent-logs --with pip opentelemetry-bootstrap -a install
 
 COPY agent-logs/agent_logs ./agent-logs/agent_logs/
 
@@ -44,7 +44,7 @@ COPY common-ai ./common-ai/
 
 RUN pip install --no-cache-dir uv && \
     uv sync --directory agent-logs --no-dev && \
-    uv run --directory agent-logs --no-dev opentelemetry-bootstrap -a install
+    uv run --directory agent-logs --no-dev --with pip opentelemetry-bootstrap -a install
 
 COPY agent-logs/agent_logs ./agent-logs/agent_logs/
 

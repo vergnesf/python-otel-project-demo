@@ -205,6 +205,12 @@ services:
       watch:
         - action: rebuild
           path: ./customer
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       broker:
         condition: service_healthy
@@ -230,6 +236,12 @@ services:
       watch:
         - action: rebuild
           path: ./supplier
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       broker:
         condition: service_healthy
@@ -254,6 +266,12 @@ services:
       watch:
         - action: rebuild
           path: ./order
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -279,6 +297,12 @@ services:
       watch:
         - action: rebuild
           path: ./stock
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -348,6 +372,12 @@ services:
       watch:
         - action: rebuild
           path: ./order
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       order:
         condition: service_started
@@ -433,6 +463,12 @@ services:
       watch:
         - action: rebuild
           path: ./agent-orchestrator
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -459,6 +495,12 @@ services:
       watch:
         - action: rebuild
           path: ./agent-logs
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -485,6 +527,12 @@ services:
       watch:
         - action: rebuild
           path: ./agent-metrics
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -511,6 +559,12 @@ services:
       watch:
         - action: rebuild
           path: ./agent-traces
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+            - .mypy_cache
+            - .ruff_cache
     depends_on:
       - grafana-mcp
       - otel-collector
