@@ -30,7 +30,7 @@ COPY agent-logs/agent_logs ./agent-logs/agent_logs/
 
 EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-logs", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+CMD ["uv", "run", "--directory", "agent-logs", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Prod stage: Optimized production image

@@ -30,7 +30,7 @@ COPY agent-orchestrator/agent_orchestrator ./agent-orchestrator/agent_orchestrat
 
 EXPOSE 8001
 
-CMD ["uv", "run", "--directory", "agent-orchestrator", "opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+CMD ["uv", "run", "--directory", "agent-orchestrator", "opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 # ============================================
 # Prod stage: Optimized production image

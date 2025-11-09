@@ -30,7 +30,7 @@ COPY agent-metrics/agent_metrics ./agent-metrics/agent_metrics/
 
 EXPOSE 8003
 
-CMD ["uv", "run", "--directory", "agent-metrics", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
+CMD ["uv", "run", "--directory", "agent-metrics", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8003"]
 
 # ============================================
 # Prod stage: Optimized production image

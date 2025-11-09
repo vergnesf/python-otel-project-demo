@@ -203,15 +203,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./customer
-          target: /app/customer
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./customer/pyproject.toml
+          path: ./customer
     depends_on:
       broker:
         condition: service_healthy
@@ -235,15 +228,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./supplier
-          target: /app/supplier
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./supplier/pyproject.toml
+          path: ./supplier
     depends_on:
       broker:
         condition: service_healthy
@@ -266,15 +252,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./order
-          target: /app/order
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./order/pyproject.toml
+          path: ./order
     depends_on:
       postgres:
         condition: service_healthy
@@ -298,15 +277,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./stock
-          target: /app/stock
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./stock/pyproject.toml
+          path: ./stock
     depends_on:
       postgres:
         condition: service_healthy
@@ -374,15 +346,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./order
-          target: /app/order
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./order/pyproject.toml
+          path: ./order
     depends_on:
       order:
         condition: service_started
@@ -466,15 +431,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./agent-orchestrator
-          target: /app/agent-orchestrator
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./agent-orchestrator/pyproject.toml
+          path: ./agent-orchestrator
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -499,15 +457,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./agent-logs
-          target: /app/agent-logs
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./agent-logs/pyproject.toml
+          path: ./agent-logs
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -532,15 +483,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./agent-metrics
-          target: /app/agent-metrics
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./agent-metrics/pyproject.toml
+          path: ./agent-metrics
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -565,15 +509,8 @@ services:
       - /app/.venv
     develop:
       watch:
-        - action: sync
-          path: ./agent-traces
-          target: /app/agent-traces
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
         - action: rebuild
-          path: ./agent-traces/pyproject.toml
+          path: ./agent-traces
     depends_on:
       - grafana-mcp
       - otel-collector

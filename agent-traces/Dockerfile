@@ -30,7 +30,7 @@ COPY agent-traces/agent_traces ./agent-traces/agent_traces/
 
 EXPOSE 8004
 
-CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
 
 # ============================================
 # Prod stage: Optimized production image
