@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "common-models"
     "confluent-kafka>=2.12.2",
     "opentelemetry-distro>=0.59b0",
     "opentelemetry-exporter-otlp>=1.38.0",
@@ -18,3 +19,6 @@ dev = [
     "black",
     "pyright",
 ]
+
+[tool.uv.sources]
+common-models = { path = "../common-models" }

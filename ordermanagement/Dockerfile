@@ -19,17 +19,17 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY ordermanagement/pyproject.toml ./ordermanagement/
-COPY common-models ./common-models/
+COPY ordermanagement/pyproject.toml /app/ordermanagement/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory ordermanagement && \
-    uv run --directory ordermanagement opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ordermanagement/ordermanagement ./ordermanagement/ordermanagement/
+COPY ordermanagement/ordermanagement /app/ordermanagement/ordermanagement/
 
 
-CMD ["uv", "run", "--directory", "ordermanagement", "opentelemetry-instrument", "python", "ordermanagement/ordermanagement.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordermanagement/ordermanagement.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +38,22 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ordermanagement/pyproject.toml ./ordermanagement/
-COPY common-models ./common-models/
+COPY ordermanagement/pyproject.toml /app/ordermanagement/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory ordermanagement --no-dev && \
-    uv run --directory ordermanagement --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ordermanagement/ordermanagement ./ordermanagement/ordermanagement/
+COPY ordermanagement/ordermanagement /app/ordermanagement/ordermanagement/
+
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "ordermanagement", "opentelemetry-instrument", "python", "ordermanagement/ordermanagement.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordermanagement/ordermanagement.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

@@ -19,17 +19,17 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY suppliercheck/pyproject.toml ./suppliercheck/
-COPY common-models ./common-models/
+COPY suppliercheck/pyproject.toml /app/suppliercheck/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory suppliercheck && \
-    uv run --directory suppliercheck opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY suppliercheck/suppliercheck ./suppliercheck/suppliercheck/
+COPY suppliercheck/suppliercheck /app/suppliercheck/suppliercheck/
 
 
-CMD ["uv", "run", "--directory", "suppliercheck", "opentelemetry-instrument", "python", "suppliercheck/suppliercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "suppliercheck/suppliercheck_consumer.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +38,21 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY suppliercheck/pyproject.toml ./suppliercheck/
-COPY common-models ./common-models/
+COPY suppliercheck/pyproject.toml /app/suppliercheck/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory suppliercheck --no-dev && \
-    uv run --directory suppliercheck --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY suppliercheck/suppliercheck ./suppliercheck/suppliercheck/
+COPY suppliercheck/suppliercheck /app/suppliercheck/suppliercheck/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "suppliercheck", "opentelemetry-instrument", "python", "suppliercheck/suppliercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "suppliercheck/suppliercheck_consumer.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

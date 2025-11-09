@@ -19,17 +19,19 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY order/pyproject.toml ./order/
-COPY common-models ./common-models/
+COPY order/pyproject.toml /app/order/
+COPY common-models /app/common-models/
+
+WORKDIR /app/order
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory order && \
-    uv run --directory order opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY order/order ./order/order/
+COPY order/order /app/order/order/
 
 
-CMD ["uv", "run", "--directory", "order", "opentelemetry-instrument", "python", "order/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "order/main.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +40,23 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY order/pyproject.toml ./order/
-COPY common-models ./common-models/
+COPY order/pyproject.toml /app/order/
+COPY common-models /app/common-models/
+
+WORKDIR /app/order
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory order --no-dev && \
-    uv run --directory order --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY order/order ./order/order/
+COPY order/order /app/order/order/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "order", "opentelemetry-instrument", "python", "order/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "order/main.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

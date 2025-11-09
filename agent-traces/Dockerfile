@@ -19,18 +19,20 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY agent-traces/pyproject.toml ./agent-traces/
-COPY common-ai ./common-ai/
+COPY agent-traces/pyproject.toml /app/agent-traces/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-traces
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-traces && \
-    uv run --directory agent-traces --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-traces/agent_traces ./agent-traces/agent_traces/
+COPY agent-traces/agent_traces /app/agent-traces/agent_traces/
 
-EXPOSE 8004
+EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -39,22 +41,24 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY agent-traces/pyproject.toml ./agent-traces/
-COPY common-ai ./common-ai/
+COPY agent-traces/pyproject.toml /app/agent-traces/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-traces
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-traces --no-dev && \
-    uv run --directory agent-traces --no-dev --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-traces/agent_traces ./agent-traces/agent_traces/
+COPY agent-traces/agent_traces /app/agent-traces/agent_traces/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8004
+EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

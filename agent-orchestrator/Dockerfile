@@ -19,21 +19,20 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY agent-orchestrator/pyproject.toml ./agent-orchestrator/
-COPY common-ai ./common-ai/
+COPY agent-orchestrator/pyproject.toml /app/agent-orchestrator/
+COPY common-ai /app/common-ai/
 
 WORKDIR /app/agent-orchestrator
 
 RUN pip install --no-cache-dir uv && \
-    uv sync && \
     uv add pip && \
-    uv run opentelemetry-bootstrap -a install
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-orchestrator/agent_orchestrator ./agent_orchestrator/
+COPY agent-orchestrator/agent_orchestrator /app/agent-orchestrator/agent_orchestrator/
 
 EXPOSE 8001
 
-CMD ["uv", "run", "opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -42,17 +41,16 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY agent-orchestrator/pyproject.toml ./agent-orchestrator/
-COPY common-ai ./common-ai/
+COPY agent-orchestrator/pyproject.toml /app/agent-orchestrator/
+COPY common-ai /app/common-ai/
 
 WORKDIR /app/agent-orchestrator
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
     uv add pip && \
-    uv run opentelemetry-bootstrap -a install
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-orchestrator/agent_orchestrator ./agent_orchestrator/
+COPY agent-orchestrator/agent_orchestrator /app/agent-orchestrator/agent_orchestrator/
 
 RUN chown -R appuser:appuser /app
 
@@ -60,7 +58,7 @@ USER appuser
 
 EXPOSE 8001
 
-CMD ["uv", "run", "opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "--no-dev","opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

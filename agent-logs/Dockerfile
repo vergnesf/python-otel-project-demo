@@ -19,18 +19,20 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY agent-logs/pyproject.toml ./agent-logs/
-COPY common-ai ./common-ai/
+COPY agent-logs/pyproject.toml /app/agent-logs/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-logs
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-logs && \
-    uv run --directory agent-logs --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-logs/agent_logs ./agent-logs/agent_logs/
+COPY agent-logs/agent_logs /app/agent-logs/agent_logs/
 
 EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-logs", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -39,14 +41,16 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY agent-logs/pyproject.toml ./agent-logs/
-COPY common-ai ./common-ai/
+COPY agent-logs/pyproject.toml /app/agent-logs/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-logs
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-logs --no-dev && \
-    uv run --directory agent-logs --no-dev --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-logs/agent_logs ./agent-logs/agent_logs/
+COPY agent-logs/agent_logs /app/agent-logs/agent_logs/
 
 RUN chown -R appuser:appuser /app
 
@@ -54,7 +58,7 @@ USER appuser
 
 EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-logs", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_logs.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

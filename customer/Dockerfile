@@ -19,17 +19,19 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY customer/pyproject.toml ./customer/
-COPY common-models ./common-models/
+COPY customer/pyproject.toml /app/customer/
+COPY common-models /app/common-models/
+
+WORKDIR /app/customer
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory customer && \
-    uv run --directory customer opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY customer/customer ./customer/customer/
+COPY customer/customer /app/customer/customer/
 
 
-CMD ["uv", "run", "--directory", "customer", "opentelemetry-instrument", "python", "customer/customer_producer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "customer/customer_producer.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +40,23 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY customer/pyproject.toml ./customer/
-COPY common-models ./common-models/
+COPY customer/pyproject.toml /app/customer/
+COPY common-models /app/common-models/
+
+WORKDIR /app/customer
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory customer --no-dev && \
-    uv run --directory customer --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY customer/customer ./customer/customer/
+COPY customer/customer /app/customer/customer/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "customer", "opentelemetry-instrument", "python", "customer/customer_producer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "customer/customer_producer.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

@@ -19,18 +19,20 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY agent-metrics/pyproject.toml ./agent-metrics/
-COPY common-ai ./common-ai/
+COPY agent-metrics/pyproject.toml /app/agent-metrics/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-metrics
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-metrics && \
-    uv run --directory agent-metrics --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-metrics/agent_metrics ./agent-metrics/agent_metrics/
+COPY agent-metrics/agent_metrics /app/agent-metrics/agent_metrics/
 
-EXPOSE 8003
+EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-metrics", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -39,22 +41,24 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY agent-metrics/pyproject.toml ./agent-metrics/
-COPY common-ai ./common-ai/
+COPY agent-metrics/pyproject.toml /app/agent-metrics/
+COPY common-ai /app/common-ai/
+
+WORKDIR /app/agent-metrics
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory agent-metrics --no-dev && \
-    uv run --directory agent-metrics --no-dev --with pip opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY agent-metrics/agent_metrics ./agent-metrics/agent_metrics/
+COPY agent-metrics/agent_metrics /app/agent-metrics/agent_metrics/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8003
+EXPOSE 8002
 
-CMD ["uv", "run", "--directory", "agent-metrics", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8002"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

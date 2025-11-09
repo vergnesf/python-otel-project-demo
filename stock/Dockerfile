@@ -19,17 +19,17 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY stock/pyproject.toml ./stock/
-COPY common-models ./common-models/
+COPY stock/pyproject.toml /app/stock/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory stock && \
-    uv run --directory stock opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY stock/stock ./stock/stock/
+COPY stock/stock /app/stock/stock/
 
 
-CMD ["uv", "run", "--directory", "stock", "opentelemetry-instrument", "python", "stock/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "stock/main.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +38,21 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY stock/pyproject.toml ./stock/
-COPY common-models ./common-models/
+COPY stock/pyproject.toml /app/stock/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory stock --no-dev && \
-    uv run --directory stock --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY stock/stock ./stock/stock/
+COPY stock/stock /app/stock/stock/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "stock", "opentelemetry-instrument", "python", "stock/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "stock/main.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET

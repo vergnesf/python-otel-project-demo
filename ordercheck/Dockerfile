@@ -19,17 +19,19 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY ordercheck/pyproject.toml ./ordercheck/
-COPY common-models ./common-models/
+COPY ordercheck/pyproject.toml /app/ordercheck/
+COPY common-models /app/common-models/
+
+WORKDIR /app/ordercheck
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory ordercheck && \
-    uv run --directory ordercheck opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
 COPY ordercheck/ordercheck ./ordercheck/ordercheck/
 
 
-CMD ["uv", "run", "--directory", "ordercheck", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
 
 # ============================================
 # Prod stage: Optimized production image

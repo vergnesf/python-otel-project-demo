@@ -19,17 +19,17 @@ WORKDIR /app
 # ============================================
 FROM base AS dev
 
-COPY supplier/pyproject.toml ./supplier/
-COPY common-models ./common-models/
+COPY supplier/pyproject.toml /app/supplier/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory supplier && \
-    uv run --directory supplier opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY supplier/supplier ./supplier/supplier/
+COPY supplier/supplier /app/supplier/supplier/
 
 
-CMD ["uv", "run", "--directory", "supplier", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
 
 # ============================================
 # Prod stage: Optimized production image
@@ -38,21 +38,21 @@ FROM base AS prod
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY supplier/pyproject.toml ./supplier/
-COPY common-models ./common-models/
+COPY supplier/pyproject.toml /app/supplier/
+COPY common-models /app/common-models/
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory supplier --no-dev && \
-    uv run --directory supplier --no-dev opentelemetry-bootstrap -a install
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY supplier/supplier ./supplier/supplier/
+COPY supplier/supplier /app/supplier/supplier/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
 
-CMD ["uv", "run", "--directory", "supplier", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
 
 # ============================================
 # Final stage: Select based on BUILD_TARGET
