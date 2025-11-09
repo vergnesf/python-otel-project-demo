@@ -96,6 +96,7 @@ class LogsAnalyzer:
             "agent_name": "logs",
             "analysis": analysis["summary"],
             "data": analysis["data"],
+            "recommendations": analysis.get("recommendations", []),
             "confidence": analysis["confidence"],
             "grafana_links": self._generate_grafana_links(logql_query, time_range),
             "timestamp": datetime.now().isoformat(),
@@ -231,6 +232,15 @@ class LogsAnalyzer:
             f"Affected services: {', '.join(sorted(affected_services))}."
         )
 
+        # Generate simple recommendations based on error count
+        recommendations = []
+        if error_count > 0:
+            recommendations.append("Investigate error logs for root cause")
+            if len(affected_services) > 1:
+                recommendations.append(f"Multiple services affected: {', '.join(sorted(affected_services)[:3])}")
+        else:
+            recommendations.append("No errors detected in this time range")
+
         return {
             "summary": " ".join(summary_parts),
             "data": {
@@ -241,6 +251,7 @@ class LogsAnalyzer:
                 "sample_logs": logs[:5],
                 "time_range_checked": time_range_checked,
             },
+            "recommendations": recommendations,
             "confidence": 0.9 if error_count > 0 else 0.3,
         }
 
@@ -342,14 +353,53 @@ class LogsAnalyzer:
         # is still too large for the model context.
         max_samples_initial = 5
         log_samples_text = []
-        for log in logs[:max_samples_initial]:
-            timestamp = log.get("timestamp", "")
-            service = log.get("service_name", "unknown")
-            message = log.get("message", "")[:200]
-            log_samples_text.append(f"- [{timestamp}] [{service}] {message}")
+
+        # Debug: log the first log structure
+        if logs:
+            logger.info(f"First log structure: {logs[0]}")
+
+        # Filter out OpenTelemetry instrumentation logs that don't have useful content
+        useful_logs = []
+        for log in logs:
+            labels = log.get("labels", {})
+            # Skip OpenTelemetry instrumentation events
+            scope_name = labels.get("scope_name", "")
+            if "opentelemetry.instrumentation" in scope_name:
+                continue
+            # Skip logs without actual message content
+            if not log.get("line") and not log.get("message"):
+                continue
+            useful_logs.append(log)
+
+        logger.info(f"Filtered {len(useful_logs)} useful logs from {len(logs)} total logs")
+
+        for log in useful_logs[:max_samples_initial]:
+            timestamp = log.get("timestamp", "").strip('"')
+
+            # Extract service_name from labels (MCP Grafana format)
+            labels = log.get("labels", {})
+            service = labels.get("service_name", log.get("service_name", "unknown"))
+
+            # Try to get message from various possible fields
+            message = (
+                log.get("line", "") or
+                log.get("message", "") or
+                log.get("msg", "")
+            )
+
+            if isinstance(message, str):
+                message = message[:200].strip()
+            else:
+                message = str(message)[:200].strip()
+
+            if message:  # Only add if there's actual content
+                log_samples_text.append(f"- [{timestamp}] [{service}] {message}")
 
         services = context.get("services", [])
         services_str = ", ".join(services) if services else "All services"
+
+        # Log the samples being sent to LLM
+        logger.info(f"Sending {len(log_samples_text)} log samples to LLM: {log_samples_text[:2]}")
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("analyze_logs.md")
@@ -423,10 +473,12 @@ class LogsAnalyzer:
                     # Map parsed JSON to expected structure
                     error_count = parsed.get("error_count", total_logs)
                     summary = parsed.get("summary", "")
+                    recommendations = parsed.get("recommendations", [])
                     logger.info("Parsed JSON from LLM logs analysis")
                     return {
                         "summary": summary,
                         "data": parsed,
+                        "recommendations": recommendations,
                         "confidence": 0.95 if error_count > 0 else 0.3,
                     }
                 except Exception:
@@ -447,6 +499,7 @@ class LogsAnalyzer:
                         "top_error_patterns": [],
                         "time_range_checked": time_range,
                     },
+                    "recommendations": ["No errors detected in this time range"],
                     "confidence": 0.3,
                 }
 

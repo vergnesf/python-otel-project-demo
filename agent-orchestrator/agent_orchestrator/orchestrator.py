@@ -309,9 +309,11 @@ class Orchestrator:
             llm_client = get_llm() if self.llm_ephemeral else self.llm
             response = llm_client.invoke(prompt)
             response_text = extract_text_from_response(response)
+            logger.info(f"LLM routing response (first 200 chars): {response_text[:200] if response_text else '<EMPTY>'}")
 
             # Clean response
             response_text = response_text.strip()
+
             # Remove markdown code blocks if present
             if response_text.startswith("```"):
                 lines = response_text.split("\n")
@@ -319,6 +321,15 @@ class Orchestrator:
                 response_text = response_text.strip()
             if response_text.startswith("json"):
                 response_text = response_text[4:].strip()
+
+            # Extract JSON from response (in case LLM added preamble)
+            # Find first { and last }
+            first_brace = response_text.find("{")
+            last_brace = response_text.rfind("}")
+
+            if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
+                response_text = response_text[first_brace:last_brace + 1]
+                logger.info(f"Extracted JSON from response: {response_text[:100]}...")
 
             # Parse JSON response
             import json
@@ -427,7 +438,6 @@ class Orchestrator:
         if logs and not isinstance(logs.get("error"), str):
             if "analysis" in logs:
                 summary_parts.append(logs["analysis"])
-            # Get recommendations from logs agent
             if "recommendations" in logs:
                 all_recommendations.extend(logs["recommendations"])
 
@@ -435,7 +445,6 @@ class Orchestrator:
         if metrics and not isinstance(metrics.get("error"), str):
             if "analysis" in metrics:
                 summary_parts.append(metrics["analysis"])
-            # Get recommendations from metrics agent
             if "recommendations" in metrics:
                 all_recommendations.extend(metrics["recommendations"])
 
@@ -443,7 +452,6 @@ class Orchestrator:
         if traces and not isinstance(traces.get("error"), str):
             if "analysis" in traces:
                 summary_parts.append(traces["analysis"])
-            # Get recommendations from traces agent
             if "recommendations" in traces:
                 all_recommendations.extend(traces["recommendations"])
 

@@ -20,7 +20,7 @@ x-common-llm-otel-env: &common-llm-otel-env
   OTEL_PYTHON_LOG_CORRELATION: "true"
   LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
-  LLM_MODEL: ${LLM_MODEL:-ai/qwen3:0.6B-Q4_0}
+  LLM_MODEL: ai/llama3.2:3B-Q4_K_M
   LLM_EPHEMERAL_PER_CALL: ${LLM_EPHEMERAL_PER_CALL:-true}
   LOG_LEVEL: INFO
 
@@ -465,8 +465,8 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-orchestrator
       AGENT_LOGS_URL: http://agent-logs:8002
-      AGENT_METRICS_URL: http://agent-metrics:8003
-      AGENT_TRACES_URL: http://agent-traces:8004
+      AGENT_METRICS_URL: http://agent-metrics:8002
+      AGENT_TRACES_URL: http://agent-traces:8002
     develop:
       watch:
         - action: rebuild
@@ -480,8 +480,6 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
-    models:
-      - llama3.2-3b
 
   agent-logs:
     image: ${DOCKER_REGISTRY:-}agent-logs:latest
@@ -510,8 +508,6 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
-    models:
-      - llama3.2-3b
 
   agent-metrics:
     image: ${DOCKER_REGISTRY:-}agent-metrics:latest
@@ -522,7 +518,7 @@ services:
     container_name: agent-metrics
     <<: *app-settings
     ports:
-      - "8003:8003"
+      - "8003:8002"
     environment:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-metrics
@@ -540,8 +536,6 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
-    models:
-      - llama3.2-3b
 
   agent-traces:
     image: ${DOCKER_REGISTRY:-}agent-traces:latest
@@ -552,7 +546,7 @@ services:
     container_name: agent-traces
     <<: *app-settings
     ports:
-      - "8004:8004"
+      - "8004:8002"
     environment:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-traces
@@ -570,8 +564,6 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
-    models:
-      - llama3.2-3b
 
   agent-ui:
     image: ${DOCKER_REGISTRY:-}agent-ui:latest
