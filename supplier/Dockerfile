@@ -1,57 +1,60 @@
-# Multi-stage build for minimal image size
 ARG DOCKER_REGISTRY=""
 ARG IMG_PYTHON="python:3.14-slim"
+ARG BUILD_TARGET=prod
 
 # ============================================
-# Build stage: Install dependencies
+# Base stage: Common setup for all targets
 # ============================================
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS builder
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS base
 
-WORKDIR /app/supplier
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files from root context
-COPY supplier/pyproject.toml ./pyproject.toml
-COPY common-models ../common-models
+ENV PYTHON_JIT=1
+ENV PYTHONUNBUFFERED=1
 
-# Install uv and dependencies
+WORKDIR /app
+
+# ============================================
+# Dev stage: Development with hot reload
+# ============================================
+FROM base AS dev
+
+COPY supplier/pyproject.toml ./supplier/
+COPY common-models ./common-models/
+
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
-    uv run --no-dev opentelemetry-bootstrap -a install
+    uv sync --directory supplier && \
+    uv run --directory supplier opentelemetry-bootstrap -a install
+
+COPY supplier/supplier ./supplier/supplier/
+
+
+CMD ["uv", "run", "--directory", "supplier", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
 
 # ============================================
-# Runtime stage: Minimal runtime image
+# Prod stage: Optimized production image
 # ============================================
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
+FROM base AS prod
 
-# Update OS packages
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-# Enable Python 3.14 JIT compiler for performance optimization
-ENV PYTHON_JIT=1
+COPY supplier/pyproject.toml ./supplier/
+COPY common-models ./common-models/
 
-WORKDIR /app/supplier
+RUN pip install --no-cache-dir uv && \
+    uv sync --directory supplier --no-dev && \
+    uv run --directory supplier --no-dev opentelemetry-bootstrap -a install
 
-# Copy venv from builder
-COPY --from=builder /app/supplier/.venv .venv
-COPY --from=builder /app/common-models ../common-models
+COPY supplier/supplier ./supplier/supplier/
 
-# Copy application code
-COPY supplier/supplier ../supplier
-
-# Set ownership to non-root user
 RUN chown -R appuser:appuser /app
 
-# Switch to non-root user
 USER appuser
 
-# Set PATH to use venv
-ENV PATH="/app/supplier/.venv/bin:$PATH"
-ENV PYTHONPATH="/app:$PYTHONPATH"
 
-# Set the default command
-CMD ["opentelemetry-instrument", "python", "/app/supplier/supplier_producer.py"]
+CMD ["uv", "run", "--directory", "supplier", "opentelemetry-instrument", "python", "supplier/supplier_producer.py"]
+
+# ============================================
+# Final stage: Select based on BUILD_TARGET
+# ============================================
+FROM ${BUILD_TARGET}

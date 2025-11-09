@@ -24,11 +24,6 @@ x-common-llm-otel-env: &common-llm-otel-env
   LLM_EPHEMERAL_PER_CALL: ${LLM_EPHEMERAL_PER_CALL:-true}
   LOG_LEVEL: INFO
 
-x-python-build: &python-build
-  args:
-    DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-    IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-
 x-common-settings: &common-settings
   pull_policy: always
   restart: unless-stopped
@@ -38,6 +33,12 @@ x-common-settings: &common-settings
 x-app-settings: &app-settings
   <<: *common-settings
   pull_policy: build
+
+x-python-build: &python-build
+  args:
+    DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+    IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    BUILD_TARGET: ${BUILD_TARGET:-dev}
 
 services:
   # =====================
@@ -198,6 +199,19 @@ services:
       OTEL_SERVICE_NAME: customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./customer
+          target: /app/customer
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./customer/pyproject.toml
     depends_on:
       broker:
         condition: service_healthy
@@ -217,6 +231,19 @@ services:
       OTEL_SERVICE_NAME: supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./supplier
+          target: /app/supplier
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./supplier/pyproject.toml
     depends_on:
       broker:
         condition: service_healthy
@@ -235,6 +262,19 @@ services:
       <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: order
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./order
+          target: /app/order
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./order/pyproject.toml
     depends_on:
       postgres:
         condition: service_healthy
@@ -254,6 +294,19 @@ services:
       <<: *common-apps-otel-env
       OTEL_SERVICE_NAME: stock
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./stock
+          target: /app/stock
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./stock/pyproject.toml
     depends_on:
       postgres:
         condition: service_healthy
@@ -317,6 +370,19 @@ services:
       API_URL_ORDERS: http://order:5000
       API_URL_STOCKS: http://stock:5001
       INTERVAL_SECONDS: 5
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./order
+          target: /app/order
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./order/pyproject.toml
     depends_on:
       order:
         condition: service_started
@@ -396,6 +462,19 @@ services:
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8003
       AGENT_TRACES_URL: http://agent-traces:8004
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./agent-orchestrator
+          target: /app/agent-orchestrator
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./agent-orchestrator/pyproject.toml
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -416,6 +495,19 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-logs
       MCP_GRAFANA_URL: http://grafana-mcp:8000
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./agent-logs
+          target: /app/agent-logs
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./agent-logs/pyproject.toml
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -436,6 +528,19 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-metrics
       MCP_GRAFANA_URL: http://grafana-mcp:8000
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./agent-metrics
+          target: /app/agent-metrics
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./agent-metrics/pyproject.toml
     depends_on:
       - grafana-mcp
       - otel-collector
@@ -456,6 +561,19 @@ services:
       <<: *common-llm-otel-env
       OTEL_SERVICE_NAME: agent-traces
       MCP_GRAFANA_URL: http://grafana-mcp:8000
+    volumes:
+      - /app/.venv
+    develop:
+      watch:
+        - action: sync
+          path: ./agent-traces
+          target: /app/agent-traces
+          ignore:
+            - __pycache__
+            - .pyc
+            - .pytest_cache
+        - action: rebuild
+          path: ./agent-traces/pyproject.toml
     depends_on:
       - grafana-mcp
       - otel-collector

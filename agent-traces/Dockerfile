@@ -1,60 +1,62 @@
-# Multi-stage build for minimal image size
 ARG DOCKER_REGISTRY=""
 ARG IMG_PYTHON="python:3.14-slim"
+ARG BUILD_TARGET=prod
 
 # ============================================
-# Build stage: Install dependencies
+# Base stage: Common setup for all targets
 # ============================================
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS builder
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS base
 
-WORKDIR /app/agent-traces
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files from root context
-COPY agent-traces/pyproject.toml ./pyproject.toml
-COPY common-ai ../common-ai
-
-# Install uv and dependencies
-RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
-    uv run --no-dev opentelemetry-bootstrap -a requirements > /tmp/otel-requirements.txt && \
-    uv pip install -r /tmp/otel-requirements.txt
-
-# ============================================
-# Runtime stage: Minimal runtime image
-# ============================================
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
-
-# Update OS packages
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    rm -rf /var/lib/apt/lists/*
-
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser -m
-
-# Enable Python 3.14 JIT compiler for performance optimization
 ENV PYTHON_JIT=1
+ENV PYTHONUNBUFFERED=1
 
-WORKDIR /app/agent-traces
+WORKDIR /app
 
-# Copy venv from builder
-COPY --from=builder /app/agent-traces/.venv .venv
-COPY --from=builder /app/common-ai ../common-ai
+# ============================================
+# Dev stage: Development with hot reload
+# ============================================
+FROM base AS dev
 
-# Copy application code
-COPY agent-traces/agent_traces ../agent_traces
+COPY agent-traces/pyproject.toml ./agent-traces/
+COPY common-ai ./common-ai/
 
-# Set ownership to non-root user
-RUN chown -R appuser:appuser /app
+RUN pip install --no-cache-dir uv && \
+    uv sync --directory agent-traces && \
+    uv run --directory agent-traces opentelemetry-bootstrap -a install
 
-# Switch to non-root user
-USER appuser
-
-# Set PATH to use venv
-ENV PATH="/app/agent-traces/.venv/bin:$PATH"
-ENV PYTHONPATH="/app:$PYTHONPATH"
+COPY agent-traces/agent_traces ./agent-traces/agent_traces/
 
 EXPOSE 8004
 
-# Set the default command
-CMD ["opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
+CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+
+# ============================================
+# Prod stage: Optimized production image
+# ============================================
+FROM base AS prod
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser -m
+
+COPY agent-traces/pyproject.toml ./agent-traces/
+COPY common-ai ./common-ai/
+
+RUN pip install --no-cache-dir uv && \
+    uv sync --directory agent-traces --no-dev && \
+    uv run --directory agent-traces --no-dev opentelemetry-bootstrap -a install
+
+COPY agent-traces/agent_traces ./agent-traces/agent_traces/
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8004
+
+CMD ["uv", "run", "--directory", "agent-traces", "opentelemetry-instrument", "uvicorn", "agent_traces.main:app", "--host", "0.0.0.0", "--port", "8004"]
+
+# ============================================
+# Final stage: Select based on BUILD_TARGET
+# ============================================
+FROM ${BUILD_TARGET}
