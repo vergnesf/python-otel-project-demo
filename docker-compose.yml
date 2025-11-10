@@ -6,6 +6,8 @@ x-docker-registry: &docker-registry
 
 x-python-image: &python-image python:3.14-slim
 
+x-token-grafana-service-account: &token-grafana-service-account XXXX
+
 x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
@@ -470,7 +472,7 @@ services:
       - "8000:8000"
     environment:
       GRAFANA_URL: http://grafana:3000
-      GRAFANA_SERVICE_ACCOUNT_TOKEN: XXXXXX
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: *token-grafana-service-account
     depends_on:
       grafana:
         condition: service_healthy
