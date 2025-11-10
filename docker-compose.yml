@@ -8,6 +8,8 @@ x-python-image: &python-image python:3.14-slim
 
 x-token-grafana-service-account: &token-grafana-service-account XXXX
 
+x-ia-model: &ia-model ai/mistral:7B-Q4_0
+
 x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
@@ -27,7 +29,7 @@ x-common-llm-otel-env: &common-llm-otel-env
   OTEL_PYTHON_LOG_CORRELATION: "true"
   LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
-  LLM_MODEL: ai/llama3.2:3B-Q4_K_M
+  LLM_MODEL: *ia-model
   LLM_EPHEMERAL_PER_CALL: true
   LOG_LEVEL: INFO
 
@@ -610,16 +612,8 @@ services:
 # using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
 # `context_size` and your model-runner capabilities (default used in code: 9000).
 models:
-  qwen3-0.6b:
-    model: ai/qwen3:0.6B-Q4_0
-    context_size: 16384
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-  llama3.2-3b:
-    model: ai/llama3.2:3B-Q4_K_M
+  ia-model:
+    model: *ia-model
     context_size: 16384
     runtime_flags:
       - "--temp" # Temperature
