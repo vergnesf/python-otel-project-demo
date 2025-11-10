@@ -1,5 +1,8 @@
 # Configuration Guide
 
+> NOTE: A condensed configuration handbook is available at `docs/handbook/configuration.md`.
+> Use the handbook for quick setup steps. This file keeps the full reference.
+
 ## Environment Variables
 
 All image versions and registry configuration are managed through environment variables. The project includes:

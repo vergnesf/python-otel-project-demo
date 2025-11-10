@@ -1,6 +1,11 @@
 # =====================
 # YAML EXTENSIONS (réutilisables)
 # =====================
+# x-docker-registry: &docker-registry your-docker-registry.com/
+x-docker-registry: &docker-registry
+
+x-python-image: &python-image python:3.14-slim
+
 x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
@@ -21,8 +26,43 @@ x-common-llm-otel-env: &common-llm-otel-env
   LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
   LLM_MODEL: ai/llama3.2:3B-Q4_K_M
-  LLM_EPHEMERAL_PER_CALL: ${LLM_EPHEMERAL_PER_CALL:-true}
+  LLM_EPHEMERAL_PER_CALL: true
   LOG_LEVEL: INFO
+
+# https://hub.docker.com/r/confluentinc/cp-kafka/tags
+x-img_kafka: &x-img_kafka ${DOCKER_REGISTRY:-}confluentinc/cp-kafka:8.1.0
+# https://hub.docker.com/r/tchiotludo/akhq/tags
+x-img_akhq: &x-img_akhq ${DOCKER_REGISTRY:-}tchiotludo/akhq:0.26.0
+# https://hub.docker.com/r/grafana/grafana/tags
+x-img_grafana: &x-img_grafana ${DOCKER_REGISTRY:-}grafana/grafana:12.2
+# https://hub.docker.com/r/otel/opentelemetry-collector-contrib/tags
+x-img_otel: &x-img_otel ${DOCKER_REGISTRY:-}otel/opentelemetry-collector-contrib:0.139.0
+# https://hub.docker.com/r/grafana/loki/tags
+x-img_loki: &x-img_loki ${DOCKER_REGISTRY:-}grafana/loki:3.5.8
+# https://hub.docker.com/r/grafana/tempo/tags
+x-img_tempo: &x-img_tempo ${DOCKER_REGISTRY:-}grafana/tempo:2.9.0
+# https://hub.docker.com/r/grafana/mimir/tags
+x-img_mimir: &x-img_mimir ${DOCKER_REGISTRY:-}grafana/mimir:3.0.0
+# https://hub.docker.com/_/postgres/tags
+x-img_postgres: &x-img_postgres ${DOCKER_REGISTRY:-}postgres:18
+# https://hub.docker.com/_/adminer/tags
+x-img_adminer: &x-img_adminer ${DOCKER_REGISTRY:-}adminer:5.4.1
+# https://hub.docker.com/r/mcp/grafana/tags
+x-img_grafana_mcp: &x-img_grafana_mcp ${DOCKER_REGISTRY:-}mcp/grafana:latest
+
+x-python-build: &python-build
+  args:
+    DOCKER_REGISTRY: *docker-registry
+    IMG_PYTHON: *python-image
+    BUILD_TARGET: ${BUILD_TARGET:-dev}
+
+# Inline env to ensure containers get .env variables at runtime
+# Add variables commonly set in a .env file here so watches and rebuilds
+# have consistent values inside containers.
+x-inline-env: &inline-env
+  DOCKER_REGISTRY: *docker-registry
+  IMG_PYTHON: *python-image
+  BUILD_TARGET: dev
 
 x-common-settings: &common-settings
   pull_policy: always
@@ -34,18 +74,20 @@ x-app-settings: &app-settings
   <<: *common-settings
   pull_policy: build
 
-x-python-build: &python-build
-  args:
-    DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-    IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    BUILD_TARGET: ${BUILD_TARGET:-dev}
+# common develop.watch ignore list
+x-develop-ignore: &develop-ignore
+  - __pycache__
+  - .pyc
+  - .pytest_cache
+  - .mypy_cache
+  - .ruff_cache
 
 services:
   # =====================
   # KAFKA STACK
   # =====================
   broker:
-    image: ${DOCKER_REGISTRY}${IMG_KAFKA}
+    image: *x-img_kafka
     container_name: broker
     <<: *common-settings
     ports:
@@ -82,7 +124,7 @@ services:
       start_period: 60s
 
   akhq:
-    image: ${DOCKER_REGISTRY}${IMG_AKHQ}
+    image: *x-img_akhq
     container_name: akhq
     <<: *common-settings
     ports:
@@ -102,7 +144,7 @@ services:
   # OBSERVABILITY STACK
   # =====================
   grafana:
-    image: ${DOCKER_REGISTRY}${IMG_GRAFANA}
+    image: *x-img_grafana
     container_name: grafana
     <<: *common-settings
     ports:
@@ -127,7 +169,7 @@ services:
       start_period: 40s
 
   otel-collector:
-    image: ${DOCKER_REGISTRY}${IMG_OTEL}
+    image: *x-img_otel
     container_name: otel-collector
     <<: *common-settings
     command: ["--config=/etc/otel-conf.yml"]
@@ -145,7 +187,7 @@ services:
         condition: service_started
 
   loki:
-    image: ${DOCKER_REGISTRY}${IMG_LOKI}
+    image: *x-img_loki
     container_name: loki
     <<: *common-settings
     command: ["-config.file=/etc/config/loki.yaml"]
@@ -165,7 +207,7 @@ services:
       start_period: 20s
 
   tempo:
-    image: ${DOCKER_REGISTRY}${IMG_TEMPO}
+    image: *x-img_tempo
     container_name: tempo
     <<: *common-settings
     command: ["-config.file=/etc/tempo.yaml"]
@@ -175,7 +217,7 @@ services:
       - tempo-data:/tmp/tempo
 
   mimir:
-    image: ${DOCKER_REGISTRY}${IMG_MIMIR}
+    image: *x-img_mimir
     container_name: mimir
     <<: *common-settings
     command: ["-config.file=/etc/mimir-config.yml"]
@@ -187,7 +229,7 @@ services:
   # APPLICATION STACK
   # =====================
   customer:
-    image: ${DOCKER_REGISTRY:-}customer:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_CUSTOMER:-customer:latest}
     build:
       context: .
       dockerfile: customer/Dockerfile
@@ -195,7 +237,7 @@ services:
     container_name: customer
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
@@ -203,12 +245,10 @@ services:
       watch:
         - action: rebuild
           path: ./customer
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       broker:
         condition: service_healthy
@@ -216,7 +256,7 @@ services:
         condition: service_started
 
   supplier:
-    image: ${DOCKER_REGISTRY:-}supplier:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIER:-supplier:latest}
     build:
       context: .
       dockerfile: supplier/Dockerfile
@@ -224,7 +264,7 @@ services:
     container_name: supplier
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
@@ -232,12 +272,10 @@ services:
       watch:
         - action: rebuild
           path: ./supplier
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       broker:
         condition: service_healthy
@@ -245,7 +283,7 @@ services:
         condition: service_started
 
   order:
-    image: ${DOCKER_REGISTRY:-}order:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDER:-order:latest}
     build:
       context: .
       dockerfile: order/Dockerfile
@@ -253,19 +291,17 @@ services:
     container_name: order
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: order
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     develop:
       watch:
         - action: rebuild
           path: ./order
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       postgres:
         condition: service_healthy
@@ -274,7 +310,7 @@ services:
         condition: service_started
 
   stock:
-    image: ${DOCKER_REGISTRY:-}stock:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_STOCK:-stock:latest}
     build:
       context: .
       dockerfile: stock/Dockerfile
@@ -282,19 +318,17 @@ services:
     container_name: stock
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: stock
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     develop:
       watch:
         - action: rebuild
           path: ./stock
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       postgres:
         condition: service_healthy
@@ -303,7 +337,7 @@ services:
         condition: service_started
 
   ordercheck:
-    image: ${DOCKER_REGISTRY:-}ordercheck:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDERCHECK:-ordercheck:latest}
     build:
       context: .
       dockerfile: ordercheck/Dockerfile
@@ -311,7 +345,7 @@ services:
     container_name: ordercheck
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: ordercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://order:5000
@@ -319,12 +353,10 @@ services:
       watch:
         - action: rebuild
           path: ./ordercheck
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       broker:
         condition: service_healthy
@@ -334,7 +366,7 @@ services:
         condition: service_started
 
   suppliercheck:
-    image: ${DOCKER_REGISTRY:-}suppliercheck:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIERCHECK:-suppliercheck:latest}
     build:
       context: .
       dockerfile: suppliercheck/Dockerfile
@@ -342,7 +374,7 @@ services:
     container_name: suppliercheck
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: suppliercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://stock:5001
@@ -350,12 +382,10 @@ services:
       watch:
         - action: rebuild
           path: ./suppliercheck
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       broker:
         condition: service_healthy
@@ -365,7 +395,7 @@ services:
         condition: service_started
 
   ordermanagement:
-    image: ${DOCKER_REGISTRY:-}ordermanagement:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDERMANAGEMENT:-ordermanagement:latest}
     build:
       context: .
       dockerfile: ordermanagement/Dockerfile
@@ -373,7 +403,7 @@ services:
     container_name: ordermanagement
     <<: *app-settings
     environment:
-      <<: *common-apps-otel-env
+      <<: [*inline-env, *common-apps-otel-env]
       OTEL_SERVICE_NAME: ordermanagement
       API_URL_ORDERS: http://order:5000
       API_URL_STOCKS: http://stock:5001
@@ -382,12 +412,10 @@ services:
       watch:
         - action: rebuild
           path: ./order
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-models
+          ignore: *develop-ignore
     depends_on:
       order:
         condition: service_started
@@ -400,7 +428,7 @@ services:
   # DATABASE STACK
   # =====================
   postgres:
-    image: ${DOCKER_REGISTRY}${IMG_POSTGRES}
+    image: *x-img_postgres
     container_name: postgres
     <<: *common-settings
     ports:
@@ -419,7 +447,7 @@ services:
       start_period: 30s
 
   adminer:
-    image: ${DOCKER_REGISTRY}${IMG_ADMINER}
+    image: *x-img_adminer
     container_name: adminer
     <<: *common-settings
     ports:
@@ -435,15 +463,14 @@ services:
   # MCP STACK
   # =====================
   grafana-mcp:
-    image: ${DOCKER_REGISTRY}${IMG_GRAFANA_MCP}
+    image: *x-img_grafana_mcp
     container_name: grafana-mcp
     <<: *common-settings
     ports:
       - "8000:8000"
     environment:
       GRAFANA_URL: http://grafana:3000
-      # Use service account token from .env
-      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: XXXXXX
     depends_on:
       grafana:
         condition: service_healthy
@@ -452,7 +479,6 @@ services:
   # AGENTIC NETWORK
   # =====================
   agent-orchestrator:
-    image: ${DOCKER_REGISTRY:-}agent-orchestrator:latest
     build:
       context: .
       dockerfile: agent-orchestrator/Dockerfile
@@ -462,7 +488,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      <<: *common-llm-otel-env
+      <<: [*inline-env, *common-llm-otel-env]
       OTEL_SERVICE_NAME: agent-orchestrator
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8002
@@ -471,18 +497,15 @@ services:
       watch:
         - action: rebuild
           path: ./agent-orchestrator
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
     depends_on:
       - grafana-mcp
       - otel-collector
 
   agent-logs:
-    image: ${DOCKER_REGISTRY:-}agent-logs:latest
     build:
       context: .
       dockerfile: agent-logs/Dockerfile
@@ -492,25 +515,22 @@ services:
     ports:
       - "8002:8002"
     environment:
-      <<: *common-llm-otel-env
+      <<: [*inline-env, *common-llm-otel-env]
       OTEL_SERVICE_NAME: agent-logs
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     develop:
       watch:
         - action: rebuild
           path: ./agent-logs
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
     depends_on:
       - grafana-mcp
       - otel-collector
 
   agent-metrics:
-    image: ${DOCKER_REGISTRY:-}agent-metrics:latest
     build:
       context: .
       dockerfile: agent-metrics/Dockerfile
@@ -520,25 +540,22 @@ services:
     ports:
       - "8003:8002"
     environment:
-      <<: *common-llm-otel-env
+      <<: [*inline-env, *common-llm-otel-env]
       OTEL_SERVICE_NAME: agent-metrics
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     develop:
       watch:
         - action: rebuild
           path: ./agent-metrics
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
     depends_on:
       - grafana-mcp
       - otel-collector
 
   agent-traces:
-    image: ${DOCKER_REGISTRY:-}agent-traces:latest
     build:
       context: .
       dockerfile: agent-traces/Dockerfile
@@ -548,25 +565,23 @@ services:
     ports:
       - "8004:8002"
     environment:
-      <<: *common-llm-otel-env
+      <<: [*inline-env, *common-llm-otel-env]
       OTEL_SERVICE_NAME: agent-traces
       MCP_GRAFANA_URL: http://grafana-mcp:8000
     develop:
       watch:
         - action: rebuild
           path: ./agent-traces
-          ignore:
-            - __pycache__
-            - .pyc
-            - .pytest_cache
-            - .mypy_cache
-            - .ruff_cache
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
     depends_on:
       - grafana-mcp
       - otel-collector
 
   agent-ui:
-    image: ${DOCKER_REGISTRY:-}agent-ui:latest
+    image: ${DOCKER_REGISTRY:-}${IMG_AGENT_UI:-agent-ui:latest}
     build:
       context: .
       dockerfile: agent-ui/Dockerfile
@@ -577,6 +592,7 @@ services:
       - "3002:3002"
       - "8005:8000"
     environment:
+      <<: *inline-env
       ORCHESTRATOR_URL: http://agent-orchestrator:8001
     depends_on:
       - agent-orchestrator

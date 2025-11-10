@@ -1,6 +1,6 @@
-# TraceQL Query Generation Prompt
+# TraceQL Query Generation
 
-You are an expert in TraceQL (Tempo Query Language).
+You are an expert in TraceQL.
 
 ## User Question
 {query}
@@ -8,30 +8,51 @@ You are an expert in TraceQL (Tempo Query Language).
 ## Context
 {services_context}
 
-## Your Task
+## Task
 
-Generate a TraceQL query to answer the user's question.
+Generate a TraceQL query for **BUSINESS SERVICES ONLY**.
 
-### Rules:
-- Use label matchers: `{{service.name="...", status="..."}}`
-- Use duration filters: `duration > 500ms`
-- Use status filters: `status=error` or `status=ok`
-- For error queries: filter on status=error
-- For specific services: use service.name attribute
-- Keep it simple and efficient
-- **DO NOT include LIMIT in the query** - limit is handled by the API parameter
-- **DO NOT include time range** - time is handled by API parameters
+### Available Attributes
 
-### Examples:
-- All errors: `{{status=error}}`
-- Slow traces: `{{duration > 500ms}}`
-- Errors in customer service: `{{service.name="customer" && status=error}}`
-- Slow customer requests: `{{service.name="customer" && duration > 300ms}}`
-- All traces for service: `{{service.name="customer"}}`
+- `service.name` - Business service (customer, order, stock, supplier, ordercheck, ordermanagement, suppliercheck)
+- `status` - Trace status (ok, error)
+- `duration` - Trace duration (e.g., > 500ms)
 
-### WRONG Examples (do NOT do this):
-- ❌ `{{status=error}} LIMIT 10` (LIMIT is not TraceQL syntax)
-- ❌ `{{service.name="customer"}} limit 5` (limit is an API parameter)
+**FORBIDDEN**: Do NOT use otel* fields.
 
-**Respond with ONLY the TraceQL query, no explanation, no LIMIT clause.**
+### Query Patterns
 
+**All traces from business services**:
+```
+{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}
+```
+
+**Traces from one service**:
+```
+{service.name="order"}
+```
+
+**Error traces**:
+```
+{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && status=error}
+```
+
+**Slow traces (> 500ms)**:
+```
+{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && duration > 500ms}
+```
+
+**Slow errors from specific service**:
+```
+{service.name="order" && status=error && duration > 300ms}
+```
+
+### Rules
+
+1. **Filter by business services**: Use `service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"`
+2. **Duration filter**: `duration > 500ms`
+3. **Status filter**: `status=error` or `status=ok`
+4. **Combine with &&**: `{service.name="order" && status=error}`
+5. **NO LIMIT** in query
+
+Return ONLY the TraceQL query. No explanation.

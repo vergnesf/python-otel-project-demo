@@ -38,12 +38,14 @@ class SafeChatOpenAI(ChatOpenAI):
                     # Import the OpenAI client directly
                     from openai import OpenAI
 
-                    logger.info(f"Retrying LLM call with direct client (base_url={self.openai_api_base}, model={self.model_name})")
+                    logger.info(
+                        f"Retrying LLM call with direct client (base_url={self.openai_api_base}, model={self.model_name})"
+                    )
 
                     # Create a fresh client without instrumentation
                     direct_client = OpenAI(
                         base_url=self.openai_api_base,
-                        api_key=self.openai_api_key or "dummy"
+                        api_key=self.openai_api_key or "dummy",
                     )
 
                     # Call the LLM directly
@@ -52,18 +54,23 @@ class SafeChatOpenAI(ChatOpenAI):
                         messages=self._convert_input_to_messages(input),
                         temperature=self.temperature,
                         max_tokens=self.max_tokens or 2000,
-                        **kwargs
+                        **kwargs,
                     )
 
                     # Extract content from response
                     content = response.choices[0].message.content
-                    logger.info(f"Direct LLM call successful, content length: {len(content) if content else 0}")
+                    logger.info(
+                        f"Direct LLM call successful, content length: {len(content) if content else 0}"
+                    )
 
                     # Create a BaseMessage to return
                     from langchain_core.messages import AIMessage
+
                     return AIMessage(content=content)
                 except Exception as inner_e:
-                    logger.error(f"Failed to get LLM response: {inner_e}", exc_info=True)
+                    logger.error(
+                        f"Failed to get LLM response: {inner_e}", exc_info=True
+                    )
                     raise
             else:
                 raise
@@ -75,7 +82,7 @@ class SafeChatOpenAI(ChatOpenAI):
         elif isinstance(input, list):
             messages = []
             for msg in input:
-                if hasattr(msg, 'type') and hasattr(msg, 'content'):
+                if hasattr(msg, "type") and hasattr(msg, "content"):
                     messages.append({"role": msg.type, "content": msg.content})
                 elif isinstance(msg, dict):
                     messages.append(msg)

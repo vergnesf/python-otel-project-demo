@@ -352,11 +352,38 @@ class Orchestrator:
         Returns:
             Routing decision
         """
-        # Conservative fallback routing: call all agents
+        # Smart fallback routing based on keywords
+        query_lower = query.lower()
+
+        # Logs-only queries
+        if any(word in query_lower for word in ["log", "logs", "erreur", "error", "message", "ligne", "line", "dernière", "last"]):
+            return {
+                "agents_to_call": ["logs"],
+                "reasoning": "Query contains log-related keywords, calling Logs Agent only",
+                "query_type": "logs",
+            }
+
+        # Metrics-only queries
+        if any(word in query_lower for word in ["rate", "latency", "cpu", "memory", "p95", "p99", "throughput"]):
+            return {
+                "agents_to_call": ["metrics"],
+                "reasoning": "Query contains metrics-related keywords, calling Metrics Agent only",
+                "query_type": "metrics",
+            }
+
+        # Traces-only queries
+        if any(word in query_lower for word in ["trace", "span", "slow", "lent", "bottleneck"]):
+            return {
+                "agents_to_call": ["traces"],
+                "reasoning": "Query contains trace-related keywords, calling Traces Agent only",
+                "query_type": "traces",
+            }
+
+        # Default: call logs only (most common use case)
         return {
-            "agents_to_call": ["logs", "metrics", "traces"],
-            "reasoning": "Conservative fallback: call all agents when LLM unavailable or uncertain",
-            "query_type": "correlation",
+            "agents_to_call": ["logs"],
+            "reasoning": "Default fallback: call Logs Agent for general queries",
+            "query_type": "logs",
         }
 
     def _extract_context(self, query: str) -> dict[str, Any]:

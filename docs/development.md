@@ -1,5 +1,8 @@
 # Local Development Guide
 
+> NOTE: A condensed developer handbook is available at `docs/handbook/development.md`.
+> Please prefer the handbook for quick commands and local workflows. This file keeps the full reference.
+
 ## Shared Modules
 
 This project uses two shared modules for code reuse:

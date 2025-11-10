@@ -1,5 +1,8 @@
 # Troubleshooting Guide
 
+> NOTE: A condensed troubleshooting handbook is available at `docs/handbook/troubleshooting.md`.
+> Use it for quick diagnostics. This file keeps the full reference and extended tips.
+
 ## Common Issues
 
 ### Services Not Sending Telemetry

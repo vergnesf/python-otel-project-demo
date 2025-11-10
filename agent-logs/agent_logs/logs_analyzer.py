@@ -116,12 +116,13 @@ class LogsAnalyzer:
         # Extract services from context
         services = context.get("services", [])
 
-        # Base query
+        # Base query - default to business services only (exclude agent-*)
         if services:
             service_filter = "|".join(services)
             logql = f'{{service_name=~"{service_filter}"}}'
         else:
-            logql = '{service_name=~".+"}'
+            # Default to business services only
+            logql = '{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}'
 
         # Add error filter if needed
         query_lower = query.lower()
@@ -189,9 +190,19 @@ class LogsAnalyzer:
         error_count = 0
 
         for log in logs:
-            message = log.get("message", "") or ""
-            service = log.get("service_name", "unknown")
-            level = (log.get("level") or log.get("severity") or "").upper()
+            # Extract from labels (MCP Grafana format) or fallback to direct fields
+            labels = log.get("labels", {})
+            message = (
+                log.get("line", "") or
+                log.get("message", "") or
+                log.get("msg", "")
+            )
+            service = labels.get("service_name", log.get("service_name", "unknown"))
+            level = (
+                labels.get("severity_text", "") or
+                log.get("level", "") or
+                log.get("severity", "")
+            ).upper()
 
             is_error = False
             if level in ("ERROR", "CRITICAL"):
@@ -351,7 +362,7 @@ class LogsAnalyzer:
         # Prepare log samples for LLM (limit to avoid token/window overflow)
         # Start with a modest number of samples and shrink if the final prompt
         # is still too large for the model context.
-        max_samples_initial = 5
+        max_samples_initial = 5  # Conservative to avoid "context shift is disabled" errors
         log_samples_text = []
 
         # Debug: log the first log structure
@@ -425,7 +436,8 @@ class LogsAnalyzer:
         try:
             # Guard against sending a prompt that is too large for the LLM
             # Use environment var LLM_MAX_PROMPT_CHARS to control maximum allowed prompt size
-            max_prompt_chars = int(os.getenv("LLM_MAX_PROMPT_CHARS", "9000"))
+            # Reduced from 9000 to 4000 to avoid "context shift is disabled" errors
+            max_prompt_chars = int(os.getenv("LLM_MAX_PROMPT_CHARS", "4000"))
 
             def build_prompt(samples):
                 return prompt_template.format(

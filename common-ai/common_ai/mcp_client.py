@@ -429,3 +429,487 @@ class MCPGrafanaClient:
         except Exception as e:
             logger.warning(f"Health check failed: {e}")
             return False
+
+    def _parse_mcp_result(self, result: Any) -> Any:
+        """
+        Parse MCP tool call result
+
+        Args:
+            result: MCP CallToolResult
+
+        Returns:
+            Parsed JSON data or empty dict/list
+        """
+        import json
+
+        if result.content:
+            for content_item in result.content:
+                if hasattr(content_item, "text"):
+                    try:
+                        return json.loads(content_item.text)
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse MCP result: {e}")
+                        return content_item.text
+        return {}
+
+    # =====================
+    # LOKI ADVANCED METHODS
+    # =====================
+
+    async def list_loki_label_names(self) -> list[str]:
+        """
+        List all available label names in Loki
+
+        Returns:
+            List of label names (e.g., ['service_name', 'level', 'host'])
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.loki_uid:
+                logger.error("Loki datasource UID not found")
+                return []
+
+            result = await session.call_tool(
+                "list_loki_label_names",
+                arguments={"datasourceUid": self.loki_uid},
+            )
+
+            data = self._parse_mcp_result(result)
+            # MCP can return a list directly or a dict with 'data' key
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to list Loki label names: {e}")
+            return []
+
+    async def list_loki_label_values(self, label_name: str) -> list[str]:
+        """
+        List all values for a specific Loki label
+
+        Args:
+            label_name: Label name (e.g., 'service_name', 'level')
+
+        Returns:
+            List of label values (e.g., ['order', 'stock', 'customer'])
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.loki_uid:
+                logger.error("Loki datasource UID not found")
+                return []
+
+            result = await session.call_tool(
+                "list_loki_label_values",
+                arguments={
+                    "datasourceUid": self.loki_uid,
+                    "labelName": label_name,
+                },
+            )
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to list Loki label values for '{label_name}': {e}")
+            return []
+
+    async def query_loki_stats(
+        self,
+        query: str,
+        time_range: str = "1h",
+    ) -> dict[str, Any]:
+        """
+        Query Loki statistics (volumes, streams, bytes)
+
+        Args:
+            query: LogQL query (e.g., '{service_name="order"}')
+            time_range: Time range (e.g., '1h', '24h', '7d')
+
+        Returns:
+            Dictionary with stats (streams, entries, bytes, etc.)
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.loki_uid:
+                logger.error("Loki datasource UID not found")
+                return {"error": "Loki datasource not configured"}
+
+            start_rfc, end_rfc = self._parse_time_range(time_range)
+
+            result = await session.call_tool(
+                "query_loki_stats",
+                arguments={
+                    "datasourceUid": self.loki_uid,
+                    "logql": query,
+                    "startRfc3339": start_rfc,
+                    "endRfc3339": end_rfc,
+                },
+            )
+
+            return self._parse_mcp_result(result)
+
+        except Exception as e:
+            logger.error(f"Failed to query Loki stats: {e}")
+            return {"error": str(e)}
+
+    # =====================
+    # PROMETHEUS ADVANCED METHODS
+    # =====================
+
+    async def list_prometheus_metric_names(self) -> list[str]:
+        """
+        List all available metric names in Prometheus/Mimir
+
+        Returns:
+            List of metric names (e.g., ['http_requests_total', 'cpu_usage'])
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.prometheus_uid:
+                logger.error("Prometheus datasource UID not found")
+                return []
+
+            result = await session.call_tool(
+                "list_prometheus_metric_names",
+                arguments={"datasourceUid": self.prometheus_uid},
+            )
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to list Prometheus metric names: {e}")
+            return []
+
+    async def list_prometheus_metric_metadata(
+        self, metric: str | None = None
+    ) -> dict[str, Any]:
+        """
+        Get metadata for Prometheus metrics (type, help, unit)
+
+        Args:
+            metric: Optional metric name to get metadata for. If None, returns all metrics metadata
+
+        Returns:
+            Dictionary with metric metadata
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.prometheus_uid:
+                logger.error("Prometheus datasource UID not found")
+                return {}
+
+            arguments = {"datasourceUid": self.prometheus_uid}
+            if metric:
+                arguments["metric"] = metric
+
+            result = await session.call_tool(
+                "list_prometheus_metric_metadata", arguments=arguments
+            )
+
+            return self._parse_mcp_result(result)
+
+        except Exception as e:
+            logger.error(f"Failed to get Prometheus metric metadata: {e}")
+            return {}
+
+    async def list_prometheus_label_names(self) -> list[str]:
+        """
+        List all available label names in Prometheus/Mimir
+
+        Returns:
+            List of label names (e.g., ['job', 'instance', 'service'])
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.prometheus_uid:
+                logger.error("Prometheus datasource UID not found")
+                return []
+
+            result = await session.call_tool(
+                "list_prometheus_label_names",
+                arguments={"datasourceUid": self.prometheus_uid},
+            )
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to list Prometheus label names: {e}")
+            return []
+
+    async def list_prometheus_label_values(
+        self, label_name: str, metric: str | None = None
+    ) -> list[str]:
+        """
+        List all values for a specific Prometheus label
+
+        Args:
+            label_name: Label name (e.g., 'job', 'instance')
+            metric: Optional metric name to filter by
+
+        Returns:
+            List of label values
+        """
+        try:
+            session = await self._ensure_session()
+
+            if not self.prometheus_uid:
+                logger.error("Prometheus datasource UID not found")
+                return []
+
+            arguments = {
+                "datasourceUid": self.prometheus_uid,
+                "labelName": label_name,
+            }
+            if metric:
+                arguments["metric"] = metric
+
+            result = await session.call_tool(
+                "list_prometheus_label_values", arguments=arguments
+            )
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(
+                f"Failed to list Prometheus label values for '{label_name}': {e}"
+            )
+            return []
+
+    async def list_alert_rules(self) -> list[dict[str, Any]]:
+        """
+        List all alert rules configured in Grafana
+
+        Returns:
+            List of alert rule dictionaries with details (name, state, labels, etc.)
+        """
+        try:
+            session = await self._ensure_session()
+
+            result = await session.call_tool("list_alert_rules", arguments={})
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to list alert rules: {e}")
+            return []
+
+    async def get_alert_rule_by_uid(self, uid: str) -> dict[str, Any]:
+        """
+        Get a specific alert rule by UID
+
+        Args:
+            uid: Alert rule UID
+
+        Returns:
+            Alert rule details
+        """
+        try:
+            session = await self._ensure_session()
+
+            result = await session.call_tool(
+                "get_alert_rule_by_uid", arguments={"uid": uid}
+            )
+
+            return self._parse_mcp_result(result)
+
+        except Exception as e:
+            logger.error(f"Failed to get alert rule {uid}: {e}")
+            return {}
+
+    # =====================
+    # ANNOTATIONS METHODS
+    # =====================
+
+    async def get_annotations(
+        self,
+        time_range: str = "1h",
+        tags: list[str] | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """
+        Get annotations from Grafana
+
+        Args:
+            time_range: Time range (e.g., '1h', '24h', '7d')
+            tags: Optional list of tags to filter by
+            limit: Maximum number of annotations to return
+
+        Returns:
+            List of annotation dictionaries
+        """
+        try:
+            session = await self._ensure_session()
+
+            start_rfc, end_rfc = self._parse_time_range(time_range)
+
+            # Convert RFC3339 to milliseconds timestamp
+            from datetime import datetime
+
+            start_ms = int(
+                datetime.fromisoformat(start_rfc.replace("Z", "+00:00")).timestamp()
+                * 1000
+            )
+            end_ms = int(
+                datetime.fromisoformat(end_rfc.replace("Z", "+00:00")).timestamp()
+                * 1000
+            )
+
+            arguments = {
+                "from": start_ms,
+                "to": end_ms,
+                "limit": limit,
+            }
+            if tags:
+                arguments["tags"] = tags
+
+            result = await session.call_tool("get_annotations", arguments=arguments)
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and "data" in data:
+                return data["data"]
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to get annotations: {e}")
+            return []
+
+    async def create_annotation(
+        self,
+        text: str,
+        tags: list[str] | None = None,
+        time: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        Create an annotation in Grafana
+
+        Args:
+            text: Annotation text
+            tags: Optional list of tags
+            time: Optional timestamp in milliseconds. If None, uses current time
+
+        Returns:
+            Created annotation details
+        """
+        try:
+            session = await self._ensure_session()
+
+            if time is None:
+                time = int(datetime.now().timestamp() * 1000)
+
+            arguments = {
+                "text": text,
+                "time": time,
+            }
+            if tags:
+                arguments["tags"] = tags
+
+            result = await session.call_tool("create_annotation", arguments=arguments)
+
+            return self._parse_mcp_result(result)
+
+        except Exception as e:
+            logger.error(f"Failed to create annotation: {e}")
+            return {"error": str(e)}
+
+    async def update_annotation(
+        self,
+        annotation_id: int,
+        text: str | None = None,
+        tags: list[str] | None = None,
+        time: int | None = None,
+        time_end: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        Update an existing annotation
+
+        Args:
+            annotation_id: Annotation ID
+            text: Optional new text
+            tags: Optional new tags
+            time: Optional new start time in milliseconds
+            time_end: Optional end time in milliseconds (for range annotations)
+
+        Returns:
+            Updated annotation details
+        """
+        try:
+            session = await self._ensure_session()
+
+            arguments = {"id": annotation_id}
+            if text is not None:
+                arguments["text"] = text
+            if tags is not None:
+                arguments["tags"] = tags
+            if time is not None:
+                arguments["time"] = time
+            if time_end is not None:
+                arguments["timeEnd"] = time_end
+
+            result = await session.call_tool("update_annotation", arguments=arguments)
+
+            return self._parse_mcp_result(result)
+
+        except Exception as e:
+            logger.error(f"Failed to update annotation {annotation_id}: {e}")
+            return {"error": str(e)}
+
+    async def get_annotation_tags(self) -> list[str]:
+        """
+        Get all annotation tags
+
+        Returns:
+            List of annotation tags
+        """
+        try:
+            session = await self._ensure_session()
+
+            result = await session.call_tool("get_annotation_tags", arguments={})
+
+            data = self._parse_mcp_result(result)
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict):
+                # Extract tags from result structure
+                tags = data.get("tags", []) or data.get("result", [])
+                return tags
+            return []
+
+        except Exception as e:
+            logger.error(f"Failed to get annotation tags: {e}")
+            return []

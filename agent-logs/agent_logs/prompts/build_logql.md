@@ -1,6 +1,6 @@
-# LogQL Query Generation Prompt
+# LogQL Query Generation
 
-You are an expert in LogQL (Loki Query Language).
+You are an expert in LogQL.
 
 ## User Question
 {query}
@@ -8,44 +8,75 @@ You are an expert in LogQL (Loki Query Language).
 ## Context
 {services_context}
 
-## Your Task
+## Task
 
-Generate a LogQL query to answer the user's question.
+Generate a LogQL query for **BUSINESS SERVICES ONLY**.
 
-### Rules:
-- Use label matchers: `{{service_name="...", job="..."}}`
-- Use text filters: `|= "text"` for contains, `|~ "regex"` for regex
-- For error queries: filter on "error", "fail", "exception" keywords
-- For specific services: use service_name label
-- **IMPORTANT**: Exclude OpenTelemetry instrumentation events: add `!= "gen_ai"` filter
-- Keep it simple and efficient
-- **DO NOT include LIMIT in the query** - limit is handled by the API parameter
-- **DO NOT include time range** - time is handled by API parameters
+### Available Labels
 
-### Examples:
+- `service_name` - Business service (customer, order, stock, supplier, ordercheck, ordermanagement, suppliercheck)
+- `trace_id` - Trace ID (32-char hex string) to filter logs for a specific trace
+- `span_id` - Span ID to filter logs for a specific span
+- `severity_text` - Log level (INFO, WARNING, ERROR, CRITICAL)
 
-**General Log Retrieval** (no filtering):
-- Last N logs from all services: `{{service_name=~".+"}} |~ "."`
-- Last N logs from specific service: `{{service_name="frontend"}} |~ "."`
+**FORBIDDEN**: Do NOT use otelTraceID, otelSpanID, otelTraceSampled or any otel* fields. Use trace_id and span_id instead.
 
-Note: `|~ "."` ensures we only get logs with actual content (filters out empty logs)
+### Query Patterns
 
-**Error/Problem Filtering**:
-- Errors in all services: `{{service_name=~".+"}} |= "error"`
-- Errors in customer service: `{{service_name="customer"}} |= "error"`
-- Database errors: `{{service_name=~".+"}} |~ "(?i)(database|db).*error"`
+**Recent logs from all business services**:
+```
+{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}
+```
 
-**Text Search**:
-- Logs mentioning "user login": `{{service_name=~".+"}} |= "user login"`
-- Logs matching pattern: `{{service_name=~".+"}} |~ "pattern"`
+**Logs from one service**:
+```
+{service_name="order"}
+```
 
-### IMPORTANT:
-- If user asks for "last N lines/logs" WITHOUT mentioning errors/problems, use: `{{service_name=~".+"}}`
-- Only add text filters (|=, |~) when user specifically asks to filter by content
+**Logs for a specific trace** (when user provides trace_id):
+```
+{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d"}
+```
 
-### WRONG Examples (do NOT do this):
-- ❌ `{{service_name=~".+"}} |= "error" LIMIT 5` (LIMIT is not LogQL syntax)
-- ❌ `{{service_name=~".+"}} |= "error" limit 10` (limit is an API parameter, not query syntax)
+**Logs for a specific trace AND service**:
+```
+{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d", service_name="order"}
+```
 
-**Respond with ONLY the LogQL query, no explanation, no LIMIT clause.**
+**Error logs**:
+```
+{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"} |= "error"
+```
 
+**Errors from specific service**:
+```
+{service_name="order"} |= "error"
+```
+
+**Search text in logs**:
+```
+{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"} |= "search text"
+```
+
+**Critical/Error level logs**:
+```
+{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck", severity_text=~"ERROR|CRITICAL"}
+```
+
+### Rules
+
+1. **Filter by business services**: Use `service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"` OR filter by `trace_id` if provided
+2. **For trace filtering**: Use `trace_id="..."` (NOT otelTraceID)
+3. **For span filtering**: Use `span_id="..."` (NOT otelSpanID)
+4. **NEVER use**: otelTraceID, otelSpanID, otelTraceSampled
+5. **Text search**: Use `|= "text"` for contains
+6. **NO LIMIT** in query
+7. **NO time range** in query
+
+### User Query Examples
+
+- "logs for trace_id abc123" → `{trace_id="abc123"}`
+- "last 5 logs" → `{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}`
+- "errors on order" → `{service_name="order"} |= "error"`
+
+Return ONLY the LogQL query. No explanation.
