@@ -76,6 +76,9 @@ async def analyze(request: AnalyzeRequest):
 
     Routes the query to specialized agents and synthesizes their responses.
     """
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
     try:
         logger.info(f"Received analysis request: {request.query}")
         result = await orchestrator.analyze(
@@ -96,6 +99,9 @@ async def health():
 
     Checks connectivity to all specialized agents.
     """
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
     agent_status = await orchestrator.check_agents_health()
 
     all_healthy = all(status == "reachable" for status in agent_status.values())

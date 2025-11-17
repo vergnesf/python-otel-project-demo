@@ -1,15 +1,18 @@
 """
-Orchestrator logic for coordinating specialized agents
+Simple Orchestrator with 3 core functionalities:
+1. Detect language and translate to English
+2. Route to appropriate agent (logs, traces, metrics)
+3. Validate the response
 """
 
 import asyncio
+import json
 import logging
 import os
 from pathlib import Path
 from typing import Any
 
 import httpx
-import re
 
 from common_ai import get_llm, extract_text_from_response
 
@@ -28,12 +31,12 @@ def load_prompt(filename: str) -> str:
     return ""
 
 
-# Use extract_text_from_response from common_ai instead of local function
-
-
 class Orchestrator:
     """
-    Main orchestrator that coordinates specialized observability agents
+    Simple orchestrator with 3 functionalities:
+    - Language detection & translation
+    - Agent routing (logs, traces, metrics)
+    - Response validation
     """
 
     def __init__(self):
@@ -47,27 +50,20 @@ class Orchestrator:
         )
 
         self.client = httpx.AsyncClient(timeout=60.0)
-        # Per-agent call timeout (seconds) - configurable to avoid UI timeouts
         self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "60"))
 
-        # Initialize LLM for synthesis (optional, can be None if LLM not available)
-        # If LLM_EPHEMERAL_PER_CALL is set to 'true', we will instantiate a fresh
-        # LLM client per call to avoid preserving conversation state between calls.
+        # Initialize LLM
         self.llm_ephemeral = (
             os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
         )
         try:
-            # Keep a shared instance as a fallback when ephemeral is disabled
             self.llm = None if self.llm_ephemeral else get_llm()
             if self.llm:
-                logger.info("LLM initialized for orchestrator (shared instance)")
+                logger.info("LLM initialized for orchestrator")
             else:
-                logger.info(
-                    "LLM will be instantiated per call (ephemeral mode=%s)",
-                    self.llm_ephemeral,
-                )
+                logger.info("LLM will be instantiated per call (ephemeral mode)")
         except Exception as e:
-            logger.warning(f"LLM not available, using basic synthesis: {e}")
+            logger.warning(f"LLM not available: {e}")
             self.llm = None
 
     async def close(self):
@@ -76,175 +72,281 @@ class Orchestrator:
 
     async def analyze(self, query: str, time_range: str = "1h") -> dict[str, Any]:
         """
-        Analyze user query by coordinating specialized agents
-        Uses LLM to intelligently route to the right agents
+        Main analysis flow:
+        1. Detect language and translate to English
+        2. Route to appropriate agents
+        3. Call selected agents
+        4. Validate responses
 
         Args:
-            query: User query to analyze
+            query: User query
             time_range: Time range for analysis
 
         Returns:
-            Synthesized response from selected agents
+            Analysis result with validation
         """
         logger.info(f"Analyzing query: {query}")
+        from datetime import datetime
 
-        # Translate to English if the query is not English
-        translated_query = await self._translate_to_english(query)
-        logger.info(f"Translated query: {translated_query}")
+        # Step 1: Detect language and translate
+        language_info = await self._detect_and_translate(query)
+        translated_query = language_info["translated_query"]
+        logger.info(
+            f"Language: {language_info['language']}, Translated: {translated_query}"
+        )
 
-        # Use LLM to decide which agents to call (use translated query)
-        routing_decision = await self._route_query(translated_query)
-        logger.info(f"Routing decision: {routing_decision}")
+        # Step 2: Route to appropriate agents
+        routing = await self._route_to_agents(translated_query)
+        logger.info(f"Routing: {routing}")
 
-        # Handle non-observability queries
-        if routing_decision["query_type"] in ["greeting", "other"]:
-            from datetime import datetime
-
-            if routing_decision["query_type"] == "greeting":
-                return {
-                    "query": query,
-                    "summary": "👋 Bonjour ! Je suis votre assistant d'observabilité. Je peux vous aider à analyser la santé de vos services en examinant les logs, métriques et traces. N'hésitez pas à me poser des questions sur vos applications !",
-                    "agent_responses": {},
-                    "recommendations": [
-                        "Demandez-moi par exemple : 'Quelle est la santé de mes services ?'",
-                        "Ou : 'Y a-t-il des erreurs dans le service customer ?'",
-                        "Ou : 'Quels services ont des problèmes de performance ?'",
-                    ],
-                    "timestamp": datetime.now(),
-                }
-            else:
-                return {
-                    "query": query,
-                    "summary": f"Je suis spécialisé dans l'analyse d'observabilité. {routing_decision['reasoning']}",
-                    "agent_responses": {},
-                    "recommendations": [
-                        "Posez des questions sur les erreurs, la performance, ou la santé des services",
-                        "Exemples : 'Y a-t-il des erreurs ?', 'Quel est le taux d'erreur ?', 'Les services sont-ils lents ?'",
-                    ],
-                    "timestamp": datetime.now(),
-                }
-
-        # Prepare request for agents
+        # Step 3: Call selected agents
         agent_request = {
-            "query": query,
+            "query": translated_query,
             "time_range": time_range,
-            "context": self._extract_context(query),
+            "context": {},
         }
 
-        # Query only the selected agents in parallel
-        agents_to_call = routing_decision.get("agents_to_call", [])
+        agent_responses = await self._call_agents(routing["agents"], agent_request)
+
+        # Step 4: Validate responses
+        validation = await self._validate_responses(translated_query, agent_responses)
+
+        # Build final response
+        summary_parts = []
+        recommendations = []
+
+        for agent_name, response in agent_responses.items():
+            if response and not isinstance(response.get("error"), str):
+                if "analysis" in response:
+                    summary_parts.append(
+                        f"**{agent_name.upper()}**: {response['analysis']}"
+                    )
+                if "recommendations" in response:
+                    recommendations.extend(response["recommendations"])
+
+        summary = (
+            "\n\n".join(summary_parts) if summary_parts else "No analysis available"
+        )
+
+        return {
+            "query": query,
+            "translated_query": translated_query,
+            "language": language_info["language"],
+            "routing": routing,
+            "agent_responses": agent_responses,
+            "summary": summary,
+            "recommendations": recommendations,
+            "validation": validation,
+            "timestamp": datetime.now(),
+        }
+
+    async def _detect_and_translate(self, query: str) -> dict[str, Any]:
+        """
+        Functionality 1: Detect language and translate to English
+
+        Args:
+            query: User query
+
+        Returns:
+            Dictionary with language and translated query
+        """
+        if not query:
+            return {"language": "unknown", "translated_query": query}
+
+        # If no LLM available, assume English
+        if not self.llm and not self.llm_ephemeral:
+            return {"language": "unknown", "translated_query": query}
+
+        try:
+            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            if not llm_client:
+                logger.warning("No LLM available, assuming English")
+                return {"language": "unknown", "translated_query": query}
+
+            # First, detect if it's English
+            detect_prompt = load_prompt("detect_language.md")
+            if detect_prompt:
+                detect_prompt = detect_prompt.format(query=query)
+                response = llm_client.invoke(detect_prompt)
+                language_result = extract_text_from_response(response).strip().upper()
+
+                # If already English, no need to translate
+                # Check for exact "ENGLISH" but not "NOT_ENGLISH" or "NON_ENGLISH"
+                if language_result == "ENGLISH" or (
+                    "ENGLISH" in language_result
+                    and "NOT" not in language_result
+                    and "NON" not in language_result
+                ):
+                    return {"language": "english", "translated_query": query}
+
+            # Not English, translate
+            translate_prompt = load_prompt("translate_to_english.md")
+            if not translate_prompt:
+                return {"language": "unknown", "translated_query": query}
+
+            translate_prompt = translate_prompt.format(query=query)
+            response = llm_client.invoke(translate_prompt)
+            translated = extract_text_from_response(response).strip()
+
+            # Clean up translation (remove code blocks if any)
+            if translated.startswith("```"):
+                lines = translated.split("\n")
+                translated = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+                translated = translated.strip()
+
+            return {
+                "language": "non-english",
+                "translated_query": translated if translated else query,
+            }
+
+        except Exception as e:
+            logger.warning(f"Language detection/translation failed: {e}")
+            return {"language": "unknown", "translated_query": query}
+
+    async def _route_to_agents(self, query: str) -> dict[str, Any]:
+        """
+        Functionality 2: Decide which agents to call based on query
+
+        Args:
+            query: User query (in English)
+
+        Returns:
+            Routing decision with agents to call
+        """
+        # If no LLM available, use keyword-based fallback
+        if not self.llm and not self.llm_ephemeral:
+            return self._keyword_based_routing(query)
+
+        try:
+            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            if not llm_client:
+                logger.warning("No LLM available, using keyword-based routing")
+                return self._keyword_based_routing(query)
+
+            # Load routing prompt
+            route_prompt = load_prompt("route_agents.md")
+            if not route_prompt:
+                return self._keyword_based_routing(query)
+
+            route_prompt = route_prompt.format(query=query)
+            response = llm_client.invoke(route_prompt)
+            response_text = extract_text_from_response(response).strip()
+
+            # Clean response
+            if response_text.startswith("```"):
+                lines = response_text.split("\n")
+                response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+                response_text = response_text.strip()
+            if response_text.startswith("json"):
+                response_text = response_text[4:].strip()
+
+            # Extract JSON
+            first_brace = response_text.find("{")
+            last_brace = response_text.rfind("}")
+            if first_brace != -1 and last_brace != -1:
+                response_text = response_text[first_brace : last_brace + 1]
+
+            routing = json.loads(response_text)
+            return {
+                "agents": routing.get("agents", ["logs"]),
+                "reason": routing.get("reason", "LLM routing decision"),
+            }
+
+        except Exception as e:
+            logger.warning(f"LLM routing failed: {e}, using keyword fallback")
+            return self._keyword_based_routing(query)
+
+    def _keyword_based_routing(self, query: str) -> dict[str, Any]:
+        """
+        Simple keyword-based routing fallback
+
+        Args:
+            query: User query
+
+        Returns:
+            Routing decision
+        """
+        query_lower = query.lower()
+        agents = []
+
+        # Check for logs keywords
+        if any(
+            word in query_lower for word in ["log", "error", "exception", "message"]
+        ):
+            agents.append("logs")
+
+        # Check for metrics keywords
+        if any(
+            word in query_lower
+            for word in ["cpu", "memory", "latency", "rate", "throughput"]
+        ):
+            agents.append("metrics")
+
+        # Check for traces keywords
+        if any(word in query_lower for word in ["trace", "slow", "bottleneck", "span"]):
+            agents.append("traces")
+
+        # Default to logs if nothing matched
+        if not agents:
+            agents = ["logs"]
+
+        return {
+            "agents": agents,
+            "reason": f"Keyword-based routing: {', '.join(agents)}",
+        }
+
+    async def _call_agents(
+        self, agents: list[str], request: dict[str, Any]
+    ) -> dict[str, Any]:
+        """
+        Call selected agents in parallel
+
+        Args:
+            agents: List of agent names to call
+            request: Request to send to agents
+
+        Returns:
+            Dictionary mapping agent names to responses
+        """
         tasks = []
-        agent_names = []
+        agent_urls = {
+            "logs": self.logs_agent_url,
+            "metrics": self.metrics_agent_url,
+            "traces": self.traces_agent_url,
+        }
 
-        if "logs" in agents_to_call:
-            tasks.append(self._query_agent(self.logs_agent_url, agent_request))
-            agent_names.append("logs")
-        if "metrics" in agents_to_call:
-            tasks.append(self._query_agent(self.metrics_agent_url, agent_request))
-            agent_names.append("metrics")
-        if "traces" in agents_to_call:
-            tasks.append(self._query_agent(self.traces_agent_url, agent_request))
-            agent_names.append("traces")
+        for agent in agents:
+            if agent in agent_urls:
+                tasks.append(self._query_agent(agent_urls[agent], request))
+            else:
+                logger.warning(f"Unknown agent: {agent}")
 
-        # Execute queries in parallel
-        if tasks:
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
-        else:
-            responses = []
+        if not tasks:
+            return {}
 
-        # Map responses to agent names
-        agent_responses_dict = {}
-        for i, agent_name in enumerate(agent_names):
+        # Execute in parallel
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Map responses
+        result = {}
+        for i, agent in enumerate([a for a in agents if a in agent_urls]):
             response = responses[i] if i < len(responses) else None
-            agent_responses_dict[agent_name] = (
+            result[agent] = (
                 response
                 if not isinstance(response, Exception)
                 else {"error": str(response)}
             )
 
-        # Add None for agents that were not called
-        logs_response = agent_responses_dict.get("logs")
-        metrics_response = agent_responses_dict.get("metrics")
-        traces_response = agent_responses_dict.get("traces")
-
-        # Synthesize responses
-        summary = self._synthesize_responses(
-            query=query,
-            logs=logs_response,
-            metrics=metrics_response,
-            traces=traces_response,
-        )
-
-        return {
-            "query": query,
-            "original_query": query,
-            "translated_query": translated_query,
-            "summary": summary["summary"],
-            "agent_responses": agent_responses_dict,
-            "recommendations": summary["recommendations"],
-            "routing": routing_decision,  # Include routing decision for transparency
-            "timestamp": summary["timestamp"],
-        }
-
-    async def _translate_to_english(self, query: str) -> str:
-        """
-        Translate the input query to English using the available LLM.
-        If no LLM available or translation fails, return the original query.
-
-        Returns:
-            Translated query (or original if translation not possible)
-        """
-        if not query:
-            return query
-
-        # Prefer LLM for language detection/translation when available
-        # Fallback: if the query contains any non-ascii letters (e.g., accented), attempt translation
-        def _simple_nonascii_check(s: str) -> bool:
-            try:
-                s.encode("ascii")
-                return False
-            except UnicodeEncodeError:
-                return True
-
-        need_translation = _simple_nonascii_check(query)
-
-        # If no sign of non-ascii and no LLM, assume English
-        if not need_translation and not self.llm:
-            return query
-
-        # If LLM available, ask it to translate
-        if self.llm or self.llm_ephemeral:
-            try:
-                prompt = f"Translate the following user question to English. Return only the translated sentence (no explanations):\n\n{query}"
-                llm_client = get_llm() if self.llm_ephemeral else self.llm
-                response = llm_client.invoke(prompt)
-                text = extract_text_from_response(response)
-                # Strip code blocks and surrounding text
-                text = text.strip()
-                if text.startswith("```"):
-                    parts = text.split("\n")
-                    text = "\n".join(parts[1:-1]) if len(parts) > 2 else parts[1]
-                # If the translation is empty, fallback
-                if not text:
-                    return query
-                return text.strip()
-            except Exception as e:
-                logger.warning(
-                    f"Translation with LLM failed: {e}, using original query"
-                )
-                return query
-
-        # No LLM - return original
-        return query
+        return result
 
     async def _query_agent(
         self, agent_url: str, request: dict[str, Any]
     ) -> dict[str, Any]:
         """
-        Query a specialized agent
+        Query a single agent
 
         Args:
-            agent_url: URL of the agent
+            agent_url: Agent URL
             request: Request payload
 
         Returns:
@@ -259,62 +361,65 @@ class Orchestrator:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            # Try to log response details if available for easier debugging
-            resp = getattr(e, "request", None)
-            try:
-                status = None
-                body = None
-                if hasattr(e, "response") and e.response is not None:
-                    status = e.response.status_code
-                    # read text safely
-                    body = e.response.text
-                logger.error(
-                    "Failed to query agent at %s: %s (status=%s, body=%s)",
-                    agent_url,
-                    e,
-                    status,
-                    body,
-                )
-            except Exception:
-                logger.error(f"Failed to query agent at {agent_url}: {e}")
+            logger.error(f"Failed to query agent at {agent_url}: {e}")
             raise
 
-    async def _route_query(self, query: str) -> dict[str, Any]:
+    async def _validate_responses(
+        self, query: str, agent_responses: dict[str, Any]
+    ) -> dict[str, Any]:
         """
-        Use LLM to intelligently decide which agents to call
+        Functionality 3: Validate that responses properly answer the query
 
         Args:
-            query: User query
+            query: Original query
+            agent_responses: Responses from agents
 
         Returns:
-            Routing decision with agents to call
+            Validation result
         """
-        # If no LLM available, use conservative fallback routing
         if not self.llm and not self.llm_ephemeral:
-            logger.warning("LLM not available, using conservative fallback routing")
             return {
-                "agents_to_call": ["logs", "metrics", "traces"],
-                "reasoning": "LLM unavailable — calling all agents for safety",
-                "query_type": "correlation",
+                "validated": False,
+                "reason": "No LLM available for validation",
             }
 
-        # Load routing prompt
-        prompt_template = load_prompt("route_query.md")
-        if not prompt_template:
-            logger.warning("Routing prompt not found, using fallback")
-            return self._fallback_routing(query)
-
         try:
-            prompt = prompt_template.format(query=query)
             llm_client = get_llm() if self.llm_ephemeral else self.llm
-            response = llm_client.invoke(prompt)
-            response_text = extract_text_from_response(response)
-            logger.info(f"LLM routing response (first 200 chars): {response_text[:200] if response_text else '<EMPTY>'}")
+            if not llm_client:
+                logger.warning("No LLM available for validation")
+                return {
+                    "validated": False,
+                    "reason": "No LLM available for validation",
+                }
+
+            # Combine all responses for validation
+            combined_response = ""
+            for agent, response in agent_responses.items():
+                if response and not isinstance(response.get("error"), str):
+                    if "analysis" in response:
+                        combined_response += f"{agent}: {response['analysis']}\n"
+
+            if not combined_response:
+                return {
+                    "validated": False,
+                    "reason": "No valid responses to validate",
+                }
+
+            # Load validation prompt
+            validate_prompt = load_prompt("validate_response.md")
+            if not validate_prompt:
+                return {
+                    "validated": False,
+                    "reason": "Validation prompt not found",
+                }
+
+            validate_prompt = validate_prompt.format(
+                query=query, response=combined_response
+            )
+            response = llm_client.invoke(validate_prompt)
+            response_text = extract_text_from_response(response).strip()
 
             # Clean response
-            response_text = response_text.strip()
-
-            # Remove markdown code blocks if present
             if response_text.startswith("```"):
                 lines = response_text.split("\n")
                 response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
@@ -322,174 +427,25 @@ class Orchestrator:
             if response_text.startswith("json"):
                 response_text = response_text[4:].strip()
 
-            # Extract JSON from response (in case LLM added preamble)
-            # Find first { and last }
+            # Extract JSON
             first_brace = response_text.find("{")
             last_brace = response_text.rfind("}")
+            if first_brace != -1 and last_brace != -1:
+                response_text = response_text[first_brace : last_brace + 1]
 
-            if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
-                response_text = response_text[first_brace:last_brace + 1]
-                logger.info(f"Extracted JSON from response: {response_text[:100]}...")
-
-            # Parse JSON response
-            import json
-
-            routing = json.loads(response_text)
-            logger.info(f"LLM routing decision: {routing}")
-            return routing
+            validation = json.loads(response_text)
+            return {
+                "validated": validation.get("valid", False),
+                "issues": validation.get("issues", []),
+                "suggestion": validation.get("suggestion", ""),
+            }
 
         except Exception as e:
-            logger.warning(f"LLM routing failed: {e}, using fallback")
-            return self._fallback_routing(query)
-
-    def _fallback_routing(self, query: str) -> dict[str, Any]:
-        """
-        Fallback routing logic when LLM is not available
-
-        Args:
-            query: User query
-
-        Returns:
-            Routing decision
-        """
-        # Smart fallback routing based on keywords
-        query_lower = query.lower()
-
-        # Logs-only queries
-        if any(word in query_lower for word in ["log", "logs", "erreur", "error", "message", "ligne", "line", "dernière", "last"]):
+            logger.warning(f"Response validation failed: {e}")
             return {
-                "agents_to_call": ["logs"],
-                "reasoning": "Query contains log-related keywords, calling Logs Agent only",
-                "query_type": "logs",
+                "validated": False,
+                "reason": f"Validation error: {str(e)}",
             }
-
-        # Metrics-only queries
-        if any(word in query_lower for word in ["rate", "latency", "cpu", "memory", "p95", "p99", "throughput"]):
-            return {
-                "agents_to_call": ["metrics"],
-                "reasoning": "Query contains metrics-related keywords, calling Metrics Agent only",
-                "query_type": "metrics",
-            }
-
-        # Traces-only queries
-        if any(word in query_lower for word in ["trace", "span", "slow", "lent", "bottleneck"]):
-            return {
-                "agents_to_call": ["traces"],
-                "reasoning": "Query contains trace-related keywords, calling Traces Agent only",
-                "query_type": "traces",
-            }
-
-        # Default: call logs only (most common use case)
-        return {
-            "agents_to_call": ["logs"],
-            "reasoning": "Default fallback: call Logs Agent for general queries",
-            "query_type": "logs",
-        }
-
-    def _extract_context(self, query: str) -> dict[str, Any]:
-        """
-        Extract basic context from query (service names, focus)
-        Keep simple - agents will do detailed analysis
-
-        Args:
-            query: User query
-
-        Returns:
-            Context dictionary with optional 'services' and 'focus'
-        """
-        context: dict[str, Any] = {}
-
-        # Simple keyword detection for common services
-        # Most architectures have these service names
-        common_services = ["customer", "order", "stock", "payment", "notification", "ordermanagement", "suppliercheck"]
-        found_services = [svc for svc in common_services if svc in query.lower()]
-        if found_services:
-            context["services"] = found_services
-
-        # Simple focus detection
-        if any(word in query.lower() for word in ["error", "erreur", "fail", "exception"]):
-            context["focus"] = "errors"
-        elif any(word in query.lower() for word in ["slow", "lent", "latency", "performance"]):
-            context["focus"] = "performance"
-
-        return context
-
-    def _synthesize_responses(
-        self,
-        query: str,
-        logs: dict | None,
-        metrics: dict | None,
-        traces: dict | None,
-    ) -> dict[str, Any]:
-        """
-        Format agent responses into a coherent summary
-        Agents already did the LLM analysis, just format their output
-
-        Args:
-            query: Original user query
-            logs: Response from logs agent
-            metrics: Response from metrics agent
-            traces: Response from traces agent
-
-        Returns:
-            Formatted summary and recommendations
-        """
-        # Simple formatting - agents already did the analysis
-        return self._basic_synthesis(query, logs, metrics, traces)
-
-    def _basic_synthesis(
-        self,
-        query: str,
-        logs: dict | None,
-        metrics: dict | None,
-        traces: dict | None,
-    ) -> dict[str, Any]:
-        """
-        Format agent responses - agents already did LLM analysis
-
-        Args:
-            query: Original user query
-            logs: Response from logs agent
-            metrics: Response from metrics agent
-            traces: Response from traces agent
-
-        Returns:
-            Formatted summary and recommendations from agents
-        """
-        from datetime import datetime
-
-        summary_parts = []
-        all_recommendations = []
-
-        # Format logs response
-        if logs and not isinstance(logs.get("error"), str):
-            if "analysis" in logs:
-                summary_parts.append(logs["analysis"])
-            if "recommendations" in logs:
-                all_recommendations.extend(logs["recommendations"])
-
-        # Format metrics response
-        if metrics and not isinstance(metrics.get("error"), str):
-            if "analysis" in metrics:
-                summary_parts.append(metrics["analysis"])
-            if "recommendations" in metrics:
-                all_recommendations.extend(metrics["recommendations"])
-
-        # Format traces response
-        if traces and not isinstance(traces.get("error"), str):
-            if "analysis" in traces:
-                summary_parts.append(traces["analysis"])
-            if "recommendations" in traces:
-                all_recommendations.extend(traces["recommendations"])
-
-        # Combine summaries
-        summary = "\n\n".join(summary_parts) if summary_parts else "No analysis available from agents"
-
-        return {
-            "summary": summary,
-            "recommendations": all_recommendations if all_recommendations else ["Check agent connectivity"],
-            "timestamp": datetime.now(),
-        }
 
     async def check_agents_health(self) -> dict[str, str]:
         """
