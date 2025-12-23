@@ -564,6 +564,14 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
+    models:
+      - mistral
+      - llama
+      - qwen
+      - granite
+      - mistral-nemo
+      - qwen2_5
+      - phi4
 
   agent-logs:
     build:
@@ -668,9 +676,63 @@ services:
 # using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
 # `context_size` and your model-runner capabilities (default used in code: 9000).
 models:
-  ia-model:
-    model: *ia-model
+  mistral:
+    model: ai/mistral:7B-Q4_0
+    context_size: 32768
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  llama:
+    model: ai/llama3.2:3B-Q4_K_M
+    context_size: 32768
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  qwen:
+    model: ai/qwen3:0.6B-Q4_0
     context_size: 16384
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  granite:
+    model: ai/granite-4.0-h-micro:3B-Q4_K_M
+    context_size: 8192
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  mistral-nemo:
+    model: ai/mistral-nemo:12B-Q4_K_M
+    context_size: 16384
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  qwen2_5:
+    model: ai/qwen2.5:7B-Q4_0
+    context_size: 32768
+    runtime_flags:
+      - "--temp" # Temperature
+      - "0"
+      - "--top-k" # Top-k sampling
+      - "1"
+
+  phi4:
+    model: ai/phi4:14B-Q4_0
+    context_size: 8192
     runtime_flags:
       - "--temp" # Temperature
       - "0"

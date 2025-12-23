@@ -92,7 +92,7 @@ class SafeChatOpenAI(ChatOpenAI):
 
 
 def get_llm(
-    model: str = "qwen3",
+    model: str | None = None,
     temperature: float = 0.1,
     max_tokens: int = 2000,
 ) -> ChatOpenAI:
@@ -103,7 +103,7 @@ def get_llm(
     Can be overridden with environment variables for production use.
 
     Args:
-        model: Model name
+        model: Model name (overrides LLM_MODEL env var if provided)
         temperature: Sampling temperature (0-1)
         max_tokens: Maximum tokens in response
 
@@ -117,7 +117,17 @@ def get_llm(
     """
     base_url = os.getenv("LLM_BASE_URL", "http://172.17.0.1:12434/engines/llama.cpp/v1")
     api_key = os.getenv("LLM_API_KEY", "dummy-token")
-    model_name = os.getenv("LLM_MODEL", model)
+
+    # Priority:
+    # 1. Function argument 'model' (if not None)
+    # 2. Environment variable 'LLM_MODEL'
+    # 3. Default "qwen3"
+    if model:
+        model_name = model
+    else:
+        model_name = os.getenv("LLM_MODEL", "qwen3")
+
+    logger.info(f"Creating LLM instance: model={model_name}, base_url={base_url}")
 
     return SafeChatOpenAI(
         base_url=base_url,

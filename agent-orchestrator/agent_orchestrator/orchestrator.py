@@ -70,7 +70,9 @@ class Orchestrator:
         """Close HTTP client"""
         await self.client.aclose()
 
-    async def analyze(self, query: str, time_range: str = "1h") -> dict[str, Any]:
+    async def analyze(
+        self, query: str, time_range: str = "1h", model: str | None = None
+    ) -> dict[str, Any]:
         """
         Main analysis flow:
         1. Detect language and translate to English
@@ -81,22 +83,23 @@ class Orchestrator:
         Args:
             query: User query
             time_range: Time range for analysis
+            model: Optional model name to use for this request
 
         Returns:
             Analysis result with validation
         """
-        logger.info(f"Analyzing query: {query}")
+        logger.info(f"Analyzing query: {query} (model: {model})")
         from datetime import datetime
 
         # Step 1: Detect language and translate
-        language_info = await self._detect_and_translate(query)
+        language_info = await self._detect_and_translate(query, model=model)
         translated_query = language_info["translated_query"]
         logger.info(
             f"Language: {language_info['language']}, Translated: {translated_query}"
         )
 
         # Step 2: Route to appropriate agents
-        routing = await self._route_to_agents(translated_query)
+        routing = await self._route_to_agents(translated_query, model=model)
         logger.info(f"Routing: {routing}")
 
         # Step 3: Call selected agents
@@ -109,7 +112,9 @@ class Orchestrator:
         agent_responses = await self._call_agents(routing["agents"], agent_request)
 
         # Step 4: Validate responses
-        validation = await self._validate_responses(translated_query, agent_responses)
+        validation = await self._validate_responses(
+            translated_query, agent_responses, model=model
+        )
 
         # Build final response
         summary_parts = []
@@ -140,12 +145,15 @@ class Orchestrator:
             "timestamp": datetime.now(),
         }
 
-    async def _detect_and_translate(self, query: str) -> dict[str, Any]:
+    async def _detect_and_translate(
+        self, query: str, model: str | None = None
+    ) -> dict[str, Any]:
         """
         Functionality 1: Detect language and translate to English
 
         Args:
             query: User query
+            model: Optional model override
 
         Returns:
             Dictionary with language and translated query
@@ -154,11 +162,18 @@ class Orchestrator:
             return {"language": "unknown", "translated_query": query}
 
         # If no LLM available, assume English
-        if not self.llm and not self.llm_ephemeral:
+        if not self.llm and not self.llm_ephemeral and not model:
             return {"language": "unknown", "translated_query": query}
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            # Always use provided model if specified, otherwise fall back to default
+            if model:
+                llm_client = get_llm(model=model)
+            elif self.llm_ephemeral:
+                llm_client = get_llm()
+            else:
+                llm_client = self.llm
+
             if not llm_client:
                 logger.warning("No LLM available, assuming English")
                 return {"language": "unknown", "translated_query": query}
@@ -203,22 +218,32 @@ class Orchestrator:
             logger.warning(f"Language detection/translation failed: {e}")
             return {"language": "unknown", "translated_query": query}
 
-    async def _route_to_agents(self, query: str) -> dict[str, Any]:
+    async def _route_to_agents(
+        self, query: str, model: str | None = None
+    ) -> dict[str, Any]:
         """
         Functionality 2: Decide which agents to call based on query
 
         Args:
             query: User query (in English)
+            model: Optional model override
 
         Returns:
             Routing decision with agents to call
         """
         # If no LLM available, use keyword-based fallback
-        if not self.llm and not self.llm_ephemeral:
+        if not self.llm and not self.llm_ephemeral and not model:
             return self._keyword_based_routing(query)
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            # Always use provided model if specified, otherwise fall back to default
+            if model:
+                llm_client = get_llm(model=model)
+            elif self.llm_ephemeral:
+                llm_client = get_llm()
+            else:
+                llm_client = self.llm
+
             if not llm_client:
                 logger.warning("No LLM available, using keyword-based routing")
                 return self._keyword_based_routing(query)
@@ -365,7 +390,7 @@ class Orchestrator:
             raise
 
     async def _validate_responses(
-        self, query: str, agent_responses: dict[str, Any]
+        self, query: str, agent_responses: dict[str, Any], model: str | None = None
     ) -> dict[str, Any]:
         """
         Functionality 3: Validate that responses properly answer the query
@@ -373,18 +398,26 @@ class Orchestrator:
         Args:
             query: Original query
             agent_responses: Responses from agents
+            model: Optional model override
 
         Returns:
             Validation result
         """
-        if not self.llm and not self.llm_ephemeral:
+        if not self.llm and not self.llm_ephemeral and not model:
             return {
                 "validated": False,
                 "reason": "No LLM available for validation",
             }
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            # Always use provided model if specified, otherwise fall back to default
+            if model:
+                llm_client = get_llm(model=model)
+            elif self.llm_ephemeral:
+                llm_client = get_llm()
+            else:
+                llm_client = self.llm
+
             if not llm_client:
                 logger.warning("No LLM available for validation")
                 return {

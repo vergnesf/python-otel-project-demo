@@ -38,28 +38,32 @@ class Colors:
 
 async def check_orchestrator_available():
     """Check if orchestrator is running"""
+    print(f"Checking orchestrator availability at {BASE_URL}/health...")
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{BASE_URL}/health")
             if response.status_code != 200:
+                print(f"Orchestrator returned status {response.status_code}")
                 pytest.skip(
                     f"Orchestrator not healthy at {BASE_URL} (status: {response.status_code})"
                 )
+            print("Orchestrator is available.")
     except Exception as e:
+        print(f"Failed to connect to orchestrator: {e}")
         pytest.skip(f"Orchestrator not running at {BASE_URL}: {e}")
 
 
-async def test_language_detection_and_translation():
+async def run_language_detection_and_translation(model: str | None = None):
     """
-    TEST 1: Language Detection and Translation
-    Verify that French queries are detected and translated to English
+    Reusable logic for Language Detection and Translation
     """
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}TEST 1: LANGUAGE DETECTION AND TRANSLATION{Colors.END}")
+    print(
+        f"{Colors.BOLD}TEST 1: LANGUAGE DETECTION AND TRANSLATION (Model: {model}){Colors.END}"
+    )
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
-    print(f"{Colors.YELLOW}Using LLM: {LLM_BASE_URL}{Colors.END}\n")
 
     test_cases = [
         {
@@ -84,9 +88,11 @@ async def test_language_detection_and_translation():
             query = test_case["query"]
             print(f"{Colors.BLUE}Test {i}: '{query}'{Colors.END}")
 
-            response = await client.post(
-                f"{BASE_URL}/analyze", json={"query": query, "time_range": "1h"}
-            )
+            payload = {"query": query, "time_range": "1h"}
+            if model:
+                payload["model"] = model
+
+            response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
             assert response.status_code == 200, f"HTTP {response.status_code}"
 
@@ -116,15 +122,22 @@ async def test_language_detection_and_translation():
     print(f"{Colors.GREEN}{Colors.BOLD}✓ All translation tests passed!{Colors.END}\n")
 
 
-async def test_agent_routing():
+async def test_language_detection_and_translation():
     """
-    TEST 2: Agent Routing
-    Verify that queries are routed to the correct agents
+    TEST 1: Language Detection and Translation
+    Verify that French queries are detected and translated to English
+    """
+    await run_language_detection_and_translation()
+
+
+async def run_agent_routing(model: str | None = None):
+    """
+    Reusable logic for Agent Routing
     """
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}TEST 2: AGENT ROUTING{Colors.END}")
+    print(f"{Colors.BOLD}TEST 2: AGENT ROUTING (Model: {model}){Colors.END}")
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
     test_cases = [
@@ -156,9 +169,11 @@ async def test_agent_routing():
             print(f"{Colors.BLUE}Test {i}: '{query}'{Colors.END}")
             print(f"  Description: {test_case['description']}")
 
-            response = await client.post(
-                f"{BASE_URL}/analyze", json={"query": query, "time_range": "1h"}
-            )
+            payload = {"query": query, "time_range": "1h"}
+            if model:
+                payload["model"] = model
+
+            response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
             assert response.status_code == 200, f"HTTP {response.status_code}"
 
@@ -184,15 +199,22 @@ async def test_agent_routing():
     print(f"{Colors.GREEN}{Colors.BOLD}✓ All routing tests passed!{Colors.END}\n")
 
 
-async def test_response_validation():
+async def test_agent_routing():
     """
-    TEST 3: Response Validation
-    Verify that agent responses are validated
+    TEST 2: Agent Routing
+    Verify that queries are routed to the correct agents
+    """
+    await run_agent_routing()
+
+
+async def run_response_validation(model: str | None = None):
+    """
+    Reusable logic for Response Validation
     """
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}TEST 3: RESPONSE VALIDATION{Colors.END}")
+    print(f"{Colors.BOLD}TEST 3: RESPONSE VALIDATION (Model: {model}){Colors.END}")
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
     test_cases = [
@@ -206,9 +228,11 @@ async def test_response_validation():
             print(f"{Colors.BLUE}Test {i}: '{query}'{Colors.END}")
             print(f"  Description: {test_case['description']}")
 
-            response = await client.post(
-                f"{BASE_URL}/analyze", json={"query": query, "time_range": "1h"}
-            )
+            payload = {"query": query, "time_range": "1h"}
+            if model:
+                payload["model"] = model
+
+            response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
             assert response.status_code == 200, f"HTTP {response.status_code}"
 
@@ -239,16 +263,23 @@ async def test_response_validation():
     print(f"{Colors.GREEN}{Colors.BOLD}✓ All validation tests passed!{Colors.END}\n")
 
 
-async def test_complete_workflow():
+async def test_response_validation():
     """
-    TEST 4: Complete Workflow
-    Test all 3 functionalities together in a single request
+    TEST 3: Response Validation
+    Verify that agent responses are validated
+    """
+    await run_response_validation()
+
+
+async def run_complete_workflow(model: str | None = None):
+    """
+    Reusable logic for Complete Workflow
     """
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
     print(
-        f"{Colors.BOLD}TEST 4: COMPLETE WORKFLOW (Translation → Routing → Validation){Colors.END}"
+        f"{Colors.BOLD}TEST 4: COMPLETE WORKFLOW (Translation → Routing → Validation) (Model: {model}){Colors.END}"
     )
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
@@ -256,9 +287,11 @@ async def test_complete_workflow():
     print(f"{Colors.BLUE}Query: '{query}'{Colors.END}\n")
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        response = await client.post(
-            f"{BASE_URL}/analyze", json={"query": query, "time_range": "1h"}
-        )
+        payload = {"query": query, "time_range": "1h"}
+        if model:
+            payload["model"] = model
+
+        response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
         assert response.status_code == 200, f"HTTP {response.status_code}"
 
@@ -338,6 +371,14 @@ async def test_complete_workflow():
         print(f"  {Colors.GREEN}✓ Summary OK{Colors.END}\n")
 
     print(f"{Colors.GREEN}{Colors.BOLD}✓ Complete workflow successful!{Colors.END}\n")
+
+
+async def test_complete_workflow():
+    """
+    TEST 4: Complete Workflow
+    Test all 3 functionalities together in a single request
+    """
+    await run_complete_workflow()
 
 
 async def main():
