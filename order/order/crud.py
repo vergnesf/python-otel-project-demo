@@ -4,7 +4,7 @@ This module provides CRUD operations for orders.
 
 from sqlalchemy.orm import Session
 
-from common.common.models import OrderStatus
+from common_models.models import OrderStatus
 
 from . import models, schemas
 
@@ -44,7 +44,7 @@ def update_order_status(db: Session, order_id: int, order_status: OrderStatus):
     """
     db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if db_order:
-        db_order.order_status = order_status
+        db_order.order_status = order_status  # type: ignore[misc]
         db.commit()
         db.refresh(db_order)
     return db_order

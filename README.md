@@ -1,85 +1,17 @@
-# Python Otel 🐍
+# Python OpenTelemetry Demo 🐍
 
-> A comprehensive microservices demonstration project showcasing Python auto-instrumentation with OpenTelemetry
+> A comprehensive microservices platform showcasing Python auto-instrumentation with OpenTelemetry and AI-powered observability analysis
 
-## 📑 Table of Contents
+[![Python 3.14+](https://img.shields.io/badge/python-3.14+-blue.svg)](https://www.python.org/downloads/)
+[![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-enabled-blueviolet)](https://opentelemetry.io/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://www.docker.com/)
 
-- [Python Otel 🐍](#python-otel-)
-  - [📑 Table of Contents](#-table-of-contents)
-  - [About the Project](#about-the-project)
-  - [Architecture](#architecture)
-    - [Microservices](#microservices)
-    - [Infrastructure](#infrastructure)
-  - [Key Features](#key-features)
-  - [Quick Start](#quick-start)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-    - [Running with Docker Compose](#running-with-docker-compose)
-    - [Useful URLs](#useful-urls)
-  - [Configuration](#configuration)
-    - [Environment Variables](#environment-variables)
-    - [Configuration Structure](#configuration-structure)
-    - [Error Simulation](#error-simulation)
-  - [AI/LLM Integrations](#aillm-integrations)
-    - [Docker AI Model Runner](#docker-ai-model-runner)
-    - [Integration with n8n](#integration-with-n8n)
-    - [Integration with Flowise](#integration-with-flowise)
-    - [MCP (Model Context Protocol) in n8n](#mcp-model-context-protocol-in-n8n)
-      - [Pre-requisite: Create Grafana Service Account 🔐](#pre-requisite-create-grafana-service-account-)
-  - [Local Development](#local-development)
-  - [Troubleshooting](#troubleshooting)
-    - [GPU Support with NVIDIA Container Toolkit](#gpu-support-with-nvidia-container-toolkit)
-      - [Prerequisites 📋](#prerequisites-)
-      - [Installing NVIDIA Container Toolkit](#installing-nvidia-container-toolkit)
-      - [Configuring Docker](#configuring-docker)
-      - [Testing GPU Support](#testing-gpu-support)
+## Features
 
----
-
-## About the Project
-
-This project is a set of microservices developed to visualize and understand Python auto-instrumentation with OpenTelemetry. It's a complete order and stock management application that demonstrates modern observability best practices.
-
-## Architecture
-
-### Microservices
-
-The application consists of the following microservices:
-
-- **customer** 🪵 - Kafka producer acting as a client for ordering wood
-- **supplier** 🪵 - Kafka producer acting as a supplier to replenish stock
-- **customercheck** 📦 - Kafka consumer serving as the order reception service
-- **suppliercheck** 📊 - Kafka consumer managing stock levels
-- **stock** 🏗️ - Stock management API
-- **order** 📝 - Order management API
-- **ordermanagement** 😄 - Service for updating order status
-
-### Infrastructure
-
-The complete application is containerized. The `docker-compose.yml` file builds all microservices and deploys the following components:
-
-- **Kafka** 📨 - Cluster to receive orders and stock updates
-- **PostgreSQL** 🗄️ - Relational database
-- **Adminer** 📂 - Web interface for database visualization
-- **Grafana** 📊 - Standard visualization tool
-- **Grafana with MCP support** 🤖 - Enhanced Grafana with Model Context Protocol for AI integration
-- **Loki** 📝 - Log database
-- **Mimir** 📈 - Metrics database
-- **Tempo** 📍 - Traces database
-- **Otel Gateway** 🛠️ - API for receiving observability data
-- **n8n** 🔄 - Workflow automation tool
-
-## Key Features
-
-✨ **Simulated Error Scenarios** - Built-in error simulation with configurable error rate via `ERROR_RATE` environment variable
-
-✨ **Comprehensive Observability** - Full OpenTelemetry auto-instrumentation with traces, metrics, and logs
-
-✨ **Docker-First Architecture** - Complete containerization with optimized build settings
-
-✨ **Flexible Configuration** - Environment-based configuration for easy deployment
-
-✨ **AI Integration Ready** - Includes Grafana with MCP support for AI-powered observability
+✨ **Complete Observability Stack** - Grafana, Loki, Mimir, Tempo with OpenTelemetry auto-instrumentation
+🤖 **AI-Powered Analysis** - Intelligent agents for natural language observability queries
+🏗️ **Production-Ready** - Docker-first, Python 3.14, UV package manager, FastAPI
+🎭 **Error Simulation** - Built-in configurable error injection for testing
 
 ## Quick Start
 
@@ -87,234 +19,191 @@ The complete application is containerized. The `docker-compose.yml` file builds 
 
 - Docker and Docker Compose
 - Git
-- (Optional) NVIDIA GPU and drivers for AI/LLM features
 
 ### Installation
 
-1. Clone the repository
-2. Copy and configure environment variables:
-
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd python-otel-project-demo
+
+# Copy environment template
 cp .env.example .env
-# Edit .env with your specific settings
+
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
 ```
 
-### Running with Docker Compose
+That's it! The complete stack is now running.
+
+## Access Points
+
+| Service             | URL                   | Description                      |
+| ------------------- | --------------------- | -------------------------------- |
+| **Observability**   |                       |                                  |
+| Grafana             | http://localhost:3000 | Main observability dashboard     |
+| **Agentic Network** |                       |                                  |
+| Agents Web UI       | http://localhost:3002 | AI-powered observability queries |
+| Orchestrator API    | http://localhost:8001 | Main agent coordinator           |
+| Logs Agent          | http://localhost:8002 | Loki log analysis                |
+| Metrics Agent       | http://localhost:8003 | Mimir metrics analysis           |
+| Traces Agent        | http://localhost:8004 | Tempo traces analysis            |
+| **Tools**           |                       |                                  |
+| AKHQ (Kafka UI)     | http://localhost:8080 | Kafka management                 |
+| Adminer (Database)  | http://localhost:8081 | PostgreSQL administration        |
+
+**Default Grafana credentials**: `admin` / `admin`
+
+## Using the AI Agents
+
+### Quick Example
+
+Open http://localhost:3002 and ask questions in natural language:
+
+- "Show me errors in the order service"
+- "What's the CPU usage of customer service?"
+- "Analyze slow traces in the last hour"
+- "Why is the order service failing?"
+
+### Setup MCP Authentication
+
+For agents to work, create a Grafana service account:
+
+```bash
+# 1. Open Grafana: http://localhost:3000
+# 2. Go to Configuration → Service accounts → Create service account
+# 3. Generate token and copy it
+# 4. Add to .env:
+echo 'GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...' >> .env
+
+# 5. Restart MCP service
+docker-compose restart grafana-mcp
+```
+
+See [Configuration Guide](docs/configuration.md) for detailed setup.
+
+## Common Commands
 
 ```bash
 # Start all services
 docker-compose up -d
 
-# Build and start
-docker-compose up --build -d
-
 # Stop all services
 docker-compose down
 
-# Complete cleanup (remove volumes and images)
-docker-compose down -v --rmi all
+# Rebuild and start
+docker-compose up --build -d
+
+# View logs for specific service
+docker-compose logs -f order
+
+# Restart a service
+docker-compose restart agent-logs
+
+# Complete cleanup (removes all data)
+docker-compose down -v
 ```
 
-### Useful URLs
+## Documentation
 
-| Service            | URL                    | Description                    |
-| ------------------ | ---------------------- | ------------------------------ |
-| Grafana (Standard) | http://localhost:3000/ | Main observability dashboard 📊 |
-| AKHQ               | http://localhost:8080/ | Kafka management UI 🛠️          |
-| Adminer            | http://localhost:8081/ | Database administration 🗃️      |
-| n8n                | http://localhost:5678/ | Workflow automation 🔄          |
+📚 **Detailed documentation available in the [`docs/`](docs/) directory:**
 
-## Configuration
+- **[Architecture](docs/architecture.md)** - System architecture, components, and data flow
+- **[Agents](docs/agents.md)** - AI agentic network architecture and usage
+- **[Development](docs/development.md)** - Local development guide and best practices
+- **[Configuration](docs/configuration.md)** - Environment variables and customization
+- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+- **[Docker Security](docs/DOCKER_SECURITY.md)** - Security best practices and non-root execution
+- **[Contributing](docs/contributing.md)** - Contribution guidelines and code style
 
-### Environment Variables
-
-All image versions and registry configuration are managed through environment variables. The project includes:
-
-- **`.env.example`** - Template with all available configuration options and documentation
-- **`.env`** - Your local configuration (not tracked in git)
-
-Key configuration options:
-
-```bash
-# Docker Registry Configuration
-DOCKER_REGISTRY=                    # Leave empty for Docker Hub
-
-# Core Services
-IMG_GRAFANA=grafana/grafana:12.0.2      # Standard Grafana
-IMG_GRAFANA_MCP=mcp/grafana:latest       # Grafana with MCP support
-IMG_LOKI=grafana/loki:3.5.2              # Log aggregation
-IMG_TEMPO=grafana/tempo:2.8.1            # Distributed tracing
-IMG_MIMIR=grafana/mimir:2.16.1           # Metrics storage
-
-# Additional Tools
-IMG_N8N=n8nio/n8n:1.112.0               # Workflow automation
-IMG_OTEL=otel/opentelemetry-collector-contrib:0.130.1  # OTEL collector
-
-# Performance Optimizations
-COMPOSE_PARALLEL_LIMIT=8                 # Parallel container builds
-DOCKER_BUILDKIT=1                        # Enable BuildKit
-```
-
-### Configuration Structure
-
-The project has been reorganized with a cleaner configuration structure:
+## Architecture Overview
 
 ```
-config/
-├── grafana/
-│   └── datasources/
-│       └── default.yaml          # Configuration des datasources Grafana
-├── loki/
-│   └── loki-config.yml          # Configuration Loki
-├── mimir/
-│   └── mimir-config.yml         # Configuration Mimir
-├── otel/
-│   └── otel-conf.yml            # Configuration du collecteur OpenTelemetry
-└── tempo/
-    └── tempo.yml                # Configuration Tempo
+┌─────────────────────────────────────────────────────────────┐
+│  Business Application (Order & Stock Management)            │
+│  customer → kafka → ordercheck → order → postgres          │
+│  supplier → kafka → suppliercheck → stock → postgres       │
+└─────────────────────────────────────────────────────────────┘
+                          ↓ OTLP
+┌─────────────────────────────────────────────────────────────┐
+│  Observability Stack (Grafana, Loki, Mimir, Tempo)         │
+└─────────────────────────────────────────────────────────────┘
+                          ↑ MCP Protocol
+┌─────────────────────────────────────────────────────────────┐
+│  AI Agentic Network (Orchestrator + Specialized Agents)     │
+│  User → Orchestrator → Logs/Metrics/Traces Agents          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Error Simulation
+See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 
-🎭 The application includes built-in error simulation for testing observability:
+## Technology Stack
 
-- **Customer Service** - Simulates Kafka/network failures when sending orders
-- **Supplier Check Service** - Simulates API/network failures when processing stock updates
-- **Configurable Error Rate** - Set `ERROR_RATE` environment variable (default: 0.1 = 10%)
+- **Python 3.14** - Latest stable Python
+- **UV** - Fast Python package manager
+- **FastAPI** - Modern web framework
+- **OpenTelemetry** - Observability instrumentation
+- **Grafana Stack** - Loki (logs), Mimir (metrics), Tempo (traces)
+- **LangChain** - LLM framework for AI agents
+- **Kafka** - Message streaming
+- **PostgreSQL** - Relational database
 
-Example configuration:
+## Project Structure
 
-```bash
-# In docker-compose.yml or your environment
-ERROR_RATE=0.2  # 20% error rate for testing
 ```
-
-## AI/LLM Integrations
-
-### Docker AI Model Runner
-
-🤖 Docker Model Runner (DMR) lets you run and manage AI models locally using Docker. Particularly useful for the AI/LLM features in this project.
-
-For installation and setup instructions, refer to the [Docker Model Runner documentation](https://docs.docker.com/ai/model-runner/get-started/#docker-engine).
-
-### Integration with n8n
-
-🔗 To configure AI features in n8n using Docker Model Runner:
-
-1. In n8n, create an **OpenAI** credential type
-2. Use a dummy token (e.g., `dummy-token`)
-3. Set the base URL to: `http://172.17.0.1:12434/engines/llama.cpp/v1`
-
-This allows n8n to connect to your local Docker Model Runner instance for AI/LLM capabilities.
-
-### Integration with Flowise
-
-🔗 To configure AI features in Flowise using Docker Model Runner:
-
-1. In Flowise, use the **ChatLocalAI** chat model
-2. Set the **Base Path** to: `http://172.17.0.1:12434/engines/llama.cpp/v1`
-3. Set the **Model Name** to: `ai/qwen3`
-
-This allows Flowise to connect to your local Docker Model Runner instance for AI/LLM capabilities.
-
-### MCP (Model Context Protocol) in n8n
-
-🛰️ If you want to enable Grafana MCP integration inside n8n (for context enrichment / model context), configure a separate credential or webhook using the Server Sent Events transport with the following URL:
-
-- **Transport**: Server Sent Events (SSE)
-- **URL**: `http://grafana-mcp:8000/sse`
-
-Important notes:
-
-- Use the SSE transport when configuring the MCP server/transport in n8n so Grafana MCP can stream context updates
-- The hostname `grafana-mcp` matches the internal Docker Compose service name used in this project; when running n8n inside the same Compose network, this resolves to the MCP service
-
-#### Pre-requisite: Create Grafana Service Account 🔐
-
-Before using the MCP server from n8n, create a Grafana service account and copy its token into your `.env` file:
-
-1. In Grafana, go to Configuration → Service accounts → Create service account
-2. Create a token for the account and copy the token value
-3. Add the token to your `.env`:
-
-```bash
-GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...
-```
-
-After setting the token, restart the MCP service so Grafana picks up the new credentials:
-
-```bash
-docker compose restart grafana-mcp
+├── common-models/       # Shared business models (WoodType, Order, Stock)
+├── common-ai/           # Shared AI utilities (MCP client, LLM config, agent models)
+├── customer/            # Microservice: Customer orders (Kafka producer)
+├── order/               # Microservice: Order management API
+├── stock/               # Microservice: Stock management API
+├── supplier/            # Microservice: Supplier (Kafka producer)
+├── ordercheck/          # Microservice: Order processing (Kafka consumer)
+├── suppliercheck/       # Microservice: Stock updates (Kafka consumer)
+├── ordermanagement/     # Microservice: Order status updates
+├── agent-orchestrator/  # AI Agent: Main coordinator
+├── agent-logs/          # AI Agent: Loki log analysis
+├── agent-metrics/       # AI Agent: Mimir metrics analysis
+├── agent-traces/        # AI Agent: Tempo traces analysis
+├── agent-ui/           # Web UI for agents
+├── config/              # Configuration files (Grafana, Loki, Mimir, Tempo)
+├── docs/                # Documentation
+└── docker-compose.yml   # Complete stack orchestration
 ```
 
 ## Local Development
 
-🐛 Each microservice is set up with **uv**, so you can launch the different services using `uv run`.
-
-Locally, you'll need to modify `PYTHONPATH` to include the project and access the "common" part.
-
-To run a microservice with auto-instrumentation:
+For local development without Docker:
 
 ```bash
+# Navigate to a service
+cd order/
+
+# Install dependencies with UV
+uv sync
+
+# Run with OpenTelemetry instrumentation
 uv run opentelemetry-instrument \
     --traces_exporter otlp \
     --metrics_exporter otlp \
-    --service_name customer2 \
+    --service_name order \
     --exporter_otlp_endpoint http://localhost:4318 \
-    --log_level debug \
     python -m order.main
 ```
 
-## Troubleshooting
+See [Development Guide](docs/development.md) for detailed instructions.
 
-### GPU Support with NVIDIA Container Toolkit
+## Contributing
 
-For AI/LLM features (like the n8n AI models), you need GPU support in Docker. This requires the NVIDIA Container Toolkit.
+Contributions are welcome! Please read our [Contributing Guide](docs/contributing.md) for:
 
-#### Prerequisites 📋
+- Code style and conventions
+- Commit message format (Conventional Commits)
+- Pull request process
+- Adding new services or agents
 
-First, check if your GPU is detected:
+---
 
-```bash
-nvidia-smi
-```
-
-You should see your GPU information. If this command fails, install NVIDIA drivers first.
-
-#### Installing NVIDIA Container Toolkit
-
-For Fedora/RHEL/CentOS:
-
-```bash
-# Configure the production repository
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
-  sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-
-# Install the toolkit
-sudo dnf install -y nvidia-container-toolkit
-```
-
-#### Configuring Docker
-
-After installation, configure Docker to use the NVIDIA runtime:
-
-```bash
-# Configure the container runtime
-sudo nvidia-ctk runtime configure --runtime=docker
-
-# Restart Docker daemon
-sudo systemctl restart docker
-```
-
-#### Testing GPU Support
-
-Test that Docker can access your GPU:
-
-```bash
-# Test with a simple CUDA container
-docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu20.04 nvidia-smi
-```
-
-If successful, you should see your GPU information displayed within the container.
-
-For more details, see the [official NVIDIA Container Toolkit documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+Built with ❤️ using Python 3.14, OpenTelemetry, and Grafana Stack

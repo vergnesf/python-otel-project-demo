@@ -3,13 +3,24 @@ name = "stock"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
+    "common-models",
     "flasgger>=0.9.7.1",
     "flask>=3.0.3",
     "flask-sqlalchemy>=3.1.1",
-    "opentelemetry-distro>=0.48b0",
-    "opentelemetry-exporter-otlp>=1.27.0",
+    "opentelemetry-distro>=0.59b0",
+    "opentelemetry-exporter-otlp>=1.38.0",
     "psycopg2-binary>=2.9.10",
-    "pydantic>=2.9.2",
+    "pydantic>=2.12.4",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "black",
+    "pyright",
+]
+
+[tool.uv.sources]
+common-models = { path = "../common-models" }

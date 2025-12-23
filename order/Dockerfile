@@ -1,26 +1,64 @@
-# Use an official Python base image
 ARG DOCKER_REGISTRY=""
-ARG IMG_PYTHON="python:3.13-slim"
-FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
+ARG IMG_PYTHON="python:3.14-slim"
+ARG BUILD_TARGET=prod
 
-USER root
+# ============================================
+# Base stage: Common setup for all targets
+# ============================================
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON} AS base
 
-# Set the working directory
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHON_JIT=1
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Copy uv configuration files
-COPY order/pyproject.toml /app/
-COPY order/order /app/order
-COPY common/common/ /app/common/common
+# ============================================
+# Dev stage: Development with hot reload
+# ============================================
+FROM base AS dev
 
-# Install uv
-RUN pip install uv && \
+COPY order/pyproject.toml /app/order/
+COPY common-models /app/common-models/
+
+WORKDIR /app/order
+
+RUN pip install --no-cache-dir uv && \
     uv add pip && \
-    uv run opentelemetry-bootstrap -a install
+    uv run --no-dev opentelemetry-bootstrap -a install
 
-EXPOSE 5000
-
-# Set the default command to run the producer
-CMD ["uv", "run", "opentelemetry-instrument", "python", "-m", "order.main"]
+COPY order/order /app/order/order/
 
 
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "order/main.py"]
+
+# ============================================
+# Prod stage: Optimized production image
+# ============================================
+FROM base AS prod
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser -m
+
+COPY order/pyproject.toml /app/order/
+COPY common-models /app/common-models/
+
+WORKDIR /app/order
+
+RUN pip install --no-cache-dir uv && \
+    uv add pip && \
+    uv run --no-dev opentelemetry-bootstrap -a install
+
+COPY order/order /app/order/order/
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "order/main.py"]
+
+# ============================================
+# Final stage: Select based on BUILD_TARGET
+# ============================================
+FROM ${BUILD_TARGET}

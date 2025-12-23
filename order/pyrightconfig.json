@@ -1,0 +1,6 @@
+{
+  "reportOptionalMemberAccess": "warning",
+  "reportOptionalSubscript": "warning",
+  "reportCallIssue": "warning",
+  "reportArgumentType": "warning"
+}

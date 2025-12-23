@@ -4,7 +4,7 @@ This module contains the SQLAlchemy model for the Order entity.
 
 from sqlalchemy import Column, Enum, Integer
 
-from common.common.models import OrderStatus, WoodType
+from common_models.models import OrderStatus, WoodType
 
 from .database import db
 
@@ -30,7 +30,15 @@ class Order(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
-            "wood_type": self.wood_type,
+            "wood_type": (
+                self.wood_type.value
+                if hasattr(self.wood_type, "value")
+                else self.wood_type
+            ),
             "quantity": self.quantity,
-            "order_status": self.order_status,
+            "order_status": (
+                self.order_status.value
+                if hasattr(self.order_status, "value")
+                else self.order_status
+            ),
         }

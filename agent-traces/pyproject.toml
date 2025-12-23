@@ -1,0 +1,28 @@
+[project]
+name = "agent-traces"
+version = "0.1.0"
+description = "Traces analysis agent specialized in querying Tempo via MCP"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "common-ai",
+    "fastapi>=0.121.0",
+    "httpx>=0.28.1",
+    "langchain>=1.0.5",
+    "langchain-core>=1.0.4",
+    "langchain-openai>=0.3.8",
+    "opentelemetry-distro>=0.59b0",
+    "opentelemetry-exporter-otlp>=1.38.0",
+    "pydantic>=2.12.4",
+    "uvicorn>=0.38.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "black",
+    "pyright",
+]
+
+[tool.uv.sources]
+common-ai = { path = "../common-ai" }

@@ -2,13 +2,11 @@ import os
 import random
 import json
 import logging
-import os
-import random
 import time
 
 from confluent_kafka import Producer
 
-from common.common.models import Stock, WoodType
+from common_models.models import Stock, WoodType
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -35,7 +33,9 @@ producer = Producer(
 
 
 def send_stock(stock: Stock):
-    producer.produce("stocks", value=json.dumps(stock.dict()), callback=delivery_report)
+    producer.produce(
+        "stocks", value=json.dumps(stock.model_dump()), callback=delivery_report
+    )
     producer.poll(0)
 
 
@@ -53,9 +53,7 @@ if __name__ == "__main__":
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < ERROR_RATE:
-            logger.error(
-                "failed to send stock (Kafka/network failure)"
-            )
+            logger.error("failed to send stock (Kafka/network failure)")
             time.sleep(interval_seconds)
             continue
 
@@ -63,10 +61,10 @@ if __name__ == "__main__":
             wood_type=random.choice(list(WoodType)),
             quantity=random.randint(1, 100),
         )
-        logger.info("Created stock: %s", stock.dict())
+        logger.info("Created stock: %s", stock.model_dump())
 
         send_stock(stock)
-        logger.info("Stock sent successfully: %s", stock.dict())
+        logger.info("Stock sent successfully: %s", stock.model_dump())
         time.sleep(interval_seconds)
 
     # Wait for any outstanding messages to be delivered and delivery reports to be received

@@ -7,7 +7,6 @@ import sys
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
 
-from common.common.models import Stock, WoodType
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -62,9 +61,7 @@ def consume_messages():
                 # Simulate random error for observability testing
                 # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
                 if random.random() < ERROR_RATE:
-                    logger.error(
-                        "failed to process stock (API or network failure)"
-                    )
+                    logger.error("failed to process stock (API or network failure)")
                     continue
 
                 stock_data = json.loads(msg.value().decode("utf-8"))

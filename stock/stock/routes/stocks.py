@@ -233,7 +233,7 @@ def decrease_stock_route():
     data = request.json
     try:
         stock_data = StockDecrease(**data)
-    except ValidationError as e:
+    except ValidationError:
         return jsonify({"error": "Invalid input"}), 400
 
     db = next(get_db())
@@ -244,7 +244,7 @@ def decrease_stock_route():
     if db_stock is None:
         return jsonify({"error": "Stock not found"}), 404
 
-    if db_stock.quantity < stock_data.quantity:
+    if db_stock.quantity is not None and db_stock.quantity < stock_data.quantity:  # type: ignore[misc]
         return jsonify({"error": "Insufficient stock"}), 400
 
     try:

@@ -1,0 +1,16 @@
+[project]
+name = "common-models"
+version = "0.1.0"
+description = "Shared business models for microservices"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.12.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "black",
+    "pyright",
+]
