@@ -27,7 +27,8 @@ x-common-llm-otel-env: &common-llm-otel-env
   OTEL_LOGS_EXPORTER: otlp
   OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
   OTEL_PYTHON_LOG_CORRELATION: "true"
-  LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+  # Default to Ollama local API; can be overridden via .env
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/api}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
   LLM_MODEL: *ia-model
   LLM_EPHEMERAL_PER_CALL: true
@@ -564,14 +565,6 @@ services:
     depends_on:
       - grafana-mcp
       - otel-collector
-    models:
-      - mistral
-      - llama
-      - qwen
-      - granite
-      - mistral-nemo
-      - qwen2_5
-      - phi4
 
   agent-logs:
     build:
@@ -665,79 +658,41 @@ services:
     depends_on:
       - agent-orchestrator
 
-## Model configuration
-# This `models:` block is used as metadata for local model tooling (Docker Model Runner).
-# Configure models via Docker Model Runner (DMR) by following the docs:
-# https://docs.docker.com/ai/compose/models-and-compose/
-# You can declare model image, context_size, runtime flags and other settings here.
-#
-# Note: The model runtime enforces context window limits. To avoid server-side
-# rejections like "context shift is disabled", keep prompts below a safe threshold
-# using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
-# `context_size` and your model-runner capabilities (default used in code: 9000).
-models:
-  mistral:
-    model: ai/mistral:7B-Q4_0
-    context_size: 32768
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
+  # ---------------------
+  # Ollama local model runtime
+  # ---------------------
+  # Provides local model serving via Ollama REST API (http://localhost:11434/api)
+  # Works with Docker and Podman; models can be pulled with `ollama pull <model>`
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    <<: *common-settings
+    ports:
+      - "11434:11434"
+    environment:
+      <<: *inline-env
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+      LD_LIBRARY_PATH: "/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
+    volumes:
+      - ollama-data:/root/.ollama:Z
+      - ./models:/models:Z
+    # Prefer the CDI/device request for NVIDIA: equivalent to `--device nvidia.com/gpu=all`
+    devices:
+      - "nvidia.com/gpu=all"
+    volumes:
+      - ollama-data:/root/.ollama:Z
+      - ./models:/models:Z
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Expose Ollama to other services by name on the compose network
+    networks:
+      - otel-network
 
-  llama:
-    model: ai/llama3.2:3B-Q4_K_M
-    context_size: 32768
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-
-  qwen:
-    model: ai/qwen3:0.6B-Q4_0
-    context_size: 16384
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-
-  granite:
-    model: ai/granite-4.0-h-micro:3B-Q4_K_M
-    context_size: 8192
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-
-  mistral-nemo:
-    model: ai/mistral-nemo:12B-Q4_K_M
-    context_size: 16384
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-
-  qwen2_5:
-    model: ai/qwen2.5:7B-Q4_0
-    context_size: 32768
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
-
-  phi4:
-    model: ai/phi4:14B-Q4_0
-    context_size: 8192
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
+  
 
 volumes:
   kafka-secrets:
@@ -747,6 +702,7 @@ volumes:
   tempo-data:
   mimir-data:
   postgres-data:
+  ollama-data:
 
 networks:
   otel-network:

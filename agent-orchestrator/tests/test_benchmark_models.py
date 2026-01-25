@@ -27,14 +27,15 @@ from tests.test_orchestrator_integration import (
 )
 
 MODELS = [
-    "ai/mistral:7B-Q4_0",
-    "ai/llama3.2:3B-Q4_K_M",
-    "ai/qwen3:0.6B-Q4_0",
-    "ai/granite-4.0-h-micro:3B-Q4_K_M",
-    "ai/mistral-nemo:12B-Q4_K_M",
-    "ai/qwen2.5:7B-Q4_0",
-    "ai/phi4:14B-Q4_0",
+    "mistral:7b"
+    "llama3.2:3b",
+    "qwen3:0.6b",
+    "granite4:3b",
+    "mistral-nemo:12b",
+    "qwen2.5:7b",
+    "phi4:14b",
 ]
+
 
 
 def load_model_configs():
@@ -65,56 +66,69 @@ MODEL_CONFIGS = load_model_configs()
 
 
 def restart_model_runner():
-    """Restart Docker Model Runner to free GPU memory"""
+    """Stop any running Ollama models to free GPU memory (no-op if none)."""
     try:
-        result = subprocess.run(
-            ["docker", "model", "restart-runner"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode == 0:
-            print(f"{Colors.GREEN}✓ Docker Model Runner restarted{Colors.END}")
-            # Wait for the runner to be ready
-            time.sleep(5)
+        # List running models via ollama CLI and stop them
+        result = subprocess.run(["ollama", "ps"], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            print(f"{Colors.YELLOW}⚠️  ollama ps failed: {result.stderr}{Colors.END}")
             return True
-        else:
-            print(
-                f"{Colors.RED}❌ Failed to restart Docker Model Runner: {result.stderr}{Colors.END}"
-            )
-            return False
+
+        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        # Skip header/empty lines; each line contains a running model name
+        stopped_any = False
+        for line in lines:
+            # Extract model name from line (first token)
+            parts = line.split()
+            if not parts:
+                continue
+            model_name = parts[0]
+            stop = subprocess.run(["ollama", "stop", model_name], capture_output=True, text=True, timeout=20)
+            if stop.returncode == 0:
+                stopped_any = True
+                print(f"{Colors.GREEN}✓ Stopped Ollama model {model_name}{Colors.END}")
+        if stopped_any:
+            time.sleep(2)
+        return True
     except Exception as e:
-        print(f"{Colors.RED}❌ Failed to restart Docker Model Runner: {e}{Colors.END}")
+        print(f"{Colors.RED}❌ Failed to stop Ollama models: {e}{Colors.END}")
         return False
 
 
 async def check_model_availability(model: str):
     """Check if the model is available in the list of models"""
     print(f"Checking availability for model: {model}...")
-    # Assuming the model runner is exposed on localhost:12434
-    url = "http://localhost:12434/v1/models"
+    # Query Ollama local API for available local models (/api/tags)
+    url = "http://localhost:11434/api/tags"
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(url)
             if response.status_code != 200:
                 print(
-                    f"{Colors.RED}❌ Failed to list models: HTTP {response.status_code} - {response.text}{Colors.END}"
+                    f"{Colors.RED}❌ Failed to list Ollama models: HTTP {response.status_code} - {response.text}{Colors.END}"
                 )
                 return False
 
             data = response.json()
-            available_models = [m["id"] for m in data.get("data", [])]
+            # Normalize desired model name (strip namespace and tag)
+            base = model.split("/")[-1].split(":")[0]
 
-            if model in available_models:
-                print(f"{Colors.GREEN}✓ Model {model} is available{Colors.END}")
+            available = False
+            for m in data.get("models", []):
+                mname = m.get("model") or m.get("name") or ""
+                if not mname:
+                    continue
+                if base in mname:
+                    available = True
+                    break
+
+            if available:
+                print(f"{Colors.GREEN}✓ Model {model} (as {base}) is available in Ollama{Colors.END}")
                 return True
             else:
-                print(
-                    f"{Colors.RED}❌ Model {model} not found in available models{Colors.END}"
-                )
+                print(f"{Colors.RED}❌ Model {model} not found in Ollama local models{Colors.END}")
                 return False
-
     except Exception as e:
         print(f"{Colors.RED}❌ Model {model} check failed: {e}{Colors.END}")
         return False
@@ -227,14 +241,45 @@ async def test_benchmark_models():
 
     if unavailable_models:
         print(
-            f"\n{Colors.RED}{Colors.BOLD}❌ ABORTING BENCHMARK: The following models are unavailable:{Colors.END}"
+            f"\n{Colors.RED}{Colors.BOLD}❌ Some models are unavailable: attempting to pull them with Ollama...{Colors.END}"
         )
         for model in unavailable_models:
             print(f"  - {model}")
-        print(
-            f"\n{Colors.YELLOW}Please ensure all models are pulled and running via 'docker compose up -d'{Colors.END}"
-        )
-        pytest.fail(f"Benchmark aborted. Unavailable models: {unavailable_models}")
+
+        # Try to pull missing models via `ollama pull <base>` where base is last path segment
+        pulled_any = False
+        for model in unavailable_models:
+            base = model.split("/")[-1].split(":")[0]
+            try:
+                print(f"{Colors.YELLOW}⤓ Pulling model {base} with ollama...{Colors.END}")
+                res = subprocess.run(["ollama", "pull", base], capture_output=True, text=True, timeout=600)
+                if res.returncode == 0:
+                    print(f"{Colors.GREEN}✓ Pulled {base}{Colors.END}")
+                    pulled_any = True
+                else:
+                    print(f"{Colors.RED}✗ Failed to pull {base}: {res.stderr}{Colors.END}")
+            except Exception as e:
+                print(f"{Colors.RED}✗ Exception while pulling {base}: {e}{Colors.END}")
+
+        if pulled_any:
+            # Re-check availability after attempted pulls
+            unavailable_after_pull = []
+            for model in unavailable_models:
+                if not await check_model_availability(model):
+                    unavailable_after_pull.append(model)
+
+            if unavailable_after_pull:
+                print(
+                    f"\n{Colors.RED}{Colors.BOLD}❌ ABORTING BENCHMARK: The following models remain unavailable after pull attempts:{Colors.END}"
+                )
+                for m in unavailable_after_pull:
+                    print(f"  - {m}")
+                pytest.fail(f"Benchmark aborted. Unavailable models: {unavailable_after_pull}")
+        else:
+            print(
+                f"\n{Colors.RED}{Colors.BOLD}❌ ABORTING BENCHMARK: Models unavailable and pull attempts were not successful.{Colors.END}"
+            )
+            pytest.fail(f"Benchmark aborted. Unavailable models: {unavailable_models}")
 
     print(
         f"\n{Colors.GREEN}{Colors.BOLD}✓ All models available. Starting benchmark...{Colors.END}"
@@ -243,15 +288,11 @@ async def test_benchmark_models():
     results = {}
 
     for i, model in enumerate(MODELS):
-        # Restart Docker Model Runner between tests to free GPU memory
+        # Unload/stop previous model between tests to free GPU memory
         if i > 0:  # Skip restart before first model
-            print(
-                f"\n{Colors.YELLOW}🔄 Restarting Docker Model Runner to free GPU memory...{Colors.END}"
-            )
+            print(f"\n{Colors.YELLOW}🔄 Stopping previously loaded Ollama models to free GPU memory...{Colors.END}")
             if not restart_model_runner():
-                print(
-                    f"{Colors.RED}❌ Failed to restart DMR, continuing anyway...{Colors.END}"
-                )
+                print(f"{Colors.RED}❌ Failed to stop Ollama models, continuing anyway...{Colors.END}")
 
         print(f"\n{Colors.BOLD}Testing Model: {Colors.BLUE}{model}{Colors.END}")
         results[model] = {

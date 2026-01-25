@@ -145,11 +145,11 @@ uv run mypy .
 
 ## AI/LLM Integrations
 
-### Docker AI Model Runner
+### Ollama (recommended for local models)
 
-🤖 Docker Model Runner (DMR) lets you run and manage AI models locally using Docker. Particularly useful for the AI/LLM features in this project.
+🤖 Ollama lets you run and manage AI models locally with first-class support for single-process runtimes and a small REST API. It's compatible with Podman and Docker and is recommended for local development in this project.
 
-For installation and setup instructions, refer to the [Docker Model Runner documentation](https://docs.docker.com/ai/model-runner/get-started/#docker-engine).
+For installation and setup instructions, refer to the Ollama docs: https://docs.ollama.com/quickstart and the API reference at https://docs.ollama.com/api
 
 ## GPU Support with NVIDIA Container Toolkit
 

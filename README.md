@@ -39,6 +39,53 @@ docker-compose logs -f
 
 That's it! The complete stack is now running.
 
+## Utiliser Ollama avec Podman et GPU NVIDIA
+
+Lorsque vous lancez la stack avec Podman (ou Docker) et que vous souhaitez que `ollama` utilise la GPU, il faut s'assurer que le conteneur voit bien les périphériques et les bibliothèques NVIDIA. Dans ce dépôt, `docker-compose.yml` a été mis à jour pour exposer les devices et variables nécessaires (voir la section `ollama` dans `docker-compose.yml`).
+
+- Ce que nous ajoutons dans `docker-compose.yml` :
+    - Variables d'environnement : `NVIDIA_VISIBLE_DEVICES`, `NVIDIA_DRIVER_CAPABILITIES`, `LD_LIBRARY_PATH`.
+    - Mappings de devices : `/dev/nvidia*` montés dans le conteneur.
+    - Bind-mounts des bibliothèques drivers hôtes (ex. `/usr/lib/nvidia` → `/usr/local/nvidia/lib`).
+    - Note SELinux : les mounts de volumes utilisent `:Z` là où c'est nécessaire.
+
+- Vérifications rapides après `podman compose up -d` :
+
+```bash
+podman compose down
+podman compose up -d
+podman logs --tail 200 ollama
+podman exec -it ollama ls -l /dev/nvidia* || true
+podman exec -it ollama ls -l /usr/local/nvidia || true
+podman exec -it ollama nvidia-smi || true
+```
+
+- Si le conteneur n'affiche toujours pas de VRAM (ex. `total vram = 0 B`), installez l'outil d'intégration NVIDIA pour conteneurs afin que Podman injecte correctement devices et bibliothèques :
+
+```bash
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-container-toolkit/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-container-toolkit/$distribution/nvidia-container-toolkit.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+sudo systemctl restart podman
+```
+
+Après installation, redémarrez la stack (`podman compose down && podman compose up -d`) et vérifiez à nouveau les logs et `nvidia-smi` à l'intérieur du conteneur.
+
+Si vous préférez ne pas installer l'outil NVIDIA, la méthode alternative est de continuer à monter explicitement `/dev/nvidia*` et les bibliothèques host dans le conteneur (comme fait ici), mais l'intégration via `nvidia-container-toolkit` est plus robuste et évite les manipulations manuelles sur chaque machine.
+
+Note SELinux (Podman on SELinux-enabled hosts)
+
+Sur des hôtes SELinux (par ex. distributions atomiques), Podman peut bloquer l'accès aux devices même si le runtime et les devices sont correctement configurés. Si vous rencontrez des erreurs d'accès aux périphériques, activez la boolean SELinux recommandée pour permettre aux conteneurs d'utiliser les devices :
+
+```bash
+sudo setsebool -P container_use_devices true
+```
+
+Cette commande autorise les conteneurs à utiliser des périphériques (/dev/*). Après l'avoir exécutée, redémarrez la stack et vérifiez `nvidia-smi` dans le conteneur.
+
+
 ## Access Points
 
 | Service             | URL                   | Description                      |

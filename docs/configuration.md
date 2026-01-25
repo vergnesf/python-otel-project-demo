@@ -35,9 +35,10 @@ DOCKER_BUILDKIT=1                        # Enable BuildKit
 
 ```bash
 # LLM Configuration
-LLM_BASE_URL=http://172.17.0.1:12434/v1  # Local LLM endpoint (Docker Model Runner)
+## Default local endpoint uses Ollama (`http://localhost:11434/api`).
+LLM_BASE_URL=http://localhost:11434/api  # Local LLM endpoint (Ollama)
 LLM_API_KEY=not-needed                   # API key (not required for local LLM)
-LLM_MODEL=ai/qwen3:0.6B-Q4_0             # Model name
+LLM_MODEL=ai/qwen3:0.6B-Q4_0             # Model name (project metadata may require mapping)
 
 # MCP Server Authentication
 GRAFANA_SERVICE_ACCOUNT_TOKEN=<token>    # Required for MCP agents (see setup below)
