@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db-pod
+spec:
+  containers:
+    - name: postgres
+      image: postgres:18
+      ports:
+        - containerPort: 5432
+      env:
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: yourpassword
+        - name: POSTGRES_DB
+          value: mydatabase
+      volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql
+    - name: adminer
+      image: adminer:5.4.1
+      ports:
+        - containerPort: 8080
+  volumes:
+    - name: postgres-data
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/postgres-data

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agents-pod
+spec:
+  containers:
+    - name: agent-orchestrator
+      image: project/agent-orchestrator:local
+      ports:
+        - containerPort: 8001
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: agent-orchestrator
+    - name: agent-logs
+      image: project/agent-logs:local
+      ports:
+        - containerPort: 8002
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: agent-logs
+    - name: agent-metrics
+      image: project/agent-metrics:local
+      ports:
+        - containerPort: 8003
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: agent-metrics
+    - name: agent-traces
+      image: project/agent-traces:local
+      ports:
+        - containerPort: 8004
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: agent-traces
+    - name: agent-ui
+      image: project/agent-ui:local
+      ports:
+        - containerPort: 3002
+        - containerPort: 8000
+      env:
+        - name: ORCHESTRATOR_URL
+          value: http://agent-orchestrator:8001

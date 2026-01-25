@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: apps-pod
+spec:
+  containers:
+    - name: customer
+      image: project/customer:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: customer
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: broker:29092
+    - name: supplier
+      image: project/supplier:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: supplier
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: broker:29092
+    - name: order
+      image: project/order:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: order
+        - name: DATABASE_URL
+          value: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    - name: stock
+      image: project/stock:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: stock
+        - name: DATABASE_URL
+          value: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    - name: ordercheck
+      image: project/ordercheck:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: ordercheck
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: broker:29092
+        - name: API_URL
+          value: http://order:5000
+    - name: suppliercheck
+      image: project/suppliercheck:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: suppliercheck
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: broker:29092
+        - name: API_URL
+          value: http://stock:5001
+    - name: ordermanagement
+      image: project/ordermanagement:local
+      env:
+        - name: OTEL_SERVICE_NAME
+          value: ordermanagement
+        - name: API_URL_ORDERS
+          value: http://order:5000
+        - name: API_URL_STOCKS
+          value: http://stock:5001

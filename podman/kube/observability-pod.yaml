@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: observability-pod
+spec:
+  containers:
+    - name: grafana
+      image: grafana/grafana:12.2
+      ports:
+        - containerPort: 3000
+      volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana
+    - name: grafana-mcp
+      image: mcp/grafana:latest
+      ports:
+        - containerPort: 8000
+    - name: otel-collector
+      image: otel/opentelemetry-collector-contrib:0.139.0
+      args: ["--config=/etc/otel-conf.yml"]
+      ports:
+        - containerPort: 4317
+        - containerPort: 4318
+      volumeMounts:
+        - name: otel-conf
+          mountPath: /etc/otel-conf.yml
+          subPath: otel-conf.yml
+    - name: loki
+      image: grafana/loki:3.5.8
+      ports:
+        - containerPort: 3100
+      volumeMounts:
+        - name: loki-data
+          mountPath: /tmp/loki
+    - name: tempo
+      image: grafana/tempo:2.9.0
+      volumeMounts:
+        - name: tempo-data
+          mountPath: /tmp/tempo
+    - name: mimir
+      image: grafana/mimir:3.0.0
+      volumeMounts:
+        - name: mimir-data
+          mountPath: /tmp/mimir
+  volumes:
+    - name: grafana-data
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/grafana-data
+    - name: loki-data
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/loki-data
+    - name: tempo-data
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/tempo-data
+    - name: mimir-data
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/mimir-data
+    - name: otel-conf
+      hostPath:
+        path: /srv/podman/python-otel-project-demo/config/otel/otel-conf.yml
