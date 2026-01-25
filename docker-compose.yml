@@ -215,7 +215,7 @@ services:
       GF_FEATURE_TOGGLES_ENABLE: tempoServiceGraph,traceToMetrics
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
-      - ./config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ${PWD}/config/grafana/datasources:/etc/grafana/provisioning/datasources:Z
       - grafana-data:/var/lib/grafana
     healthcheck:
       test:
@@ -237,7 +237,7 @@ services:
       - "4317:4317"
       - "4318:4318"
     volumes:
-      - ./config/otel/otel-conf.yml:/etc/otel-conf.yml
+      - ${PWD}/config/otel/otel-conf.yml:/etc/otel-conf.yml:Z
     depends_on:
       mimir:
         condition: service_started
@@ -253,7 +253,7 @@ services:
     command: ["-config.file=/etc/config/loki.yaml"]
     user: "0:0"
     volumes:
-      - ./config/loki/loki-config.yml:/etc/config/loki.yaml
+      - ${PWD}/config/loki/loki-config.yml:/etc/config/loki.yaml:Z
       - loki-data:/tmp/loki
     healthcheck:
       test:
@@ -273,7 +273,7 @@ services:
     command: ["-config.file=/etc/tempo.yaml"]
     user: "0:0"
     volumes:
-      - ./config/tempo/tempo.yml:/etc/tempo.yaml
+      - ${PWD}/config/tempo/tempo.yml:/etc/tempo.yaml:Z
       - tempo-data:/tmp/tempo
 
   mimir:
@@ -282,7 +282,7 @@ services:
     <<: *common-settings
     command: ["-config.file=/etc/mimir-config.yml"]
     volumes:
-      - ./config/mimir/mimir-config.yml:/etc/mimir-config.yml
+      - ${PWD}/config/mimir/mimir-config.yml:/etc/mimir-config.yml:Z
       - mimir-data:/tmp/mimir
 
   # =====================
