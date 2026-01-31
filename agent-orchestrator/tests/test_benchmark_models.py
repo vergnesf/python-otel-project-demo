@@ -12,7 +12,7 @@ import psutil
 import pytest
 import yaml
 
-from .test_orchestrator_integration import (
+from tests.test_orchestrator_integration import (
     run_agent_routing,
     run_response_validation,
     run_complete_workflow,

@@ -1,5 +1,5 @@
 [project]
-name = "ai-traduction"
+name = "agent-traduction"
 version = "0.1.0"
 description = "Translation agent for detecting language and translating queries to English"
 readme = "README.md"

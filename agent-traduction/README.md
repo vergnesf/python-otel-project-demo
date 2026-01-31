@@ -1,4 +1,4 @@
-# AI Traduction
+# Agent Traduction
 
 Service for language detection and query translation to English.
 

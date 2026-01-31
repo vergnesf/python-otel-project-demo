@@ -550,7 +550,7 @@ services:
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8002
       AGENT_TRACES_URL: http://agent-traces:8002
-      AGENT_TRANSLATION_URL: http://ai-traduction:8002
+      AGENT_TRANSLATION_URL: http://agent-traduction:8002
     develop:
       watch:
         - action: rebuild
@@ -638,22 +638,22 @@ services:
       - grafana-mcp
       - otel-collector
 
-  ai-traduction:
+  agent-traduction:
     build:
       context: .
-      dockerfile: ai-traduction/Dockerfile
+      dockerfile: agent-traduction/Dockerfile
       <<: *python-build
-    container_name: ai-traduction
+    container_name: agent-traduction
     <<: *app-settings
     ports:
       - "8006:8002"
     environment:
       <<: [*inline-env, *common-llm-otel-env]
-      OTEL_SERVICE_NAME: ai-traduction
+      OTEL_SERVICE_NAME: agent-traduction
     develop:
       watch:
         - action: rebuild
-          path: ./ai-traduction
+          path: ./agent-traduction
           ignore: *develop-ignore
         - action: rebuild
           path: ./common-ai

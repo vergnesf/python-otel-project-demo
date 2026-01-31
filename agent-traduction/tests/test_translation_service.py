@@ -7,7 +7,7 @@ from pathlib import Path
 # Add project root to path for local imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ai_traduction.translation_service import TranslationService
+from agent_traduction.translation_service import TranslationService
 
 
 def _mock_llm_with_side_effect(values: list[str]) -> Mock:
@@ -17,7 +17,7 @@ def _mock_llm_with_side_effect(values: list[str]) -> Mock:
 
 
 def test_translate_english_query_returns_same_text():
-    with patch("ai_traduction.translation_service.get_llm") as mock_get_llm:
+    with patch("agent_traduction.translation_service.get_llm") as mock_get_llm:
         mock_get_llm.return_value = _mock_llm_with_side_effect(["ENGLISH"])
 
         service = TranslationService()
@@ -28,7 +28,7 @@ def test_translate_english_query_returns_same_text():
 
 
 def test_translate_non_english_query_translates():
-    with patch("ai_traduction.translation_service.get_llm") as mock_get_llm:
+    with patch("agent_traduction.translation_service.get_llm") as mock_get_llm:
         mock_get_llm.return_value = _mock_llm_with_side_effect(
             ["NOT_ENGLISH", "Show me recent errors"]
         )
@@ -41,7 +41,7 @@ def test_translate_non_english_query_translates():
 
 
 def test_translate_without_llm_falls_back_safely():
-    with patch("ai_traduction.translation_service.get_llm") as mock_get_llm:
+    with patch("agent_traduction.translation_service.get_llm") as mock_get_llm:
         mock_get_llm.side_effect = Exception("LLM not available")
 
         service = TranslationService()

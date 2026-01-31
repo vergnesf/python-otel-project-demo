@@ -1,3 +1,0 @@
-"""
-AI Traduction agent package.
-"""

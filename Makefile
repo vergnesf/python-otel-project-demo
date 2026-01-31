@@ -1,7 +1,7 @@
 # Models to pull
 MODELS := mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
 
-PROJECTS := agent-logs agent-metrics agent-orchestrator agent-traces agent-ui ai-traduction benchmarks common-ai common-models customer order ordercheck ordermanagement stock supplier suppliercheck
+PROJECTS := agent-logs agent-metrics agent-orchestrator agent-traces agent-ui agent-traduction benchmarks common-ai common-models customer order ordercheck ordermanagement stock supplier suppliercheck
 
 models-init:
 	@echo "Detecting runtime and looking for running container 'ollama'..."

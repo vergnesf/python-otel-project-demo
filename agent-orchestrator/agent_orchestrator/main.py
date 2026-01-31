@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     )
     logger.info(
         "Translation Agent URL: %s",
-        os.getenv("AGENT_TRANSLATION_URL", "http://ai-traduction:8002"),
+        os.getenv("AGENT_TRANSLATION_URL", "http://agent-traduction:8002"),
     )
     orchestrator = Orchestrator()
     yield

@@ -49,7 +49,7 @@ class Orchestrator:
             "AGENT_TRACES_URL", "http://agent-traces:8004"
         )
         self.translation_agent_url = os.getenv(
-            "AGENT_TRANSLATION_URL", "http://ai-traduction:8002"
+            "AGENT_TRANSLATION_URL", "http://agent-traduction:8002"
         )
 
         self.client = httpx.AsyncClient(timeout=60.0)
