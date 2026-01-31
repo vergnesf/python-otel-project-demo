@@ -379,7 +379,7 @@ class TestEndToEndFlow:
 def main():
     """Run all tests"""
     print("=" * 80)
-    print("TESTS UNITAIRES - ORCHESTRATEUR SIMPLIFIÉ")
+    print("UNIT TESTS - SIMPLIFIED ORCHESTRATOR")
     print("=" * 80)
     print()
 
