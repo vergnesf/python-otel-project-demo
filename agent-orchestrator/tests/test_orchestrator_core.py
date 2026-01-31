@@ -309,7 +309,7 @@ class TestEndToEndFlow:
             ]
 
             # Mock agent response
-            orchestrator.client.post.return_value = AsyncMock(
+            mock_response = AsyncMock(
                 status_code=200,
                 json=lambda: {
                     "analysis": "Found 3 errors in customer service",
@@ -317,6 +317,8 @@ class TestEndToEndFlow:
                     "data": {"error_count": 3},
                 },
             )
+            mock_response.raise_for_status = Mock()
+            orchestrator.client.post.return_value = mock_response
 
             result = await orchestrator.analyze("Montre-moi les erreurs récentes")
 
@@ -348,7 +350,7 @@ class TestEndToEndFlow:
             ]
 
             # Mock agent response
-            orchestrator.client.post.return_value = AsyncMock(
+            mock_response = AsyncMock(
                 status_code=200,
                 json=lambda: {
                     "analysis": "CPU usage is at 75%",
@@ -356,6 +358,8 @@ class TestEndToEndFlow:
                     "data": {"cpu_usage": 75},
                 },
             )
+            mock_response.raise_for_status = Mock()
+            orchestrator.client.post.return_value = mock_response
 
             result = await orchestrator.analyze("What is the CPU usage?")
 

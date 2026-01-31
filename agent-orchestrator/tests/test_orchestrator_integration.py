@@ -19,7 +19,7 @@ import pytest
 from datetime import datetime
 
 
-class TestResult:
+class ExecutionResult:
     """Structure for test execution results"""
     def __init__(self, status: str = "NOT_RUN", warnings: list[str] | None = None):
         self.status = status  # "COMPLETED", "ERROR", "WARNING", "NOT_RUN"
