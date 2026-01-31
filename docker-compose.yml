@@ -670,8 +670,7 @@ services:
     container_name: agent-ui
     <<: *app-settings
     ports:
-      - "3002:3002"
-      - "8005:8000"
+      - "3002:8000"  # Mappe le port 8000 du conteneur vers 3002 sur l'hôte (pour garder la cohérence avec l'ancien port)
     environment:
       <<: *inline-env
       ORCHESTRATOR_URL: http://agent-orchestrator:8001
