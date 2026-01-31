@@ -93,3 +93,18 @@ Make sure to mount the config directory in docker-compose.yml:
 volumes:
   - ./config:/app/config:ro
 ```
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

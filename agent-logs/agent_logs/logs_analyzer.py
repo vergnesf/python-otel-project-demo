@@ -234,9 +234,14 @@ class LogsAnalyzer:
                 f"Primary error: '{primary_error['type']}' ({primary_error['count']} occurrences)."
             )
 
-        if any("Simulated DB" in k for k in error_types):
+        simulated_markers = ("simulated", "error_rate")
+        has_simulated_errors = any(
+            any(marker in error_type.lower() for marker in simulated_markers)
+            for error_type in error_types
+        )
+        if has_simulated_errors:
             summary_parts.append(
-                "Note: These appear to be simulated errors (ERROR_RATE environment variable)."
+                "Note: Some errors appear to be simulated (ERROR_RATE environment variable)."
             )
 
         summary_parts.append(

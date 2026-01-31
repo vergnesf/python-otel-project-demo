@@ -170,3 +170,18 @@ sum by (service_name) (count_over_time({service_name=~".+"} |= "error" [1h]))
 - Searches for "DB" or "database" in error logs
 - Identifies affected services
 - Correlates with known issues (ERROR_RATE simulation)
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

@@ -121,3 +121,18 @@ See `suppliercheck/Dockerfile` for details.
 - **stock**: Receives validated updates via API
 - **order**: Uses stock information for order processing
 - **ordermanagement**: Decreases stock when orders are processed
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

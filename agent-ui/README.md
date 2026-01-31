@@ -1,6 +1,6 @@
 # Agent UI
 
-Reflex-based web interface for interacting with the observability agentic network.
+FastAPI-based web interface for interacting with the observability agentic network.
 
 ## 📊 Features
 
@@ -16,7 +16,7 @@ Reflex-based web interface for interacting with the observability agentic networ
 The UI communicates with the **Orchestrator Agent** which coordinates the specialized agents:
 
 ```
-User → Reflex UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
+User → FastAPI UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
 ```
 
 ## 🚀 Running the UI
@@ -28,25 +28,163 @@ User → Reflex UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP �
 uv sync
 
 # Run development server
-uv run reflex run
+uv run start-dev
 
-# Access at http://localhost:3002
+# Or directly
+uv run uvicorn agent_ui.main:app --reload
+
+# Access at http://localhost:8000
 ```
 
 ### Production Mode
 
 ```bash
-# Build for production
-uv run reflex export
-
 # Run production server
-uv run reflex run --env prod
+uv run start
+
+# Or directly
+uv run uvicorn agent_ui.main:app --host 0.0.0.0 --port 8000
 ```
+
+### Testing
+
+```bash
+# Run all tests
+uv run test
+
+# Or directly
+pytest tests/ -v
+```
+
+## 🐳 Development with Podman
+
+### Quick Start
+
+```bash
+# Build the image
+make podman-build-ui
+
+# Rebuild and restart (forces fresh build)
+make podman-rebuild-ui
+
+# Start all services
+make podman-up
+
+# Stop all services
+make podman-down
+
+# Full rebuild and restart (clean slate)
+make podman-rebuild
+```
+
+### Manual Commands
+
+```bash
+# Build the Docker image
+cd agent-ui
+podman build -t agent-ui:latest .
+cd ..
+
+# Force rebuild with podman-compose
+podman-compose build --no-cache agent-ui
+
+# Restart the service
+podman-compose restart agent-ui
+
+# View logs
+podman-compose logs -f agent-ui
+```
+
+### Ensuring Fresh Builds
+
+To ensure you always have the latest code:
+
+```bash
+# 1. Stop the service
+podman-compose down agent-ui
+
+# 2. Remove old containers
+podman rm -f agent-ui
+
+# 3. Remove old images
+podman rmi agent-ui:latest
+
+# 4. Rebuild
+cd agent-ui
+podman build -t agent-ui:latest .
+cd ..
+
+# 5. Restart
+podman-compose up -d agent-ui
+```
+
+### Quick Rebuild Script
+
+For the easiest way to ensure you have the latest code, use the provided rebuild script:
+
+```bash
+# Make sure the script is executable
+chmod +x agent-ui/rebuild.sh
+
+# Run the rebuild script
+./agent-ui/rebuild.sh
+```
+
+This script will:
+1. Stop the running service
+2. Remove old containers and images
+3. Rebuild with fresh code (no cache)
+4. Restart the service
+5. Show build information
+
+### Debugging
+
+```bash
+# Check running containers
+podman ps
+
+# Inspect container
+podman inspect agent-ui
+
+# Enter container shell
+podman exec -it agent-ui /bin/bash
+
+# Check service logs
+podman-compose logs agent-ui
+
+# Check port mapping
+podman port agent-ui
+
+# Check build info
+podman exec agent-ui cat /app/BUILD_INFO.txt
+```
+
+### Pro Tips
+
+1. **Always use `--no-cache`** when building to ensure fresh code:
+   ```bash
+   podman build --no-cache -t agent-ui:latest .
+   ```
+
+2. **Use build arguments** to force rebuilds:
+   ```bash
+   podman build --no-cache -t agent-ui:latest --build-arg BUILD_TIMESTAMP=$(date +%s) .
+   ```
+
+3. **Check the build info** to verify your code is up to date:
+   ```bash
+   podman exec agent-ui cat /app/BUILD_INFO.txt
+   ```
+
+4. **Use `make` commands** for common operations (see root Makefile)
 
 ## 📦 Dependencies
 
-- `reflex`: Web framework for Python
-- `common-ai`: Shared AI utilities (agent models)
+- `fastapi`: Web framework for Python
+- `uvicorn`: ASGI server
+- `jinja2`: Templating engine
+- `httpx`: HTTP client
+- `pydantic`: Data validation
 
 ## 🐳 Docker
 
@@ -56,7 +194,7 @@ The UI is containerized and runs as part of the docker-compose stack:
 docker-compose up agent-ui
 ```
 
-Access at: **http://localhost:3002**
+Access at: **http://localhost:8000**
 
 ## 🔧 Configuration
 
@@ -67,8 +205,8 @@ Environment variables:
 ORCHESTRATOR_URL=http://agent-orchestrator:8001
 
 # UI server configuration
-REFLEX_HOST=0.0.0.0
-REFLEX_PORT=3002
+FASTAPI_HOST=0.0.0.0
+FASTAPI_PORT=8000
 ```
 
 ## 💬 Example Queries
@@ -111,10 +249,10 @@ Responses are organized by agent:
 
 ## 🔄 State Management
 
-Reflex handles state management with:
+FastAPI handles state management with:
 - `ChatState`: Manages conversation history
-- `messages`: List of chat messages
-- `is_loading`: Shows loading indicator
+- `chats`: List of QA pairs
+- `processing`: Shows loading indicator
 - `send_message()`: Sends query to orchestrator
 
 ## 📱 Responsive Design
@@ -141,30 +279,28 @@ The UI is fully responsive:
 agent-ui/
 ├── agent_ui/
 │   ├── __init__.py
-│   ├── agent_ui.py      # Main Reflex app
+│   ├── main.py          # Main FastAPI app
 │   ├── state.py          # State management
-│   └── components/       # UI components
-│       ├── chat.py
-│       ├── message.py
-│       └── sidebar.py
-├── assets/               # Static assets
+│   └── templates/       # Jinja2 templates
+│       ├── base.html
+│       └── index.html
 ├── pyproject.toml
-└── rxconfig.py          # Reflex configuration
+└── Dockerfile
 ```
 
 ### Adding Features
 
 To extend the UI:
 
-1. Add new components in `components/`
+1. Add new templates in `templates/`
 2. Update state in `state.py`
-3. Modify layout in `agent_ui.py`
-4. Style with Tailwind classes
+3. Add new routes in `main.py`
+4. Style with Tailwind CSS
 
 ## 🎨 Styling
 
 The UI uses:
-- **Reflex Components**: Pre-built React components
+- **Jinja2 Templates**: HTML templates with Python
 - **Tailwind CSS**: Utility-first styling
 - **Custom Theme**: Observability-focused colors
 - **Dark Mode**: Eye-friendly for monitoring
@@ -201,3 +337,18 @@ The UI integrates with:
 - **Orchestrator**: Main analysis coordinator
 - **Grafana**: Deep-dive into data
 - **MCP**: Indirect via orchestrator and agents
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

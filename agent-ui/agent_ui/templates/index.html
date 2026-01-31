@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Observability Assistant{% endblock %}
+
+{% block content %}
+    <!-- Modern Navbar with Gradient -->
+    <nav class="flex justify-center items-center p-4 border-b border-surface1/50 backdrop-blur-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue to-lavender flex items-center justify-center">
+                <i class="fas fa-robot text-base"></i>
+            </div>
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue to-lavender bg-clip-text text-transparent">
+                🔍 Observability Assistant
+            </h1>
+        </div>
+    </nav>
+
+    <!-- Enhanced Chat Area with Modern Design -->
+    <main class="flex-1 p-4 overflow-auto chat-area" id="chat-area">
+        <div class="max-w-4xl mx-auto space-y-4">
+            {% for qa in chats %}
+                <!-- User Message with Avatar -->
+                <div class="flex justify-end items-start gap-2 mb-3 message">
+                    <div class="message-user p-4 rounded-xl rounded-br-none max-w-3xl shadow-sm">
+                        <div class="markdown-content">
+                            {{ qa.question | safe }}
+                        </div>
+                        <div class="mt-2 text-xs text-subtext0 flex items-center gap-1">
+                            <i class="fas fa-user-circle"></i>
+                            <span>You</span>
+                        </div>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-blue flex items-center justify-center text-sm">
+                        <i class="fas fa-user text-base"></i>
+                    </div>
+                </div>
+
+                <!-- Assistant Message with Avatar and Typing Animation -->
+                {% if qa.answer %}
+                    <div class="flex items-start gap-2 mb-3 message">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-lavender to-mauve flex items-center justify-center text-sm">
+                            <i class="fas fa-robot text-base"></i>
+                        </div>
+                        <div class="message-assistant p-4 rounded-xl rounded-bl-none max-w-3xl shadow-sm">
+                            <div class="markdown-content">
+                                {{ qa.answer | safe }}
+                            </div>
+                            <div class="mt-2 text-xs text-subtext0 flex items-center gap-1">
+                                <i class="fas fa-robot"></i>
+                                <span>Observability AI</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            <!-- Welcome Message if no chats -->
+            {% if chats|length == 0 %}
+                <div class="text-center py-12">
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-r from-blue to-lavender mx-auto mb-4 flex items-center justify-center">
+                        <i class="fas fa-comments text-2xl text-base"></i>
+                    </div>
+                    <h2 class="text-2xl font-semibold mb-2">Welcome to Observability Assistant</h2>
+                    <p class="text-subtext0 max-w-md mx-auto">
+                        Ask questions about your microservices, logs, metrics, and traces.
+                        I'll analyze the data and provide insights.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Modern Action Bar with Enhanced Features -->
+    <footer class="action-bar p-4 sticky bottom-0">
+        <div class="max-w-4xl mx-auto">
+            <form id="chat-form" class="flex items-center gap-3 mb-2" method="post">
+                <div class="relative flex-1">
+                    <input 
+                        type="text" 
+                        name="question"
+                        placeholder="Ask about your microservices..."
+                        class="input-field w-full p-3 pl-12 rounded-lg text-text placeholder-subtext0 focus:outline-none focus:ring-2 focus:ring-blue/50"
+                        required
+                        {% if processing %}disabled{% endif %}
+                    >
+                    <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-subtext0">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+                <button 
+                    type="submit"
+                    class="send-button text-text px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-all"
+                    {% if processing %}disabled{% endif %}
+                >
+                    {% if processing %}
+                        <span class="loading-dots">Sending</span>
+                        <i class="fas fa-spinner fa-spin"></i>
+                    {% else %}
+                        <span>Send</span>
+                        <i class="fas fa-paper-plane"></i>
+                    {% endif %}
+                </button>
+            </form>
+            <div class="text-center">
+                <p class="text-xs text-subtext0 flex items-center justify-center gap-2">
+                    <i class="fas fa-info-circle"></i>
+                    Observability Assistant - Ask questions about logs, metrics, and traces
+                </p>
+                <div class="mt-2 flex justify-center gap-4 text-xs">
+                    <div class="flex items-center gap-1 text-green">
+                        <i class="fas fa-circle text-xs"></i>
+                        <span>Connected</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-subtext0">
+                        <i class="fas fa-clock"></i>
+                        <span>Real-time analysis</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-subtext0">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Secure</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-scroll to bottom with smooth animation
+        function scrollToBottom() {
+            const chatArea = document.getElementById('chat-area');
+            chatArea.scrollTo({
+                top: chatArea.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // Scroll to bottom on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollToBottom();
+            
+            // Add typewriter effect to welcome message if present
+            const welcomeMessage = document.querySelector('.markdown-content');
+            if (welcomeMessage && welcomeMessage.textContent.includes('Welcome')) {
+                welcomeMessage.style.opacity = '0';
+                setTimeout(() => {
+                    welcomeMessage.style.transition = 'opacity 0.5s ease';
+                    welcomeMessage.style.opacity = '1';
+                }, 100);
+            }
+        });
+
+        // Handle form submission with AJAX and better UX
+        document.getElementById('chat-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const question = formData.get('question');
+
+            if (!question.trim()) {
+                // Add shake animation for empty input
+                this.querySelector('input[name="question"]').classList.add('animate-shake');
+                setTimeout(() => {
+                    this.querySelector('input[name="question"]').classList.remove('animate-shake');
+                }, 500);
+                return;
+            }
+
+            // Disable form with better UX
+            const questionInput = this.querySelector('input[name="question"]');
+            const submitButton = this.querySelector('button[type="submit"]');
+            questionInput.disabled = true;
+            submitButton.disabled = true;
+            
+            // Add loading state
+            const originalButtonHTML = submitButton.innerHTML;
+            submitButton.innerHTML = `
+                <span class="loading-dots">Processing</span>
+                <i class="fas fa-spinner fa-spin"></i>
+            `;
+
+            try {
+                const response = await fetch('/send_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(formData)
+                });
+
+                if (response.ok) {
+                    // Reload to see new messages
+                    window.location.reload();
+                } else {
+                    // Show error with better UX
+                    const errorMessage = await response.text();
+                    alert(`❌ Error: ${errorMessage || 'Failed to send message'}`);
+                }
+            } catch (error) {
+                alert('⚠️ Network error. Please check your connection.');
+            } finally {
+                questionInput.disabled = false;
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonHTML;
+                this.reset();
+            }
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            const input = document.querySelector('input[name="question"]');
+            
+            // Focus input on / key
+            if (e.key === '/' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.preventDefault();
+                input.focus();
+            }
+            
+            // Submit on Ctrl+Enter
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                document.getElementById('chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
+
+        // Add CSS for shake animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-5px); }
+                40%, 80% { transform: translateX(5px); }
+            }
+            .animate-shake {
+                animation: shake 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+{% endblock %}

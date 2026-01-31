@@ -117,3 +117,18 @@ See `customer/Dockerfile` for details.
 - **order**: Processes validated orders
 - **stock**: Manages inventory
 - **supplier**: Provides stock updates
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

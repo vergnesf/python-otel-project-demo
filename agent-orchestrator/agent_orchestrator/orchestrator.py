@@ -110,6 +110,28 @@ class Orchestrator:
             f"Language: {language_info['language']}, Translated: {translated_query}"
         )
 
+        intent = await self._classify_intent(
+            translated_query, model=model, model_params=model_params
+        )
+        if intent == "chat":
+            chat_response = await self._generate_chat_response(
+                translated_query, model=model, model_params=model_params
+            )
+            return {
+                "query": query,
+                "translated_query": translated_query,
+                "language": language_info["language"],
+                "routing": {"agents": [], "reason": "Chat intent detected"},
+                "agent_responses": {},
+                "summary": chat_response,
+                "recommendations": [],
+                "validation": {
+                    "validated": False,
+                    "reason": "Chat intent detected",
+                },
+                "timestamp": datetime.now(),
+            }
+
         # Step 2: Route to appropriate agents
         routing = await self._route_to_agents(translated_query, model=model)
         logger.info(f"Routing: {routing}")
@@ -284,30 +306,20 @@ class Orchestrator:
         model: str | None,
         model_params: dict | None,
     ) -> str | None:
+        logger.info(f"_invoke_llm_prompt called with model={model}, params={model_params}")
+        
+        # Always use Ollama directly for visibility in logs
+        logger.info("Using Ollama API directly")
         try:
-            if model:
-                llm_client = (
-                    get_llm(model=model, **model_params)
-                    if model_params
-                    else get_llm(model=model)
-                )
-            elif self.llm_ephemeral:
-                llm_client = get_llm(**model_params) if model_params else get_llm()
+            result = await self._ollama_generate(prompt, model, model_params)
+            if result:
+                logger.info(f"Ollama returned response: {result[:100]}...")
+                return result
             else:
-                llm_client = self.llm
-
-            if llm_client:
-                response = llm_client.invoke(prompt)
-                response_text = extract_text_from_response(response).strip()
-                if response_text:
-                    return response_text
+                logger.warning("Ollama returned empty response")
+                return None
         except Exception as exc:
-            logger.warning("LLM invoke failed: %s", exc)
-
-        try:
-            return await self._ollama_generate(prompt, model, model_params)
-        except Exception as exc:
-            logger.warning("Ollama fallback failed: %s", exc)
+            logger.error(f"Ollama API call failed: {exc}", exc_info=True)
             return None
 
     async def _ollama_generate(
@@ -325,6 +337,8 @@ class Orchestrator:
             url = f"{base_url}/api/generate"
 
         model_name = model or os.getenv("LLM_MODEL", "qwen3:0.6b")
+        logger.info(f"Calling Ollama at {url} with model={model_name}")
+        
         payload: dict[str, Any] = {
             "model": model_name,
             "prompt": prompt,
@@ -345,12 +359,14 @@ class Orchestrator:
         if options:
             payload["options"] = options
 
+        logger.debug(f"Ollama payload: {payload}")
         response = await self.client.post(
             url, json=payload, timeout=self.agent_call_timeout
         )
         response.raise_for_status()
         data = response.json()
         text = data.get("response", "") if isinstance(data, dict) else ""
+        logger.info(f"Ollama response received: {text[:100] if text else 'empty'}...")
         return text.strip() if text else None
 
     def _keyword_based_routing(self, query: str) -> dict[str, Any]:
@@ -391,6 +407,80 @@ class Orchestrator:
             "agents": agents,
             "reason": f"Keyword-based routing: {', '.join(agents)}",
         }
+
+    async def _classify_intent(
+        self,
+        query: str,
+        model: str | None = None,
+        model_params: dict | None = None,
+    ) -> str:
+        logger.info(f"_classify_intent called with query: {query}")
+        prompt = load_prompt("classify_intent.md")
+        if not prompt:
+            logger.warning("classify_intent.md not found, returning 'observability'")
+            return "observability"
+
+        prompt = prompt.format(query=query)
+        logger.debug(f"Classify intent prompt: {prompt}")
+        
+        # Use direct Ollama call to make LLM calls visible
+        logger.info("Calling Ollama for intent classification (direct call)")
+        response_text = await self._ollama_generate(prompt, model, model_params)
+        
+        logger.info(f"LLM intent response: {response_text}")
+        if not response_text:
+            logger.warning("LLM returned empty response, defaulting to 'observability'")
+            return "observability"
+
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+            response_text = response_text.strip()
+        if response_text.startswith("json"):
+            response_text = response_text[4:].strip()
+
+        first_brace = response_text.find("{")
+        last_brace = response_text.rfind("}")
+        if first_brace != -1 and last_brace != -1:
+            response_text = response_text[first_brace : last_brace + 1]
+
+        try:
+            data = json.loads(response_text)
+            intent = str(data.get("intent", "observability")).lower()
+            logger.info(f"Parsed intent: {intent}")
+            if intent in {"chat", "observability"}:
+                return intent
+        except Exception as e:
+            logger.error(f"Failed to parse intent response: {e}", exc_info=True)
+            return "observability"
+        
+        logger.info(f"Intent not recognized, defaulting to 'observability'")
+        return "observability"
+
+    async def _generate_chat_response(
+        self,
+        query: str,
+        model: str | None = None,
+        model_params: dict | None = None,
+    ) -> str:
+        logger.info(f"Generating chat response for query: {query}")
+        prompt = load_prompt("chat_response.md")
+        if not prompt:
+            logger.error("Failed to load chat_response.md prompt")
+            raise ValueError("chat_response.md prompt not found")
+
+        prompt = prompt.format(query=query)
+        logger.debug(f"Chat prompt: {prompt}")
+        
+        # Always use direct Ollama call for chat to make calls visible in logs
+        logger.info("Using direct Ollama API call (bypassing LangChain)")
+        response_text = await self._ollama_generate(prompt, model, model_params)
+        
+        if not response_text:
+            logger.error("LLM failed to generate chat response")
+            raise RuntimeError("Failed to generate chat response from LLM")
+        logger.info(f"Chat response generated: {response_text[:100]}...")
+        return response_text
 
     async def _call_agents(
         self, agents: list[str], request: dict[str, Any]

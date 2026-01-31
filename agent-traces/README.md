@@ -215,3 +215,18 @@ Identifies bottlenecks by:
 - **Error Sources**: Where errors originate
 - **Dependency Chain**: Complete service call graph
 - **Optimization Targets**: Services/operations to optimize first
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

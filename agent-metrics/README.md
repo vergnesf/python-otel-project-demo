@@ -185,3 +185,18 @@ The agent detects:
 - **Degradation**: Gradual performance decline
 - **Outliers**: Metrics outside normal ranges
 - **Correlations**: Related metric changes across services
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Observability Assistant{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Catppuccin Mocha Theme */
+        :root {
+            --base: #1E1E2E;
+            --mantle: #181825;
+            --crust: #11111B;
+            --text: #CDD6F4;
+            --subtext1: #BAC2DE;
+            --subtext0: #A6ADC8;
+            --overlay2: #9399B2;
+            --overlay1: #7F849C;
+            --overlay0: #6C7086;
+            --surface2: #585B70;
+            --surface1: #45475A;
+            --surface0: #313244;
+            --blue: #89B4FA;
+            --lavender: #B4BEFE;
+            --sapphire: #74C7EC;
+            --sky: #89DCEB;
+            --teal: #94E2D5;
+            --green: #A6E3A1;
+            --yellow: #F9E2AF;
+            --peach: #FAB387;
+            --maroon: #EBA0AC;
+            --red: #F38BA8;
+            --mauve: #CBA6F7;
+            --pink: #F5C2E7;
+            --flamingo: #F2CDCD;
+            --rosewater: #F5E0DC;
+        }
+
+        body {
+            background-color: var(--base);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface0);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--surface1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--surface2);
+        }
+
+        /* Message bubbles */
+        .message-user {
+            background: linear-gradient(135deg, var(--blue), var(--lavender));
+            border: 1px solid var(--surface1);
+        }
+
+        .message-assistant {
+            background: var(--surface0);
+            border: 1px solid var(--surface1);
+        }
+
+        /* Chat area */
+        .chat-area {
+            background-color: var(--mantle);
+        }
+
+        /* Action bar */
+        .action-bar {
+            background-color: var(--surface0);
+            border-top: 1px solid var(--surface1);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Input field */
+        .input-field {
+            background-color: var(--surface0);
+            border: 1px solid var(--surface1);
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(137, 180, 250, 0.2);
+            outline: none;
+        }
+
+        /* Send button */
+        .send-button {
+            background: linear-gradient(135deg, var(--blue), var(--lavender));
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            background: linear-gradient(135deg, var(--lavender), var(--mauve));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(137, 180, 250, 0.3);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        /* Loading animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-dots::after {
+            content: '';
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Code blocks */
+        pre {
+            background-color: var(--surface0);
+            border-left: 3px solid var(--blue);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        code {
+            color: var(--peach);
+            font-family: 'Fira Code', 'Monaco', monospace;
+        }
+
+        /* Link styling */
+        a {
+            color: var(--blue);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--lavender);
+            text-decoration: underline;
+        }
+
+        /* Card styling */
+        .card {
+            background-color: var(--surface0);
+            border: 1px solid var(--surface1);
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--blue);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gradient-to-b from-base to-mantle">
+    {% block content %}{% endblock %}
+
+    <!-- Font loading -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+</body>
+</html>
