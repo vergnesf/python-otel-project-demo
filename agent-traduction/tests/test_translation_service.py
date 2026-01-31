@@ -1,11 +1,6 @@
 """Unit tests for the translation service."""
 
 from unittest.mock import Mock, patch
-import sys
-from pathlib import Path
-
-# Add project root to path for local imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_traduction.translation_service import TranslationService
 

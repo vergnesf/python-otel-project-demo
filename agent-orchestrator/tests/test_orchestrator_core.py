@@ -8,11 +8,6 @@ Unit tests for orchestrator core behaviors:
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-import sys
-from pathlib import Path
-
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_orchestrator.orchestrator import Orchestrator
 
