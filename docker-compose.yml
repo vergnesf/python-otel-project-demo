@@ -1,5 +1,5 @@
 # =====================
-# YAML EXTENSIONS (réutilisables)
+# YAML EXTENSIONS (reusable)
 # =====================
 # x-docker-registry: &docker-registry your-docker-registry.com/
 x-docker-registry: &docker-registry

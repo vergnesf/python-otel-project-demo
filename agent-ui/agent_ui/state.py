@@ -75,7 +75,7 @@ class ChatState(rx.State):
             "ORCHESTRATOR_URL", "http://agent-orchestrator:8001"
         )
 
-        # Detect time range in question (e.g., "5 dernières minutes")
+        # Detect time range in question (e.g., "last 5 minutes")
         time_range = "1h"
         q_lower = question.lower()
         if "5" in q_lower and (
