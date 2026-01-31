@@ -426,12 +426,13 @@ class Orchestrator:
         # Use direct Ollama call to make LLM calls visible
         logger.info("Calling Ollama for intent classification (direct call)")
         response_text = await self._ollama_generate(prompt, model, model_params)
+        logger.info(f"LLM intent response (raw): {repr(response_text)}")
         
-        logger.info(f"LLM intent response: {response_text}")
         if not response_text:
             logger.warning("LLM returned empty response, defaulting to 'observability'")
             return "observability"
 
+        logger.debug(f"Raw response: {repr(response_text)}")
         if response_text.startswith("```"):
             lines = response_text.split("\n")
             response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
@@ -443,15 +444,19 @@ class Orchestrator:
         last_brace = response_text.rfind("}")
         if first_brace != -1 and last_brace != -1:
             response_text = response_text[first_brace : last_brace + 1]
+        
+        logger.debug(f"After extraction: {repr(response_text)}")
 
         try:
             data = json.loads(response_text)
+            logger.debug(f"Parsed JSON data: {data}")
             intent = str(data.get("intent", "observability")).lower()
             logger.info(f"Parsed intent: {intent}")
             if intent in {"chat", "observability"}:
                 return intent
         except Exception as e:
             logger.error(f"Failed to parse intent response: {e}", exc_info=True)
+            logger.error(f"Response text was: {response_text}")
             return "observability"
         
         logger.info(f"Intent not recognized, defaulting to 'observability'")

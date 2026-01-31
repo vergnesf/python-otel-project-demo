@@ -201,10 +201,11 @@ def get_llm(
     )
 
     # Build model_kwargs for Ollama-specific parameters
-    model_kwargs = {}
+    model_kwargs: dict[str, Any] = {}
     if top_k is not None:
         model_kwargs["top_k"] = top_k
-    model_kwargs.update(kwargs)
+    if kwargs:
+        model_kwargs.update(kwargs)
 
     return SafeChatOpenAI(
         base_url=base_url,
@@ -212,5 +213,5 @@ def get_llm(
         model=model_name,
         temperature=temperature,
         max_tokens=max_tokens,
-        model_kwargs=model_kwargs if model_kwargs else None,
+        model_kwargs=model_kwargs,
     )

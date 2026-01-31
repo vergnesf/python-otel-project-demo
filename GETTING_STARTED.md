@@ -152,25 +152,46 @@ podman logs ollama | grep -i "inference compute"
 
 ## 🎯 Post-Installation Setup
 
-### 1. Configure MCP Authentication
+### 1. Create Environment Configuration
 
-For AI agents to work, you need to set up Grafana service account:
+First, create your `.env` file from the example:
 
 ```bash
-# 1. Open Grafana: http://localhost:3000
-# 2. Login with admin/admin
-# 3. Go to Configuration → Service accounts → Create service account
-# 4. Generate token and copy it
-# 5. Add token to environment
-echo 'GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...' >> .env
+# Copy the example environment file
+cp .env.example .env
 
-# 6. Restart MCP service
-docker-compose restart grafana-mcp
-# or
-podman-compose restart grafana-mcp
+# The .env file is now ready with the default Grafana token
+# (You'll update it with your own token in the next step)
 ```
 
-### 2. Verify All Services
+### 2. Configure MCP Authentication
+
+For AI agents to work, you need to set up Grafana service account with a token:
+
+```bash
+# 1. Start the stack (without grafana-mcp working yet)
+docker-compose up -d
+# or
+podman-compose up -d
+
+# 2. Wait for Grafana to be ready (about 30-40 seconds)
+# 3. Open Grafana: http://localhost:3000
+# 4. Login with admin/admin
+# 5. Go to Configuration → Service accounts (or use the menu)
+# 6. Create a new service account with a descriptive name (e.g., "MCP Integration")
+# 7. Generate a token for this service account
+# 8. Copy the full token value
+
+# 9. Update your .env file with the actual token
+sed -i 's/GRAFANA_SERVICE_ACCOUNT_TOKEN=.*/GRAFANA_SERVICE_ACCOUNT_TOKEN=YOUR_TOKEN_HERE/' .env
+
+# OR manually edit .env and replace the token value
+
+# 10. Restart the grafana-mcp service to apply the new token
+make redeploy grafana-mcp
+```
+
+### 3. Verify All Services
 
 ```bash
 # Check all containers are running

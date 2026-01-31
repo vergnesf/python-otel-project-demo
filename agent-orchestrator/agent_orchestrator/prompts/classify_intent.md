@@ -5,7 +5,7 @@ Classify the user's intent as one of:
 - "chat": casual conversation, greetings, small talk, or general questions not related to observability.
 
 Return ONLY a JSON object with this schema:
-{"intent": "observability" | "chat"}
+{{"intent": "observability" | "chat"}}
 
 User query:
 "{query}"
