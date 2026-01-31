@@ -43,7 +43,9 @@ class LogsAnalyzer:
             self.llm = get_llm()
             logger.info("LLM initialized for logs analysis")
         except Exception as e:
-            logger.warning(f"LLM not available, using basic analysis: {e}")
+            logger.warning(
+                f"LLM not available, using basic analysis: {e}", exc_info=True
+            )
             self.llm = None
 
     async def close(self):
@@ -73,24 +75,42 @@ class LogsAnalyzer:
         context["time_range"] = time_range
         logger.info(f"Analyzing logs for query: {query}")
 
+        if not self.llm:
+            raise RuntimeError(
+                "LLM unavailable; cannot analyze logs without LLM per configuration"
+            )
+
         # Use LLM to build better LogQL query if available
-        if self.llm:
-            logql_query = await self._build_logql_query_with_llm(query, context)
-        else:
-            logql_query = self._build_logql_query(query, context)
+        logql_query = await self._build_logql_query_with_llm(query, context)
 
         logger.info(f"Generated LogQL: {logql_query}")
 
         # Query Loki via MCP
         logs_data = await self._query_loki(logql_query, time_range)
 
-        # Analyze log data with LLM if available
-        if self.llm and logs_data.get("logs"):
-            analysis = await self._analyze_logs_with_llm(
-                logs_data, query, context, time_range
+        requested_limit = self._extract_error_limit(query)
+        if requested_limit and logs_data.get("logs"):
+            analysis = self._build_recent_errors_response(
+                logs_data=logs_data,
+                limit=requested_limit,
+                time_range=time_range,
             )
-        else:
-            analysis = self._analyze_logs(logs_data, query, context)
+            return {
+                "agent_name": "logs",
+                "analysis": analysis["summary"],
+                "data": analysis["data"],
+                "recommendations": analysis.get("recommendations", []),
+                "confidence": analysis["confidence"],
+                "grafana_links": self._generate_grafana_links(
+                    logql_query, time_range
+                ),
+                "timestamp": datetime.now().isoformat(),
+            }
+
+        # Always analyze with LLM (no hardcoded responses)
+        analysis = await self._analyze_logs_with_llm(
+            logs_data, query, context, time_range
+        )
 
         return {
             "agent_name": "logs",
@@ -101,6 +121,7 @@ class LogsAnalyzer:
             "grafana_links": self._generate_grafana_links(logql_query, time_range),
             "timestamp": datetime.now().isoformat(),
         }
+
 
     def _build_logql_query(self, query: str, context: dict[str, Any]) -> str:
         """
@@ -155,12 +176,8 @@ class LogsAnalyzer:
 
         # Return in expected format
         if "error" in result:
-            logger.warning(f"Loki query error: {result['error']}")
-            # Return mock data as fallback
-            return {
-                "logs": [],
-                "total_count": 0,
-            }
+            logger.error(f"Loki query error: {result['error']}")
+            raise RuntimeError(f"Loki query failed: {result['error']}")
 
         return result
 
@@ -234,9 +251,14 @@ class LogsAnalyzer:
                 f"Primary error: '{primary_error['type']}' ({primary_error['count']} occurrences)."
             )
 
-        if any("Simulated DB" in k for k in error_types):
+        simulated_markers = ("simulated", "error_rate")
+        has_simulated_errors = any(
+            any(marker in error_type.lower() for marker in simulated_markers)
+            for error_type in error_types
+        )
+        if has_simulated_errors:
             summary_parts.append(
-                "Note: These appear to be simulated errors (ERROR_RATE environment variable)."
+                "Note: Some errors appear to be simulated (ERROR_RATE environment variable)."
             )
 
         summary_parts.append(
@@ -304,8 +326,7 @@ class LogsAnalyzer:
         # Load prompt template from markdown file
         prompt_template = load_prompt("build_logql.md")
         if not prompt_template:
-            # Fallback to simple query building
-            return self._build_logql_query(query, context)
+            raise RuntimeError("Missing build_logql.md prompt template")
 
         # Replace variables in template
         try:
@@ -314,7 +335,7 @@ class LogsAnalyzer:
             )
         except KeyError as e:
             logger.error(f"Missing variable in build_logql.md template: {e}")
-            return self._build_logql_query(query, context)
+            raise RuntimeError("Invalid build_logql.md prompt template") from e
 
         try:
             response = self.llm.invoke(prompt)
@@ -329,13 +350,12 @@ class LogsAnalyzer:
 
             # If LLM returned empty string, use fallback
             if not logql:
-                logger.warning("LLM generated empty LogQL, using fallback")
-                return self._build_logql_query(query, context)
+                raise RuntimeError("LLM returned empty LogQL")
 
             return logql
         except Exception as e:
-            logger.warning(f"LLM query generation failed: {e}, using fallback")
-            return self._build_logql_query(query, context)
+            logger.error(f"LLM query generation failed: {e}", exc_info=True)
+            raise
 
     async def _analyze_logs_with_llm(
         self,
@@ -415,8 +435,7 @@ class LogsAnalyzer:
         # Load prompt template from markdown file
         prompt_template = load_prompt("analyze_logs.md")
         if not prompt_template:
-            # Fallback
-            return self._analyze_logs(logs_data, query, context)
+            raise RuntimeError("Missing analyze_logs.md prompt template")
 
         # Replace variables in template
         try:
@@ -431,7 +450,7 @@ class LogsAnalyzer:
             )
         except KeyError as e:
             logger.error(f"Missing variable in analyze_logs.md template: {e}")
-            return self._analyze_logs(logs_data, query, context)
+            raise RuntimeError("Invalid analyze_logs.md prompt template") from e
 
         try:
             # Guard against sending a prompt that is too large for the LLM
@@ -501,30 +520,22 @@ class LogsAnalyzer:
             # If logs empty and user asked for short window, return structured fallback
             if total_logs == 0 and (
                 "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
-            ):
-                return {
-                    "summary": f"Found 0 error logs in the last {time_range}.",
-                    "data": {
-                        "total_logs": 0,
-                        "error_count": 0,
-                        "affected_services": [],
-                        "top_error_patterns": [],
-                        "time_range_checked": time_range,
-                    },
-                    "recommendations": ["No errors detected in this time range"],
-                    "confidence": 0.3,
-                }
+                        except Exception:
+                            logger.warning("Failed to parse JSON from LLM response")
 
-            # Fallback to local analyzer
-            return self._analyze_logs(logs_data, query, context)
-
-        except Exception as e:
-            logger.warning(f"LLM analysis failed: {e}, using fallback")
-            return self._analyze_logs(logs_data, query, context)
-
+                    return {
+                        "summary": llm_analysis.strip(),
+                        "data": {
+                            "raw_response": llm_analysis.strip(),
+                            "total_logs": total_logs,
+                            "time_range_checked": time_range,
+                        },
+                        "recommendations": [],
+                        "confidence": 0.7,
+                    }
     async def check_mcp_health(self) -> bool:
-        """
-        Check if MCP Grafana server is reachable
+                    logger.error(f"LLM analysis failed: {e}", exc_info=True)
+                    raise
 
         Returns:
             True if healthy, False otherwise

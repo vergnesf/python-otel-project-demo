@@ -1,14 +1,10 @@
 # =====================
-# YAML EXTENSIONS (réutilisables)
+# YAML EXTENSIONS (reusable)
 # =====================
 # x-docker-registry: &docker-registry your-docker-registry.com/
 x-docker-registry: &docker-registry
 
 x-python-image: &python-image python:3.14-slim
-
-x-token-grafana-service-account: &token-grafana-service-account XXXX
-
-x-ia-model: &ia-model ai/mistral:7B-Q4_0
 
 x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
@@ -27,9 +23,9 @@ x-common-llm-otel-env: &common-llm-otel-env
   OTEL_LOGS_EXPORTER: otlp
   OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
   OTEL_PYTHON_LOG_CORRELATION: "true"
-  LLM_BASE_URL: ${LLM_BASE_URL:-http://172.17.0.1:12434/v1}
+  # Default to Ollama via service name with OpenAI-compatible endpoint (works in containers); use http://localhost:11434/v1 for host access
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
-  LLM_MODEL: *ia-model
   LLM_EPHEMERAL_PER_CALL: true
   LOG_LEVEL: INFO
 
@@ -60,8 +56,8 @@ x-python-build: &python-build
     IMG_PYTHON: *python-image
     BUILD_TARGET: ${BUILD_TARGET:-dev}
 
-# Inline env to ensure containers get .env variables at runtime
-# Add variables commonly set in a .env file here so watches and rebuilds
+# Inline env to ensure containers get environment variables at runtime
+# Add variables commonly set in environment here so watches and rebuilds
 # have consistent values inside containers.
 x-inline-env: &inline-env
   DOCKER_REGISTRY: *docker-registry
@@ -127,7 +123,6 @@ x-develop-ignore: &develop-ignore # Python cache and compiled files
   - .travis.yml
 
   # Environment and config files (if not needed at runtime)
-  - .env.example
   - .editorconfig
   - pyrightconfig.json
   - pytest.ini
@@ -530,7 +525,7 @@ services:
       - "8000:8000"
     environment:
       GRAFANA_URL: http://grafana:3000
-      GRAFANA_SERVICE_ACCOUNT_TOKEN: *token-grafana-service-account
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
     depends_on:
       grafana:
         condition: service_healthy
@@ -553,6 +548,7 @@ services:
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8002
       AGENT_TRACES_URL: http://agent-traces:8002
+      AGENT_TRANSLATION_URL: http://agent-traduction:8002
     develop:
       watch:
         - action: rebuild
@@ -640,6 +636,29 @@ services:
       - grafana-mcp
       - otel-collector
 
+  agent-traduction:
+    build:
+      context: .
+      dockerfile: agent-traduction/Dockerfile
+      <<: *python-build
+    container_name: agent-traduction
+    <<: *app-settings
+    ports:
+      - "8006:8002"
+    environment:
+      <<: [*inline-env, *common-llm-otel-env]
+      OTEL_SERVICE_NAME: agent-traduction
+    develop:
+      watch:
+        - action: rebuild
+          path: ./agent-traduction
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
+    depends_on:
+      - otel-collector
+
   agent-ui:
     image: ${DOCKER_REGISTRY:-}${IMG_AGENT_UI:-agent-ui:latest}
     build:
@@ -649,33 +668,50 @@ services:
     container_name: agent-ui
     <<: *app-settings
     ports:
-      - "3002:3002"
-      - "8005:8000"
+      - "3002:8000"  # Mappe le port 8000 du conteneur vers 3002 sur l'hôte (pour garder la cohérence avec l'ancien port)
     environment:
       <<: *inline-env
       ORCHESTRATOR_URL: http://agent-orchestrator:8001
     depends_on:
       - agent-orchestrator
 
-## Model configuration
-# This `models:` block is used as metadata for local model tooling (Docker Model Runner).
-# Configure models via Docker Model Runner (DMR) by following the docs:
-# https://docs.docker.com/ai/compose/models-and-compose/
-# You can declare model image, context_size, runtime flags and other settings here.
-#
-# Note: The model runtime enforces context window limits. To avoid server-side
-# rejections like "context shift is disabled", keep prompts below a safe threshold
-# using the `LLM_MAX_PROMPT_CHARS` env var. Set it according to the model's
-# `context_size` and your model-runner capabilities (default used in code: 9000).
-models:
-  ia-model:
-    model: *ia-model
-    context_size: 16384
-    runtime_flags:
-      - "--temp" # Temperature
-      - "0"
-      - "--top-k" # Top-k sampling
-      - "1"
+  # ---------------------
+  # Ollama local model runtime
+  # ---------------------
+  # Provides local model serving via Ollama REST API (http://localhost:11434/api)
+  # OpenAI-compatible endpoint (if supported): http://localhost:11434/v1
+  # Works with Docker and Podman; models can be pulled with `ollama pull <model>`
+  # NOTE: Use `sudo podman compose up -d` if running Podman without GPU access
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    <<: *common-settings
+    ports:
+      - "11434:11434"
+    environment:
+      <<: *inline-env
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+    volumes:
+      - ollama-data:/root/.ollama:Z
+      - ./models:/models:Z
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Expose Ollama to other services by name on the compose network
+    networks:
+      - otel-network
+
+  
 
 volumes:
   kafka-secrets:
@@ -685,6 +721,7 @@ volumes:
   tempo-data:
   mimir-data:
   postgres-data:
+  ollama-data:
 
 networks:
   otel-network:

@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AgentType(str, Enum):
@@ -32,14 +32,15 @@ class AgentRequest(BaseModel):
         default_factory=datetime.now, description="Request timestamp"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "Why is the order service failing?",
                 "time_range": "1h",
                 "context": {"services": ["order", "ordercheck"], "error_rate": 0.1},
             }
         }
+    )
 
 
 class AgentResponse(BaseModel):
@@ -65,8 +66,8 @@ class AgentResponse(BaseModel):
         default=None, description="Error message if analysis failed"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "agent_name": "logs",
                 "analysis": "Found 47 errors in order service over the last hour. Primary cause: Simulated DB insertion errors (ERROR_RATE=0.1).",
@@ -82,6 +83,7 @@ class AgentResponse(BaseModel):
                 "grafana_links": ["http://grafana:3000/explore?..."],
             }
         }
+    )
 
 
 class OrchestratorResponse(BaseModel):
@@ -99,8 +101,8 @@ class OrchestratorResponse(BaseModel):
         default_factory=datetime.now, description="Response timestamp"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "Analyze problems with the order service",
                 "summary": "The order service has a 10% error rate due to simulated DB failures...",
@@ -115,3 +117,4 @@ class OrchestratorResponse(BaseModel):
                 ],
             }
         }
+    )

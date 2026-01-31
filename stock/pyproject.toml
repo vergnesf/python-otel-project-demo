@@ -23,4 +23,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-common-models = { path = "../common-models" }
+common-models = { path = "../common-models", editable = true }

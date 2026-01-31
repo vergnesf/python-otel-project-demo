@@ -5,6 +5,31 @@ applyTo: '**/*.py, **/pyproject.toml, **/requirements.txt'
 
 # Python MCP Server Development
 
+## ⚠️ CRITICAL: Always Use UV for All Operations
+
+**IMPORTANT:** GitHub Copilot MUST use `uv` for ALL Python-related operations. Never use `python`, `pip`, or other tools directly.
+
+### UV Command Pattern
+
+All commands follow this pattern:
+```bash
+uv run <command>
+```
+
+Examples:
+```bash
+uv run python server.py              # Run Python scripts
+uv run pytest                        # Run tests
+uv run mcp dev server.py             # Test MCP server with Inspector
+uv run mcp install server.py         # Install for Claude Desktop
+```
+
+**Never use these directly:**
+- ❌ `python server.py` → ✅ `uv run python server.py`
+- ❌ `pip install` → ✅ `uv add`
+- ❌ `pytest` → ✅ `uv run pytest`
+- ❌ `mcp dev` → ✅ `uv run mcp dev`
+
 ## Instructions
 
 - Use **uv** for project management: `uv init mcp-server-demo` and `uv add "mcp[cli]"`

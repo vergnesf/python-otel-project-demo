@@ -1,0 +1,52 @@
+# Model-specific optimal parameters for AI inference
+# Used by common-ai and benchmarks for consistent, deterministic behavior
+
+# Default parameters (used when model not found)
+default:
+  temperature: 0.0      # Deterministic output (0 = no randomness)
+  top_k: 1              # Only consider top 1 token (most deterministic)
+  max_tokens: 2000      # Maximum response length
+
+# Model-specific configurations
+models:
+  mistral:7b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 32768  # 32K context
+    
+  llama3.2:3b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 131072  # 128K context
+    
+  qwen3:0.6b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 32768  # 32K context
+    
+  granite4:3b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 16384  # 16K context
+    
+  mistral-nemo:12b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 131072  # 128K context
+    
+  qwen2.5:7b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 32768  # 32K context (correct)
+    
+  phi4:14b:
+    temperature: 0.0
+    top_k: 1
+    max_tokens: 2000
+    context_size: 1024000  # Up to 1M context!

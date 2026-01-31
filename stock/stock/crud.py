@@ -16,10 +16,10 @@ def create_stock(db: Session, stock: schemas.StockCreate):
     )
 
     if db_stock:
-        # Mettre à jour le stock existant
+        # Update existing stock
         db_stock.quantity += stock.quantity  # type: ignore[misc]
     else:
-        # Créer un nouveau stock
+        # Create new stock
         db_stock = models.Stock(wood_type=stock.wood_type, quantity=stock.quantity)
         db.add(db_stock)
 

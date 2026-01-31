@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Définir l'URL de la base de données ici
+# Define the database URL here
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://postgres:yourpassword@localhost:5432/mydatabase"
 )

@@ -48,6 +48,9 @@ class Orchestrator:
         self.traces_agent_url = os.getenv(
             "AGENT_TRACES_URL", "http://agent-traces:8004"
         )
+        self.translation_agent_url = os.getenv(
+            "AGENT_TRANSLATION_URL", "http://agent-traduction:8002"
+        )
 
         self.client = httpx.AsyncClient(timeout=60.0)
         self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "60"))
@@ -70,7 +73,13 @@ class Orchestrator:
         """Close HTTP client"""
         await self.client.aclose()
 
-    async def analyze(self, query: str, time_range: str = "1h") -> dict[str, Any]:
+    async def analyze(
+        self,
+        query: str,
+        time_range: str = "1h",
+        model: str | None = None,
+        model_params: dict | None = None,
+    ) -> dict[str, Any]:
         """
         Main analysis flow:
         1. Detect language and translate to English
@@ -81,22 +90,50 @@ class Orchestrator:
         Args:
             query: User query
             time_range: Time range for analysis
+            model: Optional model name to use for this request
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Analysis result with validation
         """
-        logger.info(f"Analyzing query: {query}")
+        logger.info(
+            f"Analyzing query: {query} (model: {model}, params: {model_params})"
+        )
         from datetime import datetime
 
         # Step 1: Detect language and translate
-        language_info = await self._detect_and_translate(query)
+        language_info = await self._detect_and_translate(
+            query, model=model, model_params=model_params
+        )
         translated_query = language_info["translated_query"]
         logger.info(
             f"Language: {language_info['language']}, Translated: {translated_query}"
         )
 
+        intent = await self._classify_intent(
+            translated_query, model=model, model_params=model_params
+        )
+        if intent == "chat":
+            chat_response = await self._generate_chat_response(
+                translated_query, model=model, model_params=model_params
+            )
+            return {
+                "query": query,
+                "translated_query": translated_query,
+                "language": language_info["language"],
+                "routing": {"agents": [], "reason": "Chat intent detected"},
+                "agent_responses": {},
+                "summary": chat_response,
+                "recommendations": [],
+                "validation": {
+                    "validated": False,
+                    "reason": "Chat intent detected",
+                },
+                "timestamp": datetime.now(),
+            }
+
         # Step 2: Route to appropriate agents
-        routing = await self._route_to_agents(translated_query)
+        routing = await self._route_to_agents(translated_query, model=model)
         logger.info(f"Routing: {routing}")
 
         # Step 3: Call selected agents
@@ -109,7 +146,9 @@ class Orchestrator:
         agent_responses = await self._call_agents(routing["agents"], agent_request)
 
         # Step 4: Validate responses
-        validation = await self._validate_responses(translated_query, agent_responses)
+        validation = await self._validate_responses(
+            translated_query, agent_responses, model=model
+        )
 
         # Build final response
         summary_parts = []
@@ -140,85 +179,86 @@ class Orchestrator:
             "timestamp": datetime.now(),
         }
 
-    async def _detect_and_translate(self, query: str) -> dict[str, Any]:
+    async def _detect_and_translate(
+        self, query: str, model: str | None = None, model_params: dict | None = None
+    ) -> dict[str, Any]:
         """
         Functionality 1: Detect language and translate to English
 
         Args:
             query: User query
+            model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Dictionary with language and translated query
         """
+        logger.debug(
+            "_detect_and_translate() called with model=%s, params=%s",
+            model,
+            model_params,
+        )
+
         if not query:
             return {"language": "unknown", "translated_query": query}
 
-        # If no LLM available, assume English
-        if not self.llm and not self.llm_ephemeral:
-            return {"language": "unknown", "translated_query": query}
+        payload: dict[str, Any] = {"query": query}
+        if model:
+            payload["model"] = model
+        if model_params:
+            payload["model_params"] = model_params
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
-            if not llm_client:
-                logger.warning("No LLM available, assuming English")
-                return {"language": "unknown", "translated_query": query}
-
-            # First, detect if it's English
-            detect_prompt = load_prompt("detect_language.md")
-            if detect_prompt:
-                detect_prompt = detect_prompt.format(query=query)
-                response = llm_client.invoke(detect_prompt)
-                language_result = extract_text_from_response(response).strip().upper()
-
-                # If already English, no need to translate
-                # Check for exact "ENGLISH" but not "NOT_ENGLISH" or "NON_ENGLISH"
-                if language_result == "ENGLISH" or (
-                    "ENGLISH" in language_result
-                    and "NOT" not in language_result
-                    and "NON" not in language_result
-                ):
-                    return {"language": "english", "translated_query": query}
-
-            # Not English, translate
-            translate_prompt = load_prompt("translate_to_english.md")
-            if not translate_prompt:
-                return {"language": "unknown", "translated_query": query}
-
-            translate_prompt = translate_prompt.format(query=query)
-            response = llm_client.invoke(translate_prompt)
-            translated = extract_text_from_response(response).strip()
-
-            # Clean up translation (remove code blocks if any)
-            if translated.startswith("```"):
-                lines = translated.split("\n")
-                translated = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
-                translated = translated.strip()
-
-            return {
-                "language": "non-english",
-                "translated_query": translated if translated else query,
-            }
-
-        except Exception as e:
-            logger.warning(f"Language detection/translation failed: {e}")
+            response = await self.client.post(
+                f"{self.translation_agent_url}/translate",
+                json=payload,
+                timeout=self.agent_call_timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as exc:
+            logger.warning("Translation service error: %s", exc)
             return {"language": "unknown", "translated_query": query}
 
-    async def _route_to_agents(self, query: str) -> dict[str, Any]:
+        language = data.get("language", "unknown")
+        translated_query = data.get("translated_query", query)
+
+        if not translated_query:
+            translated_query = query
+
+        return {"language": language, "translated_query": translated_query}
+
+    async def _route_to_agents(
+        self, query: str, model: str | None = None, model_params: dict | None = None
+    ) -> dict[str, Any]:
         """
         Functionality 2: Decide which agents to call based on query
 
         Args:
             query: User query (in English)
+            model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Routing decision with agents to call
         """
         # If no LLM available, use keyword-based fallback
-        if not self.llm and not self.llm_ephemeral:
+        if not self.llm and not self.llm_ephemeral and not model:
             return self._keyword_based_routing(query)
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            # Always use provided model if specified, otherwise fall back to default
+            if model:
+                llm_client = (
+                    get_llm(model=model, **model_params)
+                    if model_params
+                    else get_llm(model=model)
+                )
+            elif self.llm_ephemeral:
+                llm_client = get_llm(**model_params) if model_params else get_llm()
+            else:
+                llm_client = self.llm
+
             if not llm_client:
                 logger.warning("No LLM available, using keyword-based routing")
                 return self._keyword_based_routing(query)
@@ -229,8 +269,11 @@ class Orchestrator:
                 return self._keyword_based_routing(query)
 
             route_prompt = route_prompt.format(query=query)
-            response = llm_client.invoke(route_prompt)
-            response_text = extract_text_from_response(response).strip()
+            response_text = await self._invoke_llm_prompt(
+                route_prompt, model=model, model_params=model_params
+            )
+            if not response_text:
+                return self._keyword_based_routing(query)
 
             # Clean response
             if response_text.startswith("```"):
@@ -255,6 +298,76 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"LLM routing failed: {e}, using keyword fallback")
             return self._keyword_based_routing(query)
+
+    async def _invoke_llm_prompt(
+        self,
+        prompt: str,
+        *,
+        model: str | None,
+        model_params: dict | None,
+    ) -> str | None:
+        logger.info(f"_invoke_llm_prompt called with model={model}, params={model_params}")
+        
+        # Always use Ollama directly for visibility in logs
+        logger.info("Using Ollama API directly")
+        try:
+            result = await self._ollama_generate(prompt, model, model_params)
+            if result:
+                logger.info(f"Ollama returned response: {result[:100]}...")
+                return result
+            else:
+                logger.warning("Ollama returned empty response")
+                return None
+        except Exception as exc:
+            logger.error(f"Ollama API call failed: {exc}", exc_info=True)
+            return None
+
+    async def _ollama_generate(
+        self,
+        prompt: str,
+        model: str | None,
+        model_params: dict | None,
+    ) -> str | None:
+        base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        if base_url.endswith("/api"):
+            url = f"{base_url}/generate"
+        else:
+            url = f"{base_url}/api/generate"
+
+        model_name = model or os.getenv("LLM_MODEL", "qwen3:0.6b")
+        logger.info(f"Calling Ollama at {url} with model={model_name}")
+        
+        payload: dict[str, Any] = {
+            "model": model_name,
+            "prompt": prompt,
+            "stream": False,
+        }
+
+        options: dict[str, Any] = {}
+        params = model_params or {}
+        if "temperature" in params:
+            options["temperature"] = params["temperature"]
+        if params.get("top_k") is not None:
+            options["top_k"] = params["top_k"]
+        if "max_tokens" in params:
+            options["num_predict"] = params["max_tokens"]
+        if "context_size" in params:
+            options["num_ctx"] = params["context_size"]
+
+        if options:
+            payload["options"] = options
+
+        logger.debug(f"Ollama payload: {payload}")
+        response = await self.client.post(
+            url, json=payload, timeout=self.agent_call_timeout
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data.get("response", "") if isinstance(data, dict) else ""
+        logger.info(f"Ollama response received: {text[:100] if text else 'empty'}...")
+        return text.strip() if text else None
 
     def _keyword_based_routing(self, query: str) -> dict[str, Any]:
         """
@@ -294,6 +407,85 @@ class Orchestrator:
             "agents": agents,
             "reason": f"Keyword-based routing: {', '.join(agents)}",
         }
+
+    async def _classify_intent(
+        self,
+        query: str,
+        model: str | None = None,
+        model_params: dict | None = None,
+    ) -> str:
+        logger.info(f"_classify_intent called with query: {query}")
+        prompt = load_prompt("classify_intent.md")
+        if not prompt:
+            logger.warning("classify_intent.md not found, returning 'observability'")
+            return "observability"
+
+        prompt = prompt.format(query=query)
+        logger.debug(f"Classify intent prompt: {prompt}")
+        
+        # Use direct Ollama call to make LLM calls visible
+        logger.info("Calling Ollama for intent classification (direct call)")
+        response_text = await self._ollama_generate(prompt, model, model_params)
+        logger.info(f"LLM intent response (raw): {repr(response_text)}")
+        
+        if not response_text:
+            logger.warning("LLM returned empty response, defaulting to 'observability'")
+            return "observability"
+
+        logger.debug(f"Raw response: {repr(response_text)}")
+        if response_text.startswith("```"):
+            lines = response_text.split("\n")
+            response_text = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
+            response_text = response_text.strip()
+        if response_text.startswith("json"):
+            response_text = response_text[4:].strip()
+
+        first_brace = response_text.find("{")
+        last_brace = response_text.rfind("}")
+        if first_brace != -1 and last_brace != -1:
+            response_text = response_text[first_brace : last_brace + 1]
+        
+        logger.debug(f"After extraction: {repr(response_text)}")
+
+        try:
+            data = json.loads(response_text)
+            logger.debug(f"Parsed JSON data: {data}")
+            intent = str(data.get("intent", "observability")).lower()
+            logger.info(f"Parsed intent: {intent}")
+            if intent in {"chat", "observability"}:
+                return intent
+        except Exception as e:
+            logger.error(f"Failed to parse intent response: {e}", exc_info=True)
+            logger.error(f"Response text was: {response_text}")
+            return "observability"
+        
+        logger.info(f"Intent not recognized, defaulting to 'observability'")
+        return "observability"
+
+    async def _generate_chat_response(
+        self,
+        query: str,
+        model: str | None = None,
+        model_params: dict | None = None,
+    ) -> str:
+        logger.info(f"Generating chat response for query: {query}")
+        prompt = load_prompt("chat_response.md")
+        if not prompt:
+            logger.error("Failed to load chat_response.md prompt")
+            raise ValueError("chat_response.md prompt not found")
+
+        prompt = prompt.format(query=query)
+        logger.debug(f"Chat prompt: {prompt}")
+        
+        # Always use direct Ollama call for chat to make calls visible in logs
+        logger.info("Using direct Ollama API call (bypassing LangChain)")
+        response_text = await self._ollama_generate(prompt, model, model_params)
+        
+        if not response_text:
+            logger.error("LLM failed to generate chat response")
+            raise RuntimeError("Failed to generate chat response from LLM")
+        logger.info(f"Chat response generated: {response_text[:100]}...")
+        return response_text
 
     async def _call_agents(
         self, agents: list[str], request: dict[str, Any]
@@ -365,7 +557,11 @@ class Orchestrator:
             raise
 
     async def _validate_responses(
-        self, query: str, agent_responses: dict[str, Any]
+        self,
+        query: str,
+        agent_responses: dict[str, Any],
+        model: str | None = None,
+        model_params: dict | None = None,
     ) -> dict[str, Any]:
         """
         Functionality 3: Validate that responses properly answer the query
@@ -373,18 +569,31 @@ class Orchestrator:
         Args:
             query: Original query
             agent_responses: Responses from agents
+            model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Validation result
         """
-        if not self.llm and not self.llm_ephemeral:
+        if not self.llm and not self.llm_ephemeral and not model:
             return {
                 "validated": False,
                 "reason": "No LLM available for validation",
             }
 
         try:
-            llm_client = get_llm() if self.llm_ephemeral else self.llm
+            # Always use provided model if specified, otherwise fall back to default
+            if model:
+                llm_client = (
+                    get_llm(model=model, **model_params)
+                    if model_params
+                    else get_llm(model=model)
+                )
+            elif self.llm_ephemeral:
+                llm_client = get_llm(**model_params) if model_params else get_llm()
+            else:
+                llm_client = self.llm
+
             if not llm_client:
                 logger.warning("No LLM available for validation")
                 return {
@@ -416,8 +625,14 @@ class Orchestrator:
             validate_prompt = validate_prompt.format(
                 query=query, response=combined_response
             )
-            response = llm_client.invoke(validate_prompt)
-            response_text = extract_text_from_response(response).strip()
+            response_text = await self._invoke_llm_prompt(
+                validate_prompt, model=model, model_params=model_params
+            )
+            if not response_text:
+                return {
+                    "validated": False,
+                    "reason": "LLM returned empty response",
+                }
 
             # Clean response
             if response_text.startswith("```"):
@@ -466,10 +681,12 @@ class Orchestrator:
             check_agent(self.logs_agent_url),
             check_agent(self.metrics_agent_url),
             check_agent(self.traces_agent_url),
+            check_agent(self.translation_agent_url),
         )
 
         return {
             "logs": results[0],
             "metrics": results[1],
             "traces": results[2],
+            "translation": results[3],
         }

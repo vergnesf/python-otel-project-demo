@@ -5,6 +5,38 @@ applyTo: '**/*.py, **/pyproject.toml, **/uv.lock'
 
 # Python 3.14 Coding Conventions and UV Workflow
 
+## ⚠️ CRITICAL: Always Use UV for All Python Operations
+
+**IMPORTANT:** GitHub Copilot MUST use `uv` for ALL Python-related operations in this project. Never use `python`, `pip`, `pytest`, or other tools directly without prefixing with `uv run`.
+
+### UV Command Pattern
+
+All Python operations follow this pattern:
+```bash
+uv run <command>
+```
+
+Examples:
+```bash
+uv run python script.py              # Run Python scripts
+uv run pytest                        # Run tests
+uv run pytest tests/                 # Run specific test directory
+uv run pytest tests/test_file.py     # Run specific test file
+uv run mypy src/                     # Type checking
+uv run ruff check src/               # Linting
+uv run black src/                    # Code formatting
+uv run python -m pip list            # List packages
+uv sync                              # Install dependencies from lock file
+```
+
+**Never use these directly:**
+- ❌ `python script.py` → ✅ `uv run python script.py`
+- ❌ `pytest` → ✅ `uv run pytest`
+- ❌ `pip install` → ✅ `uv add`
+- ❌ `mypy` → ✅ `uv run mypy`
+- ❌ `black` → ✅ `uv run black`
+- ❌ `ruff` → ✅ `uv run ruff`
+
 ## Project Setup with UV
 
 **UV is the standard Python package manager** - it's faster, more reliable, and replaces pip, poetry, pipenv, and pyenv.

@@ -1,14 +1,14 @@
-# Agent Metrics (Mimir Specialist)
+# Agent Metrics
 
-The **Metrics Agent** is specialized in analyzing performance metrics from **Mimir** via the Grafana MCP server. It detects anomalies, analyzes trends, and provides insights about system performance and resource utilization.
+Mimir specialist agent that analyzes performance metrics via the Grafana MCP server.
 
-## 📊 Role
+## 📊 Features
 
-- **Performance Analysis**: CPU, memory, request rates, latency
-- **Anomaly Detection**: Identify spikes and unusual patterns
-- **Trend Analysis**: Analyze metrics over time
-- **Resource Monitoring**: Track resource utilization
-- **SLI/SLO Tracking**: Monitor service level indicators
+- Performance analysis (CPU, memory, latency)
+- Anomaly detection and pattern recognition
+- Trend analysis over time
+- Resource utilization monitoring
+- SLI/SLO tracking and alerting
 
 ## 🔍 Capabilities
 
@@ -115,6 +115,11 @@ uv sync
 uv run uvicorn agent_metrics.main:app --reload --host 0.0.0.0 --port 8003
 ```
 
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)
+
 ## 📊 PromQL Queries
 
 The agent generates PromQL queries for Mimir:
@@ -180,3 +185,21 @@ The agent detects:
 - **Degradation**: Gradual performance decline
 - **Outliers**: Metrics outside normal ranges
 - **Correlations**: Related metric changes across services
+
+## 🐳 Podman Compose
+
+### Redeploy Command
+
+Use the generic `redeploy` command from the root Makefile to rebuild any service:
+
+```bash
+# Redeploy any service (agent-metrics, agent-logs, etc.)
+make redeploy agent-metrics
+```
+
+This command will:
+1. Stop the specified service
+2. Rebuild with `--no-cache` to ensure fresh code
+3. Restart the service
+
+**Note:** If no service is specified, the command will show an error with usage instructions.

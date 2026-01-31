@@ -39,6 +39,10 @@ async def lifespan(app: FastAPI):
     logger.info(
         f"Traces Agent URL: {os.getenv('AGENT_TRACES_URL', 'http://agent-traces:8004')}"
     )
+    logger.info(
+        "Translation Agent URL: %s",
+        os.getenv("AGENT_TRANSLATION_URL", "http://agent-traduction:8002"),
+    )
     orchestrator = Orchestrator()
     yield
     # Shutdown
@@ -59,6 +63,10 @@ class AnalyzeRequest(BaseModel):
 
     query: str
     time_range: str = "1h"
+    model: str | None = None
+    model_params: dict | None = (
+        None  # Optional LLM parameters (temperature, top_k, max_tokens)
+    )
 
 
 class HealthResponse(BaseModel):
@@ -84,6 +92,8 @@ async def analyze(request: AnalyzeRequest):
         result = await orchestrator.analyze(
             query=request.query,
             time_range=request.time_range,
+            model=request.model,
+            model_params=request.model_params,
         )
         logger.info("Analysis completed successfully")
         return result

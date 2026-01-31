@@ -1,22 +1,22 @@
-# Agents UI (Reflex Chat Interface)
+# Agent UI
 
-The **Agents UI** is a modern web interface built with **Reflex** that allows users to interact with the observability agentic network through a chat interface.
+FastAPI-based web interface for interacting with the observability agentic network.
 
-## 💬 Features
+## 📊 Features
 
-- **Chat Interface**: Natural language queries about observability
-- **Real-time Streaming**: Live updates as agents analyze data
-- **Rich Responses**: Formatted analysis with code blocks and links
-- **Multi-agent Visualization**: See responses from Logs, Metrics, and Traces agents
-- **Grafana Integration**: Direct links to explore data in Grafana
-- **Response History**: Chat history persisted during session
+- Chat interface for natural language queries
+- Real-time streaming of agent responses
+- Rich response formatting with code blocks
+- Multi-agent response visualization
+- Grafana integration with direct links
+- Response history and session management
 
 ## 🏗️ Architecture
 
 The UI communicates with the **Orchestrator Agent** which coordinates the specialized agents:
 
 ```
-User → Reflex UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
+User → FastAPI UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
 ```
 
 ## 🚀 Running the UI
@@ -28,20 +28,74 @@ User → Reflex UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP �
 uv sync
 
 # Run development server
-uv run reflex run
+uv run start-dev
 
-# Access at http://localhost:3002
+# Or directly
+uv run uvicorn agent_ui.main:app --reload
+
+# Access at http://localhost:8000
 ```
 
 ### Production Mode
 
 ```bash
-# Build for production
-uv run reflex export
-
 # Run production server
-uv run reflex run --env prod
+uv run start
+
+# Or directly
+uv run uvicorn agent_ui.main:app --host 0.0.0.0 --port 8000
 ```
+
+### Testing
+
+```bash
+# Run all tests
+uv run test
+
+# Or directly
+pytest tests/ -v
+```
+
+## 🐳 Development with Podman
+
+### Redeploy Command
+
+Use the generic `redeploy` command from the root Makefile to rebuild any service:
+
+```bash
+# Redeploy any service (agent-ui, agent-orchestrator, agent-logs, etc.)
+make redeploy agent-ui
+```
+
+This command will:
+1. Stop the specified service
+2. Rebuild with `--no-cache` to ensure fresh code
+3. Restart the service
+
+**Note:** If no service is specified, the command will show an error with usage instructions.
+
+### Verification
+
+Check that your rebuild worked:
+
+```bash
+# View build info (shows timestamp and git commit)
+podman exec agent-ui cat /app/BUILD_INFO.txt
+
+# Check logs
+podman-compose logs -f agent-ui
+
+# Test the API
+curl http://localhost:3002/health
+```
+
+## 📦 Dependencies
+
+- `fastapi`: Web framework for Python
+- `uvicorn`: ASGI server
+- `jinja2`: Templating engine
+- `httpx`: HTTP client
+- `pydantic`: Data validation
 
 ## 🐳 Docker
 
@@ -51,7 +105,7 @@ The UI is containerized and runs as part of the docker-compose stack:
 docker-compose up agent-ui
 ```
 
-Access at: **http://localhost:3002**
+Access at: **http://localhost:8000**
 
 ## 🔧 Configuration
 
@@ -62,8 +116,8 @@ Environment variables:
 ORCHESTRATOR_URL=http://agent-orchestrator:8001
 
 # UI server configuration
-REFLEX_HOST=0.0.0.0
-REFLEX_PORT=3002
+FASTAPI_HOST=0.0.0.0
+FASTAPI_PORT=8000
 ```
 
 ## 💬 Example Queries
@@ -106,10 +160,10 @@ Responses are organized by agent:
 
 ## 🔄 State Management
 
-Reflex handles state management with:
+FastAPI handles state management with:
 - `ChatState`: Manages conversation history
-- `messages`: List of chat messages
-- `is_loading`: Shows loading indicator
+- `chats`: List of QA pairs
+- `processing`: Shows loading indicator
 - `send_message()`: Sends query to orchestrator
 
 ## 📱 Responsive Design
@@ -136,30 +190,28 @@ The UI is fully responsive:
 agent-ui/
 ├── agent_ui/
 │   ├── __init__.py
-│   ├── agent_ui.py      # Main Reflex app
+│   ├── main.py          # Main FastAPI app
 │   ├── state.py          # State management
-│   └── components/       # UI components
-│       ├── chat.py
-│       ├── message.py
-│       └── sidebar.py
-├── assets/               # Static assets
+│   └── templates/       # Jinja2 templates
+│       ├── base.html
+│       └── index.html
 ├── pyproject.toml
-└── rxconfig.py          # Reflex configuration
+└── Dockerfile
 ```
 
 ### Adding Features
 
 To extend the UI:
 
-1. Add new components in `components/`
+1. Add new templates in `templates/`
 2. Update state in `state.py`
-3. Modify layout in `agent_ui.py`
-4. Style with Tailwind classes
+3. Add new routes in `main.py`
+4. Style with Tailwind CSS
 
 ## 🎨 Styling
 
 The UI uses:
-- **Reflex Components**: Pre-built React components
+- **Jinja2 Templates**: HTML templates with Python
 - **Tailwind CSS**: Utility-first styling
 - **Custom Theme**: Observability-focused colors
 - **Dark Mode**: Eye-friendly for monitoring
@@ -196,3 +248,18 @@ The UI integrates with:
 - **Orchestrator**: Main analysis coordinator
 - **Grafana**: Deep-dive into data
 - **MCP**: Indirect via orchestrator and agents
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```

@@ -6,120 +6,24 @@
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-enabled-blueviolet)](https://opentelemetry.io/)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://www.docker.com/)
 
-## Features
+## 🚀 Quick Start
 
-✨ **Complete Observability Stack** - Grafana, Loki, Mimir, Tempo with OpenTelemetry auto-instrumentation
-🤖 **AI-Powered Analysis** - Intelligent agents for natural language observability queries
-🏗️ **Production-Ready** - Docker-first, Python 3.14, UV package manager, FastAPI
-🎭 **Error Simulation** - Built-in configurable error injection for testing
+For a complete getting started guide including Docker, Podman, and GPU setup, see [GETTING_STARTED.md](GETTING_STARTED.md).
 
-## Quick Start
-
-### Prerequisites
-
-- Docker and Docker Compose
-- Git
-
-### Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd python-otel-project-demo
-
-# Copy environment template
-cp .env.example .env
-
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-```
-
-That's it! The complete stack is now running.
-
-## Access Points
-
-| Service             | URL                   | Description                      |
-| ------------------- | --------------------- | -------------------------------- |
-| **Observability**   |                       |                                  |
-| Grafana             | http://localhost:3000 | Main observability dashboard     |
-| **Agentic Network** |                       |                                  |
-| Agents Web UI       | http://localhost:3002 | AI-powered observability queries |
-| Orchestrator API    | http://localhost:8001 | Main agent coordinator           |
-| Logs Agent          | http://localhost:8002 | Loki log analysis                |
-| Metrics Agent       | http://localhost:8003 | Mimir metrics analysis           |
-| Traces Agent        | http://localhost:8004 | Tempo traces analysis            |
-| **Tools**           |                       |                                  |
-| AKHQ (Kafka UI)     | http://localhost:8080 | Kafka management                 |
-| Adminer (Database)  | http://localhost:8081 | PostgreSQL administration        |
-
-**Default Grafana credentials**: `admin` / `admin`
-
-## Using the AI Agents
-
-### Quick Example
-
-Open http://localhost:3002 and ask questions in natural language:
-
-- "Show me errors in the order service"
-- "What's the CPU usage of customer service?"
-- "Analyze slow traces in the last hour"
-- "Why is the order service failing?"
-
-### Setup MCP Authentication
-
-For agents to work, create a Grafana service account:
-
-```bash
-# 1. Open Grafana: http://localhost:3000
-# 2. Go to Configuration → Service accounts → Create service account
-# 3. Generate token and copy it
-# 4. Add to .env:
-echo 'GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...' >> .env
-
-# 5. Restart MCP service
-docker-compose restart grafana-mcp
-```
-
-See [Configuration Guide](docs/configuration.md) for detailed setup.
-
-## Common Commands
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Stop all services
-docker-compose down
-
-# Rebuild and start
-docker-compose up --build -d
-
-# View logs for specific service
-docker-compose logs -f order
-
-# Restart a service
-docker-compose restart agent-logs
-
-# Complete cleanup (removes all data)
-docker-compose down -v
-```
-
-## Documentation
+## 📚 Documentation
 
 📚 **Detailed documentation available in the [`docs/`](docs/) directory:**
 
 - **[Architecture](docs/architecture.md)** - System architecture, components, and data flow
 - **[Agents](docs/agents.md)** - AI agentic network architecture and usage
-- **[Development](docs/development.md)** - Local development guide and best practices
-- **[Configuration](docs/configuration.md)** - Environment variables and customization
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
-- **[Docker Security](docs/DOCKER_SECURITY.md)** - Security best practices and non-root execution
-- **[Contributing](docs/contributing.md)** - Contribution guidelines and code style
+- **[Prompts](docs/prompts.md)** - Prompt engineering and AI query patterns
+- **[Docker Security](docs/docker-security.md)** - Security best practices
+- **[Handbook](docs/handbook/)** - Quick reference guides:
+  - [Development](docs/handbook/development.md) - Local development workflow
+  - [Configuration](docs/handbook/configuration.md) - Environment setup
+  - [Troubleshooting](docs/handbook/troubleshooting.md) - Common issues
 
-## Architecture Overview
+## 🏗️ Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -140,7 +44,14 @@ docker-compose down -v
 
 See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 
-## Technology Stack
+## 🎯 Features
+
+✨ **Complete Observability Stack** - Grafana, Loki, Mimir, Tempo with OpenTelemetry auto-instrumentation
+🤖 **AI-Powered Analysis** - Intelligent agents for natural language observability queries
+🏗️ **Production-Ready** - Docker-first, Python 3.14, UV package manager, FastAPI
+🎭 **Error Simulation** - Built-in configurable error injection for testing
+
+## 🔧 Technology Stack
 
 - **Python 3.14** - Latest stable Python
 - **UV** - Fast Python package manager
@@ -151,7 +62,7 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 - **Kafka** - Message streaming
 - **PostgreSQL** - Relational database
 
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 ├── common-models/       # Shared business models (WoodType, Order, Stock)
@@ -173,29 +84,92 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 └── docker-compose.yml   # Complete stack orchestration
 ```
 
-## Local Development
+## 🎯 Access Points
 
-For local development without Docker:
+| Service             | URL                   | Description                      |
+| ------------------- | --------------------- | -------------------------------- |
+| **Observability**   |                       |                                  |
+| Grafana             | http://localhost:3000 | Main observability dashboard     |
+| **Agentic Network** |                       |                                  |
+| Agents Web UI       | http://localhost:3002 | AI-powered observability queries |
+| Orchestrator API    | http://localhost:8001 | Main agent coordinator           |
+| Logs Agent          | http://localhost:8002 | Loki log analysis                |
+| Metrics Agent       | http://localhost:8003 | Mimir metrics analysis           |
+| Traces Agent        | http://localhost:8004 | Tempo traces analysis            |
+| Translation Agent   | http://localhost:8006 | Language detection & translation |
+| **Tools**           |                       |                                  |
+| AKHQ (Kafka UI)     | http://localhost:8080 | Kafka management                 |
+| Adminer (Database)  | http://localhost:8081 | PostgreSQL administration        |
+
+**Default Grafana credentials**: `admin` / `admin`
+
+## 🤖 Using the AI Agents
+
+### Quick Example
+
+Open http://localhost:3002 and ask questions in natural language:
+
+- "Show me errors in the order service"
+- "What's the CPU usage of customer service?"
+- "Analyze slow traces in the last hour"
+- "Why is the order service failing?"
+
+### Setup MCP Authentication
+
+For agents to work, create a Grafana service account:
 
 ```bash
-# Navigate to a service
-cd order/
+# 1. Open Grafana: http://localhost:3000
+# 2. Go to Configuration → Service accounts → Create service account
+# 3. Generate token and copy it
+# 4. Add to environment:
+echo 'GRAFANA_SERVICE_ACCOUNT_TOKEN=eyJ...your-token...' >> .env
 
-# Install dependencies with UV
-uv sync
-
-# Run with OpenTelemetry instrumentation
-uv run opentelemetry-instrument \
-    --traces_exporter otlp \
-    --metrics_exporter otlp \
-    --service_name order \
-    --exporter_otlp_endpoint http://localhost:4318 \
-    python -m order.main
+# 5. Restart MCP service
+docker-compose restart grafana-mcp
 ```
 
-See [Development Guide](docs/development.md) for detailed instructions.
+See [Configuration Guide](docs/handbook/configuration.md) for detailed setup.
 
-## Contributing
+## 🔧 Common Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# Rebuild and start
+docker-compose up --build -d
+
+# View logs for specific service
+docker-compose logs -f order
+
+# Restart a service
+docker-compose restart agent-logs
+
+# Complete cleanup (removes all data)
+docker-compose down -v
+```
+
+## 🐳 Podman Compose (rebuild a service)
+
+To force the rebuild of a service without restarting the entire stack:
+
+```bash
+podman compose up -d --build --force-recreate --no-deps <service>
+```
+
+To ensure a rebuild without cache:
+
+```bash
+podman compose build --no-cache <service>
+podman compose up -d --force-recreate --no-deps <service>
+```
+
+
+## 🤝 Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](docs/contributing.md) for:
 
@@ -205,5 +179,3 @@ Contributions are welcome! Please read our [Contributing Guide](docs/contributin
 - Adding new services or agents
 
 ---
-
-Built with ❤️ using Python 3.14, OpenTelemetry, and Grafana Stack

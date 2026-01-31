@@ -1,102 +1,17 @@
 #!/usr/bin/env python3
 """
-Unit tests for the 3 core functionalities of the Orchestrator:
-1. Language detection and translation
-2. Agent routing (logs, traces, metrics)
-3. Response validation
+Unit tests for orchestrator core behaviors:
+1. Agent routing (logs, traces, metrics)
+2. Response validation
+3. End-to-end flow with translation agent mocked
 """
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-import sys
-from pathlib import Path
-
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent_orchestrator.orchestrator import Orchestrator
 
 pytestmark = pytest.mark.unit
-
-
-class TestLanguageDetectionAndTranslation:
-    """Test Functionality 1: Language detection and translation"""
-
-    @pytest.fixture
-    def orchestrator(self):
-        """Create orchestrator instance"""
-        with patch("agent_orchestrator.orchestrator.get_llm") as mock_llm:
-            mock_llm.return_value = Mock()
-            orch = Orchestrator()
-            yield orch
-
-    @pytest.mark.asyncio
-    async def test_detect_english_query(self, orchestrator):
-        """Test that English queries are detected correctly"""
-        # Mock LLM to return "ENGLISH"
-        with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(content="ENGLISH")
-
-            result = await orchestrator._detect_and_translate("Show me recent errors")
-
-            assert result["language"] == "english"
-            assert result["translated_query"] == "Show me recent errors"
-
-    @pytest.mark.asyncio
-    async def test_detect_and_translate_french_query(self, orchestrator):
-        """Test that French queries are detected and translated"""
-        # Mock LLM responses
-        with patch.object(orchestrator, "llm") as mock_llm:
-            # First call: language detection -> NOT_ENGLISH
-            # Second call: translation -> translated text
-            mock_llm.invoke.side_effect = [
-                Mock(content="NOT_ENGLISH"),
-                Mock(content="Show me recent errors"),
-            ]
-
-            result = await orchestrator._detect_and_translate(
-                "Montre-moi les erreurs récentes"
-            )
-
-            assert result["language"] == "non-english"
-            assert "error" in result["translated_query"].lower()
-
-    @pytest.mark.asyncio
-    async def test_translation_handles_empty_query(self, orchestrator):
-        """Test that empty queries are handled gracefully"""
-        result = await orchestrator._detect_and_translate("")
-
-        assert result["language"] == "unknown"
-        assert result["translated_query"] == ""
-
-    @pytest.mark.asyncio
-    async def test_translation_fallback_without_llm(self):
-        """Test translation fallback when LLM is not available"""
-        with patch("agent_orchestrator.orchestrator.get_llm") as mock_llm:
-            mock_llm.side_effect = Exception("LLM not available")
-            orch = Orchestrator()
-
-            result = await orch._detect_and_translate("Bonjour")
-
-            assert result["language"] == "unknown"
-            assert result["translated_query"] == "Bonjour"
-
-    @pytest.mark.asyncio
-    async def test_translation_handles_code_blocks(self, orchestrator):
-        """Test that translation removes code blocks from LLM response"""
-        with patch.object(orchestrator, "llm") as mock_llm:
-            # LLM returns translation wrapped in code blocks
-            mock_llm.invoke.side_effect = [
-                Mock(content="NOT_ENGLISH"),
-                Mock(content="```\nShow me recent errors\n```"),
-            ]
-
-            result = await orchestrator._detect_and_translate("Montre-moi les erreurs")
-
-            assert result["language"] == "non-english"
-            # Code blocks should be removed
-            assert not result["translated_query"].startswith("```")
-            assert "error" in result["translated_query"].lower()
 
 
 class TestAgentRouting:
@@ -295,11 +210,9 @@ class TestEndToEndFlow:
     @pytest.mark.asyncio
     async def test_french_query_full_flow(self, orchestrator):
         """Test complete flow with French query"""
-        # Mock LLM responses for translation and routing
+        # Mock LLM responses for routing and validation
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(content="NOT_ENGLISH"),  # Language detection
-                Mock(content="Show me recent errors"),  # Translation
                 Mock(
                     content='{"agents": ["logs"], "reason": "Error query"}'
                 ),  # Routing
@@ -308,15 +221,33 @@ class TestEndToEndFlow:
                 ),  # Validation
             ]
 
-            # Mock agent response
-            orchestrator.client.post.return_value = AsyncMock(
-                status_code=200,
-                json=lambda: {
+            def build_response(payload: dict):
+                response = AsyncMock()
+                response.status_code = 200
+                response.json = Mock(return_value=payload)
+                response.raise_for_status = Mock()
+                return response
+
+            translate_response = build_response(
+                {
+                    "language": "non-english",
+                    "translated_query": "Show me recent errors",
+                }
+            )
+            agent_response = build_response(
+                {
                     "analysis": "Found 3 errors in customer service",
                     "recommendations": ["Check database connection"],
                     "data": {"error_count": 3},
-                },
+                }
             )
+
+            async def mock_post(url, **kwargs):
+                if url.endswith("/translate"):
+                    return translate_response
+                return agent_response
+
+            orchestrator.client.post = mock_post
 
             result = await orchestrator.analyze("Montre-moi les erreurs récentes")
 
@@ -338,7 +269,6 @@ class TestEndToEndFlow:
         """Test complete flow with English query"""
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(content="ENGLISH"),  # Language detection
                 Mock(
                     content='{"agents": ["metrics"], "reason": "CPU query"}'
                 ),  # Routing
@@ -347,15 +277,33 @@ class TestEndToEndFlow:
                 ),  # Validation
             ]
 
-            # Mock agent response
-            orchestrator.client.post.return_value = AsyncMock(
-                status_code=200,
-                json=lambda: {
+            def build_response(payload: dict):
+                response = AsyncMock()
+                response.status_code = 200
+                response.json = Mock(return_value=payload)
+                response.raise_for_status = Mock()
+                return response
+
+            translate_response = build_response(
+                {
+                    "language": "english",
+                    "translated_query": "What is the CPU usage?",
+                }
+            )
+            agent_response = build_response(
+                {
                     "analysis": "CPU usage is at 75%",
                     "recommendations": ["Consider scaling"],
                     "data": {"cpu_usage": 75},
-                },
+                }
             )
+
+            async def mock_post(url, **kwargs):
+                if url.endswith("/translate"):
+                    return translate_response
+                return agent_response
+
+            orchestrator.client.post = mock_post
 
             result = await orchestrator.analyze("What is the CPU usage?")
 
@@ -374,7 +322,6 @@ class TestEndToEndFlow:
         """Test flow with multiple agents"""
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(content="ENGLISH"),  # Language detection
                 Mock(
                     content='{"agents": ["logs", "metrics"], "reason": "Complex"}'
                 ),  # Routing
@@ -383,23 +330,36 @@ class TestEndToEndFlow:
                 ),  # Validation
             ]
 
-            # Mock multiple agent responses
+            def build_response(payload: dict):
+                response = AsyncMock()
+                response.status_code = 200
+                response.json = Mock(return_value=payload)
+                response.raise_for_status = Mock()
+                return response
+
+            translate_response = build_response(
+                {
+                    "language": "english",
+                    "translated_query": "Show errors and performance",
+                }
+            )
+
             async def mock_post(url, **kwargs):
+                if url.endswith("/translate"):
+                    return translate_response
                 if "logs" in url:
-                    return AsyncMock(
-                        status_code=200,
-                        json=lambda: {
+                    return build_response(
+                        {
                             "analysis": "Found errors",
                             "recommendations": ["Fix errors"],
-                        },
+                        }
                     )
-                elif "metrics" in url:
-                    return AsyncMock(
-                        status_code=200,
-                        json=lambda: {
+                if "metrics" in url:
+                    return build_response(
+                        {
                             "analysis": "CPU high",
                             "recommendations": ["Scale up"],
-                        },
+                        }
                     )
 
             orchestrator.client.post = mock_post
@@ -414,7 +374,7 @@ class TestEndToEndFlow:
 def main():
     """Run all tests"""
     print("=" * 80)
-    print("TESTS UNITAIRES - ORCHESTRATEUR SIMPLIFIÉ")
+    print("UNIT TESTS - SIMPLIFIED ORCHESTRATOR")
     print("=" * 80)
     print()
 

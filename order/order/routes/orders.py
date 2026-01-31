@@ -84,7 +84,7 @@ def create_order_route():
     data = request.json
     if not data:
         return jsonify({"error": "Missing request body"}), 400
-    
+
     db = SessionLocal()
     try:
         order_data = schemas.OrderCreate(**data)
@@ -143,7 +143,7 @@ def read_orders_route():
         )
     skip = int(request.args.get("skip", 0))
     limit = int(request.args.get("limit", 10))
-    
+
     db = SessionLocal()
     try:
         orders = get_orders(db=db, skip=skip, limit=limit)
@@ -205,7 +205,7 @@ def read_orders_by_status_route(status):
         )
     skip = int(request.args.get("skip", 0))
     limit = int(request.args.get("limit", 10))
-    
+
     db = SessionLocal()
     try:
         orders = get_orders_by_status(
@@ -257,7 +257,7 @@ def read_order_route(order_id):
             jsonify({"error": "Simulated API error during order read"}),
             502,
         )
-    
+
     db = SessionLocal()
     try:
         db_order = get_order(db=db, order_id=order_id)
@@ -336,7 +336,7 @@ def update_order_status_route(order_id):
         updated_order = update_order_status(
             db, order_id=order_id, order_status=order_status
         )
-        
+
         if updated_order is None:
             return jsonify({"error": "Order not found"}), 404
 

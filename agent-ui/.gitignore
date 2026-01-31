@@ -1,6 +1,52 @@
-assets/external/
+# Python
+__pycache__/
 *.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Test and coverage
+.htmlcov/
+.coverage
+*.cover
+*.py,cover
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# FastAPI/UVicorn
+uvicorn.pid
+
+# Static files (if any)
+static/
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.DS_Store
+.dockerignore
+
+# Reflex specific
+assets/external/
 .web
 .states
-*.db
-__pycache__/

@@ -1,14 +1,14 @@
-# Agent Traces (Tempo Specialist)
+# Agent Traces
 
-The **Traces Agent** is specialized in analyzing distributed traces from **Tempo** via the Grafana MCP server. It identifies slow spans, analyzes service dependencies, and provides insights about request flows and bottlenecks.
+Tempo specialist agent that analyzes distributed traces via the Grafana MCP server.
 
-## 🛤️ Role
+## 📊 Features
 
-- **Distributed Tracing**: Analyze request flows across microservices
-- **Bottleneck Detection**: Identify slow spans and performance issues
-- **Service Dependency Mapping**: Understand service call patterns
-- **Error Propagation**: Track how errors cascade through services
-- **Latency Analysis**: Deep-dive into request timing
+- Distributed tracing and request flow analysis
+- Bottleneck detection and performance optimization
+- Service dependency mapping and visualization
+- Error propagation tracking across services
+- Latency analysis and timing breakdowns
 
 ## 🔍 Capabilities
 
@@ -127,6 +127,11 @@ uv sync
 uv run uvicorn agent_traces.main:app --reload --host 0.0.0.0 --port 8004
 ```
 
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)
+
 ## 📊 TraceQL Queries
 
 The agent generates TraceQL queries for Tempo:
@@ -210,3 +215,21 @@ Identifies bottlenecks by:
 - **Error Sources**: Where errors originate
 - **Dependency Chain**: Complete service call graph
 - **Optimization Targets**: Services/operations to optimize first
+
+## 🐳 Podman Compose
+
+### Redeploy Command
+
+Use the generic `redeploy` command from the root Makefile to rebuild any service:
+
+```bash
+# Redeploy any service (agent-traces, agent-logs, etc.)
+make redeploy agent-traces
+```
+
+This command will:
+1. Stop the specified service
+2. Rebuild with `--no-cache` to ensure fresh code
+3. Restart the service
+
+**Note:** If no service is specified, the command will show an error with usage instructions.

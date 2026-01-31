@@ -2,11 +2,9 @@ import random
 import json
 import logging
 import os
-import sys
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
-
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -16,11 +14,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
-
-# Add the 'common' module path to PYTHONPATH
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "../../common"))
-)
 
 # Initialize the Kafka consumer
 consumer = Consumer(
