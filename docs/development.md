@@ -104,7 +104,7 @@ cd agent-logs/
 uv run uvicorn agent_logs.main:app --reload
 ```
 
-**Note**: In Docker, shared modules are installed automatically during build via `uv pip install -e`.
+**Note:** In Docker, shared modules are installed automatically during build via `uv pip install -e`.
 
 ## Adding Dependencies
 
@@ -123,7 +123,7 @@ Then run:
 uv sync  # Install new dependencies
 ```
 
-**Important**: 
+**Important:**
 - Business services should NOT add `common-ai` dependencies (httpx, langchain)
 - AI agents should NOT need `common-models` (it's already in `common-ai` if needed)
 - Keep dependencies minimal and separated by concern
@@ -149,56 +149,78 @@ uv run mypy .
 
 🤖 Ollama lets you run and manage AI models locally with first-class support for single-process runtimes and a small REST API. It's compatible with Podman and Docker and is recommended for local development in this project.
 
-For installation and setup instructions, refer to the Ollama docs: https://docs.ollama.com/quickstart and the API reference at https://docs.ollama.com/api
+For installation and setup instructions, refer to:
+- [Ollama Quickstart](https://docs.ollama.com/quickstart)
+- [Ollama API reference](https://docs.ollama.com/api)
 
 ## GPU Support with NVIDIA Container Toolkit
 
-For AI/LLM features acceleration, you may want GPU support in Docker. This requires the NVIDIA Container Toolkit.
+For AI/LLM features acceleration, you can enable GPU support. This requires the NVIDIA Container Toolkit.
 
-### Prerequisites 📋
+### Prerequisites
 
-First, check if your GPU is detected:
+Check if your GPU is detected:
 
 ```bash
 nvidia-smi
 ```
 
-You should see your GPU information. If this command fails, install NVIDIA drivers first.
+You should see GPU information. If the command fails, install NVIDIA drivers first.
 
-### Installing NVIDIA Container Toolkit
+### Installation & Setup
 
-For Fedora/RHEL/CentOS:
+**Step 1: Install NVIDIA Container Toolkit** (Fedora/RHEL/CentOS)
 
 ```bash
-# Configure the production repository
+# Configure production repository
 curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
   sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
 
-# Install the toolkit
+# Install toolkit
 sudo dnf install -y nvidia-container-toolkit
 ```
 
-### Configuring Docker
+**Step 2: Configure Container Runtime**
 
-After installation, configure Docker to use the NVIDIA runtime:
-
+For Docker:
 ```bash
-# Configure the container runtime
 sudo nvidia-ctk runtime configure --runtime=docker
-
-# Restart Docker daemon
 sudo systemctl restart docker
 ```
 
-### Testing GPU Support
-
-Test that Docker can access your GPU:
-
+For Podman with SELinux (only if using SELinux):
 ```bash
-# Test with a simple CUDA container
-docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu20.04 nvidia-smi
+# Enable container access to GPU devices
+sudo setsebool -P container_use_devices=true
 ```
 
-If successful, you should see your GPU information displayed within the container.
+### Testing GPU Access
 
-For more details, see the [official NVIDIA Container Toolkit documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+Verify GPU access works:
+
+```bash
+# Test GPU access
+docker run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu20.04 nvidia-smi
+# or
+podman run --rm --gpus all nvidia/cuda:11.0.3-base-ubuntu20.04 nvidia-smi
+```
+
+### Running Services with GPU
+
+Start services with GPU support:
+
+```bash
+# Docker or Podman (both work the same after setup)
+docker compose up -d
+# or
+podman compose up -d
+```
+
+Verify Ollama is using the GPU:
+```bash
+podman logs ollama | grep -i "inference compute"
+```
+
+You should see `id=cuda` (GPU enabled) instead of `id=cpu`.
+
+For more details, see the [NVIDIA Container Toolkit documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).

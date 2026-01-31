@@ -5,9 +5,24 @@ applyTo: "**/*.py"
 
 # LangChain Python Instructions
 
-These instructions guide GitHub Copilot in generating code and documentation for LangChain applications in Python. Focus on LangChain-specific patterns, APIs, and best practices.
+## ⚠️ CRITICAL: Always Use UV for Python Operations
+
+**IMPORTANT:** GitHub Copilot MUST use `uv` for ALL Python-related operations. Never use `python` or `pip` directly.
+
+### UV Command Pattern
+```bash
+uv run python script.py
+uv run pytest
+uv run mypy src/
+```
+
+**Never use these directly:**
+- ❌ `python script.py` → ✅ `uv run python script.py`
+- ❌ `pip install` → ✅ `uv add`
 
 ## Runnable Interface (LangChain-specific)
+
+These instructions guide GitHub Copilot in generating code and documentation for LangChain applications in Python. Focus on LangChain-specific patterns, APIs, and best practices.
 
 LangChain's `Runnable` interface is the foundation for composing and executing chains, chat models, output parsers, retrievers, and LangGraph graphs. It provides a unified API for invoking, batching, streaming, inspecting, and composing components.
 

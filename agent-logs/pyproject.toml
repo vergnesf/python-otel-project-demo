@@ -25,4 +25,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-common-ai = { path = "../common-ai" }
+common-ai = { path = "../common-ai", editable = true }

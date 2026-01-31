@@ -25,10 +25,11 @@ dev = [
     "pyright",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-order>=1.2.0",
 ]
 
 [tool.uv.sources]
-common-ai = { path = "../common-ai" }
+common-ai = { path = "../common-ai", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

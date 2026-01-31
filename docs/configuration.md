@@ -35,10 +35,10 @@ DOCKER_BUILDKIT=1                        # Enable BuildKit
 
 ```bash
 # LLM Configuration
-## Default local endpoint uses Ollama (`http://localhost:11434/api`).
-LLM_BASE_URL=http://localhost:11434/api  # Local LLM endpoint (Ollama)
+## Default local endpoint uses Ollama with OpenAI-compatible endpoint (`http://localhost:11434/v1`).
+LLM_BASE_URL=http://localhost:11434/v1  # Local LLM endpoint (Ollama OpenAI-compatible)
 LLM_API_KEY=not-needed                   # API key (not required for local LLM)
-LLM_MODEL=ai/qwen3:0.6B-Q4_0             # Model name (project metadata may require mapping)
+LLM_MODEL=qwen3:0.6b                     # Model name (pull with `ollama pull qwen3:0.6b`)
 
 # MCP Server Authentication
 GRAFANA_SERVICE_ACCOUNT_TOKEN=<token>    # Required for MCP agents (see setup below)

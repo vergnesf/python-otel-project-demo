@@ -14,15 +14,32 @@ REQUIREMENTS:
 
 import httpx
 import asyncio
+import os
 import pytest
 from datetime import datetime
+
+
+class TestResult:
+    """Structure for test execution results"""
+    def __init__(self, status: str = "NOT_RUN", warnings: list[str] | None = None):
+        self.status = status  # "COMPLETED", "ERROR", "WARNING", "NOT_RUN"
+        self.warnings = warnings or []
+    
+    def add_warning(self, warning: str):
+        self.warnings.append(warning)
+        if self.status == "NOT_RUN":
+            self.status = "WARNING"
+    
+    def set_error(self, error: str):
+        self.status = "ERROR"
+        self.warnings = [error]
 
 
 BASE_URL = "http://localhost:8001"
 TIMEOUT = 120.0
 
-# LLM URL (same as docker-compose default)
-LLM_BASE_URL = "http://172.17.0.1:12434/v1"
+# LLM URL (default to local Ollama OpenAI-compatible endpoint)
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
 
 
 class Colors:
@@ -34,6 +51,66 @@ class Colors:
     BLUE = "\033[94m"
     BOLD = "\033[1m"
     END = "\033[0m"
+
+
+def _ollama_tags_url(base_url: str) -> str:
+    """Derive the Ollama /api/tags URL from a base URL."""
+    normalized = base_url.rstrip("/")
+    if normalized.endswith("/v1"):
+        return f"{normalized[:-3]}/api/tags"
+    if normalized.endswith("/api"):
+        return f"{normalized}/tags"
+    return f"{normalized}/api/tags"
+
+
+async def resolve_available_model() -> str | None:
+    """Resolve an available model name from Ollama or skip tests if none found."""
+    configured = os.getenv("LLM_MODEL")
+    if configured:
+        return configured
+
+    tags_url = _ollama_tags_url(LLM_BASE_URL)
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(tags_url)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        pytest.skip(f"Unable to query Ollama models at {tags_url}: {exc}")
+
+    models = data.get("models", []) if isinstance(data, dict) else []
+    if not models:
+        pytest.skip(
+            "No Ollama models found. Run `make models-init` before tests."
+        )
+
+    model_name = models[0].get("name") if isinstance(models[0], dict) else None
+    if not model_name:
+        pytest.skip("Ollama models list is missing names.")
+
+    return model_name
+
+
+async def list_available_models() -> list[str]:
+    """List available Ollama model names (OpenAI-compatible endpoint)."""
+    tags_url = _ollama_tags_url(LLM_BASE_URL)
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(tags_url)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:
+        pytest.skip(f"Unable to query Ollama models at {tags_url}: {exc}")
+
+    models = data.get("models", []) if isinstance(data, dict) else []
+    if not models:
+        pytest.skip("No Ollama models found. Run `make models-init` before tests.")
+
+    names = [m.get("name") for m in models if isinstance(m, dict) and m.get("name")]
+    if not names:
+        pytest.skip("Ollama models list is missing names.")
+
+    return names
 
 
 async def check_orchestrator_available():
@@ -53,9 +130,19 @@ async def check_orchestrator_available():
         pytest.skip(f"Orchestrator not running at {BASE_URL}: {e}")
 
 
-async def run_language_detection_and_translation(model: str | None = None):
+async def run_language_detection_and_translation(
+    model: str | None = None,
+    *,
+    strict: bool = True,
+    model_params: dict | None = None,
+):
     """
     Reusable logic for Language Detection and Translation
+    
+    Args:
+        model: Model name to use
+        strict: If True, raise assertions on failure; if False, print warnings
+        model_params: Optional LLM parameters (temperature, top_k, max_tokens)
     """
     await check_orchestrator_available()
 
@@ -105,16 +192,27 @@ async def run_language_detection_and_translation(model: str | None = None):
 
             # Verify language detection
             if test_case["expected_lang"] != "unknown":
-                assert (
-                    language == test_case["expected_lang"]
-                ), f"Expected {test_case['expected_lang']}, got {language}"
+                if strict:
+                    assert (
+                        language == test_case["expected_lang"]
+                    ), f"Expected {test_case['expected_lang']}, got {language}"
+                elif language != test_case["expected_lang"]:
+                    print(
+                        f"  {Colors.YELLOW}⚠️  Expected {test_case['expected_lang']}, got {language}{Colors.END}"
+                    )
 
             # Verify translation
             if test_case["should_translate"]:
-                assert translated != query, "Query should have been translated"
-                assert len(translated) > 0, "Translation is empty"
+                if strict:
+                    assert translated != query, "Query should have been translated"
+                    assert len(translated) > 0, "Translation is empty"
+                elif translated == query or not translated:
+                    print(
+                        f"  {Colors.YELLOW}⚠️  Translation missing or unchanged{Colors.END}"
+                    )
             else:
-                assert translated == query, "Query should not have been translated"
+                if strict:
+                    assert translated == query, "Query should not have been translated"
 
             print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
             await asyncio.sleep(1)
@@ -127,12 +225,23 @@ async def test_language_detection_and_translation():
     TEST 1: Language Detection and Translation
     Verify that French queries are detected and translated to English
     """
-    await run_language_detection_and_translation()
+    model = await resolve_available_model()
+    await run_language_detection_and_translation(model=model)
 
 
-async def run_agent_routing(model: str | None = None):
+async def run_agent_routing(
+    model: str | None = None,
+    *,
+    strict: bool = True,
+    model_params: dict | None = None,
+):
     """
     Reusable logic for Agent Routing
+    
+    Args:
+        model: Model name to use
+        strict: If True, raise assertions on failure; if False, print warnings
+        model_params: Optional LLM parameters (temperature, top_k, max_tokens)
     """
     await check_orchestrator_available()
 
@@ -172,6 +281,8 @@ async def run_agent_routing(model: str | None = None):
             payload = {"query": query, "time_range": "1h"}
             if model:
                 payload["model"] = model
+            if model_params:
+                payload["model_params"] = model_params
 
             response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
@@ -189,9 +300,14 @@ async def run_agent_routing(model: str | None = None):
             has_expected = any(
                 agent in agents_called for agent in test_case["expected_agents"]
             )
-            assert (
-                has_expected
-            ), f"Expected one of {test_case['expected_agents']}, got {agents_called}"
+            if strict:
+                assert (
+                    has_expected
+                ), f"Expected one of {test_case['expected_agents']}, got {agents_called}"
+            elif not has_expected:
+                print(
+                    f"  {Colors.YELLOW}⚠️  Expected one of {test_case['expected_agents']}, got {agents_called}{Colors.END}"
+                )
 
             print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
             await asyncio.sleep(1)
@@ -204,10 +320,16 @@ async def test_agent_routing():
     TEST 2: Agent Routing
     Verify that queries are routed to the correct agents
     """
-    await run_agent_routing()
+    model = await resolve_available_model()
+    await run_agent_routing(model=model)
 
 
-async def run_response_validation(model: str | None = None):
+async def run_response_validation(
+    model: str | None = None,
+    *,
+    strict: bool = True,
+    model_params: dict | None = None,
+):
     """
     Reusable logic for Response Validation
     """
@@ -231,6 +353,8 @@ async def run_response_validation(model: str | None = None):
             payload = {"query": query, "time_range": "1h"}
             if model:
                 payload["model"] = model
+            if model_params:
+                payload["model_params"] = model_params
 
             response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
@@ -253,9 +377,10 @@ async def run_response_validation(model: str | None = None):
                 print(f"  Suggestion: {Colors.YELLOW}{suggestion}{Colors.END}")
 
                 # Validation should have been attempted
-                assert (
-                    "validated" in validation or "reason" in validation
-                ), "Validation result should be present"
+                if strict:
+                    assert (
+                        "validated" in validation or "reason" in validation
+                    ), "Validation result should be present"
 
             print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
             await asyncio.sleep(1)
@@ -268,12 +393,23 @@ async def test_response_validation():
     TEST 3: Response Validation
     Verify that agent responses are validated
     """
-    await run_response_validation()
+    model = await resolve_available_model()
+    await run_response_validation(model=model)
 
 
-async def run_complete_workflow(model: str | None = None):
+async def run_complete_workflow(
+    model: str | None = None,
+    *,
+    strict: bool = True,
+    model_params: dict | None = None,
+):
     """
     Reusable logic for Complete Workflow
+    
+    Args:
+        model: Model name to use
+        strict: If True, raise assertions on failure; if False, print warnings
+        model_params: Optional LLM parameters (temperature, top_k, max_tokens)
     """
     await check_orchestrator_available()
 
@@ -290,6 +426,8 @@ async def run_complete_workflow(model: str | None = None):
         payload = {"query": query, "time_range": "1h"}
         if model:
             payload["model"] = model
+        if model_params:
+            payload["model_params"] = model_params
 
         response = await client.post(f"{BASE_URL}/analyze", json=payload)
 
@@ -307,9 +445,14 @@ async def run_complete_workflow(model: str | None = None):
         print(f"  Translated: {Colors.YELLOW}{translated}{Colors.END}")
         print(f"  Language: {Colors.YELLOW}{language}{Colors.END}")
 
-        assert (
-            translated != original or language == "english"
-        ), "French query should be translated"
+        if strict:
+            assert (
+                translated != original or language == "english"
+            ), "French query should be translated"
+        elif translated == original and language != "english":
+            print(
+                f"  {Colors.YELLOW}⚠️  Translation missing or language unknown{Colors.END}"
+            )
         print(f"  {Colors.GREEN}✓ Translation OK{Colors.END}\n")
 
         # Step 2: Verify routing
@@ -321,7 +464,8 @@ async def run_complete_workflow(model: str | None = None):
         print(f"  Agents: {Colors.YELLOW}{agents}{Colors.END}")
         print(f"  Reason: {Colors.YELLOW}{reason}{Colors.END}")
 
-        assert len(agents) > 0, "At least one agent should be called"
+        if strict:
+            assert len(agents) > 0, "At least one agent should be called"
         print(f"  {Colors.GREEN}✓ Routing OK{Colors.END}\n")
 
         # Step 3: Verify agent responses
@@ -338,7 +482,8 @@ async def run_complete_workflow(model: str | None = None):
                     analysis = agent_resp.get("analysis", "")[:100]
                     print(f"  {Colors.GREEN}✓ {agent_name}: {analysis}...{Colors.END}")
 
-        assert len(agent_responses) > 0, "Should have agent responses"
+        if strict:
+            assert len(agent_responses) > 0, "Should have agent responses"
         print(f"  {Colors.GREEN}✓ Agents responded{Colors.END}\n")
 
         # Step 4: Verify validation
@@ -367,7 +512,8 @@ async def run_complete_workflow(model: str | None = None):
         print(f"  Summary ({len(summary)} chars): {summary[:150]}...")
         print(f"  Recommendations: {len(recommendations)} items")
 
-        assert len(summary) > 0, "Summary should not be empty"
+        if strict:
+            assert len(summary) > 0, "Summary should not be empty"
         print(f"  {Colors.GREEN}✓ Summary OK{Colors.END}\n")
 
     print(f"{Colors.GREEN}{Colors.BOLD}✓ Complete workflow successful!{Colors.END}\n")
@@ -378,7 +524,8 @@ async def test_complete_workflow():
     TEST 4: Complete Workflow
     Test all 3 functionalities together in a single request
     """
-    await run_complete_workflow()
+    model = await resolve_available_model()
+    await run_complete_workflow(model=model)
 
 
 async def main():

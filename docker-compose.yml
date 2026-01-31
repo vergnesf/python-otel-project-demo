@@ -8,8 +8,6 @@ x-python-image: &python-image python:3.14-slim
 
 x-token-grafana-service-account: &token-grafana-service-account XXXX
 
-x-ia-model: &ia-model ai/mistral:7B-Q4_0
-
 x-common-apps-otel-env: &common-apps-otel-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
@@ -27,10 +25,9 @@ x-common-llm-otel-env: &common-llm-otel-env
   OTEL_LOGS_EXPORTER: otlp
   OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
   OTEL_PYTHON_LOG_CORRELATION: "true"
-  # Default to Ollama local API; can be overridden via .env
-  LLM_BASE_URL: ${LLM_BASE_URL:-http://localhost:11434/api}
+  # Default to Ollama via service name with OpenAI-compatible endpoint (works in containers); use http://localhost:11434/v1 for host access
+  LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
   LLM_API_KEY: ${LLM_API_KEY:-not-needed}
-  LLM_MODEL: *ia-model
   LLM_EPHEMERAL_PER_CALL: true
   LOG_LEVEL: INFO
 
@@ -662,7 +659,9 @@ services:
   # Ollama local model runtime
   # ---------------------
   # Provides local model serving via Ollama REST API (http://localhost:11434/api)
+  # OpenAI-compatible endpoint (if supported): http://localhost:11434/v1
   # Works with Docker and Podman; models can be pulled with `ollama pull <model>`
+  # NOTE: Use `sudo podman compose up -d` if running Podman without GPU access
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -673,16 +672,16 @@ services:
       <<: *inline-env
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
-      LD_LIBRARY_PATH: "/usr/local/nvidia/lib:/usr/local/nvidia/lib64"
     volumes:
       - ollama-data:/root/.ollama:Z
       - ./models:/models:Z
-    # Prefer the CDI/device request for NVIDIA: equivalent to `--device nvidia.com/gpu=all`
-    devices:
-      - "nvidia.com/gpu=all"
-    volumes:
-      - ollama-data:/root/.ollama:Z
-      - ./models:/models:Z
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/version || exit 1"]
       interval: 10s

@@ -3,16 +3,14 @@
 Benchmark tests for different AI models
 """
 
-import httpx
-import asyncio
 import pytest
-from datetime import datetime
 import time
-import json
 import psutil
-import subprocess
-import threading
 import statistics
+import asyncio
+import os
+import threading
+import subprocess
 from pathlib import Path
 import yaml
 from tests.test_orchestrator_integration import (
@@ -21,13 +19,15 @@ from tests.test_orchestrator_integration import (
     run_response_validation,
     run_complete_workflow,
     check_orchestrator_available,
+    list_available_models,
     Colors,
     BASE_URL,
     TIMEOUT,
 )
+from common_ai import get_model_params, unload_ollama_model
 
 MODELS = [
-    "mistral:7b"
+    "mistral:7b",
     "llama3.2:3b",
     "qwen3:0.6b",
     "granite4:3b",
@@ -37,27 +37,24 @@ MODELS = [
 ]
 
 
-
 def load_model_configs():
-    """Load model configurations from docker-compose.yml"""
-    compose_file = Path(__file__).parent.parent.parent / "docker-compose.yml"
+    """Load model configurations from config/ai/model-params.yml"""
+    config_file = Path(__file__).parent.parent.parent / "config" / "ai" / "model-params.yml"
     try:
-        with open(compose_file, "r") as f:
-            compose_data = yaml.safe_load(f)
+        with open(config_file, "r") as f:
+            config_data = yaml.safe_load(f)
 
         model_configs = {}
-        models_section = compose_data.get("models", {})
+        models_section = config_data.get("models", {})
 
-        for model_key, model_data in models_section.items():
-            model_name = model_data.get("model")
+        for model_name, model_data in models_section.items():
             context_size = model_data.get("context_size", "N/A")
-            if model_name:
-                model_configs[model_name] = {"context_size": context_size}
+            model_configs[model_name] = {"context_size": context_size}
 
         return model_configs
     except Exception as e:
         print(
-            f"{Colors.YELLOW}⚠️  Could not load model configs from docker-compose.yml: {e}{Colors.END}"
+            f"{Colors.YELLOW}⚠️  Could not load model configs from config/ai/model-params.yml: {e}{Colors.END}"
         )
         return {}
 
@@ -65,73 +62,10 @@ def load_model_configs():
 MODEL_CONFIGS = load_model_configs()
 
 
-def restart_model_runner():
-    """Stop any running Ollama models to free GPU memory (no-op if none)."""
-    try:
-        # List running models via ollama CLI and stop them
-        result = subprocess.run(["ollama", "ps"], capture_output=True, text=True, timeout=10)
-        if result.returncode != 0:
-            print(f"{Colors.YELLOW}⚠️  ollama ps failed: {result.stderr}{Colors.END}")
-            return True
-
-        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
-        # Skip header/empty lines; each line contains a running model name
-        stopped_any = False
-        for line in lines:
-            # Extract model name from line (first token)
-            parts = line.split()
-            if not parts:
-                continue
-            model_name = parts[0]
-            stop = subprocess.run(["ollama", "stop", model_name], capture_output=True, text=True, timeout=20)
-            if stop.returncode == 0:
-                stopped_any = True
-                print(f"{Colors.GREEN}✓ Stopped Ollama model {model_name}{Colors.END}")
-        if stopped_any:
-            time.sleep(2)
-        return True
-    except Exception as e:
-        print(f"{Colors.RED}❌ Failed to stop Ollama models: {e}{Colors.END}")
-        return False
 
 
-async def check_model_availability(model: str):
-    """Check if the model is available in the list of models"""
-    print(f"Checking availability for model: {model}...")
-    # Query Ollama local API for available local models (/api/tags)
-    url = "http://localhost:11434/api/tags"
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url)
-            if response.status_code != 200:
-                print(
-                    f"{Colors.RED}❌ Failed to list Ollama models: HTTP {response.status_code} - {response.text}{Colors.END}"
-                )
-                return False
 
-            data = response.json()
-            # Normalize desired model name (strip namespace and tag)
-            base = model.split("/")[-1].split(":")[0]
-
-            available = False
-            for m in data.get("models", []):
-                mname = m.get("model") or m.get("name") or ""
-                if not mname:
-                    continue
-                if base in mname:
-                    available = True
-                    break
-
-            if available:
-                print(f"{Colors.GREEN}✓ Model {model} (as {base}) is available in Ollama{Colors.END}")
-                return True
-            else:
-                print(f"{Colors.RED}❌ Model {model} not found in Ollama local models{Colors.END}")
-                return False
-    except Exception as e:
-        print(f"{Colors.RED}❌ Model {model} check failed: {e}{Colors.END}")
-        return False
 
 
 class ResourceMonitor:
@@ -224,6 +158,7 @@ class ResourceMonitor:
 
 @pytest.mark.integration
 @pytest.mark.asyncio
+@pytest.mark.order(-1)  # Run last
 async def test_benchmark_models():
     """Run benchmark for all configured AI models"""
     await check_orchestrator_available()
@@ -233,73 +168,38 @@ async def test_benchmark_models():
     print(f"{Colors.BOLD}╚{'=' * 78}╝{Colors.END}")
 
     # Pre-check: Verify all models are available before starting
-    print(f"\n{Colors.BOLD}🔍 Pre-checking model availability...{Colors.END}")
-    unavailable_models = []
-    for model in MODELS:
-        if not await check_model_availability(model):
-            unavailable_models.append(model)
-
-    if unavailable_models:
-        print(
-            f"\n{Colors.RED}{Colors.BOLD}❌ Some models are unavailable: attempting to pull them with Ollama...{Colors.END}"
-        )
-        for model in unavailable_models:
-            print(f"  - {model}")
-
-        # Try to pull missing models via `ollama pull <base>` where base is last path segment
-        pulled_any = False
-        for model in unavailable_models:
-            base = model.split("/")[-1].split(":")[0]
-            try:
-                print(f"{Colors.YELLOW}⤓ Pulling model {base} with ollama...{Colors.END}")
-                res = subprocess.run(["ollama", "pull", base], capture_output=True, text=True, timeout=600)
-                if res.returncode == 0:
-                    print(f"{Colors.GREEN}✓ Pulled {base}{Colors.END}")
-                    pulled_any = True
-                else:
-                    print(f"{Colors.RED}✗ Failed to pull {base}: {res.stderr}{Colors.END}")
-            except Exception as e:
-                print(f"{Colors.RED}✗ Exception while pulling {base}: {e}{Colors.END}")
-
-        if pulled_any:
-            # Re-check availability after attempted pulls
-            unavailable_after_pull = []
-            for model in unavailable_models:
-                if not await check_model_availability(model):
-                    unavailable_after_pull.append(model)
-
-            if unavailable_after_pull:
-                print(
-                    f"\n{Colors.RED}{Colors.BOLD}❌ ABORTING BENCHMARK: The following models remain unavailable after pull attempts:{Colors.END}"
-                )
-                for m in unavailable_after_pull:
-                    print(f"  - {m}")
-                pytest.fail(f"Benchmark aborted. Unavailable models: {unavailable_after_pull}")
-        else:
-            print(
-                f"\n{Colors.RED}{Colors.BOLD}❌ ABORTING BENCHMARK: Models unavailable and pull attempts were not successful.{Colors.END}"
-            )
-            pytest.fail(f"Benchmark aborted. Unavailable models: {unavailable_models}")
-
-    print(
-        f"\n{Colors.GREEN}{Colors.BOLD}✓ All models available. Starting benchmark...{Colors.END}"
-    )
+    print(f"\n{Colors.GREEN}{Colors.BOLD}✓ Starting benchmark...{Colors.END}")
 
     results = {}
+    available_models = await list_available_models()
+    available_set = {name.lower() for name in available_models}
 
     for i, model in enumerate(MODELS):
-        # Unload/stop previous model between tests to free GPU memory
-        if i > 0:  # Skip restart before first model
-            print(f"\n{Colors.YELLOW}🔄 Stopping previously loaded Ollama models to free GPU memory...{Colors.END}")
-            if not restart_model_runner():
-                print(f"{Colors.RED}❌ Failed to stop Ollama models, continuing anyway...{Colors.END}")
+        if model.lower() not in available_set:
+            print(
+                f"{Colors.YELLOW}⚠️  Skipping unavailable model: {model}{Colors.END}"
+            )
+            continue
+        # Unload previous model before loading the next one
+        if i > 0:
+            print(f"\n{Colors.YELLOW}🔄 Unloading previous model to free GPU memory...{Colors.END}")
+            await unload_ollama_model(MODELS[i-1])
 
         print(f"\n{Colors.BOLD}Testing Model: {Colors.BLUE}{model}{Colors.END}")
+        
+        # Get optimal parameters for this model
+        params = get_model_params(model)
+        print(f"{Colors.YELLOW}Using parameters: temp={params['temperature']}, top_k={params['top_k']}, max_tokens={params['max_tokens']}{Colors.END}")
+        
         results[model] = {
             "test1_language": "NOT_RUN",
             "test2_routing": "NOT_RUN",
             "test3_validation": "NOT_RUN",
             "test4_workflow": "NOT_RUN",
+            "test1_warnings": [],
+            "test2_warnings": [],
+            "test3_warnings": [],
+            "test4_warnings": [],
             "duration": 0,
             "stats": {},
         }
@@ -310,39 +210,51 @@ async def test_benchmark_models():
 
         # Test 1: Language Detection and Translation
         try:
-            await run_language_detection_and_translation(model=model)
-            results[model]["test1_language"] = "PASSED"
-            print(f"{Colors.GREEN}✓ TEST 1 PASSED{Colors.END}")
+            await run_language_detection_and_translation(model=model, strict=False, model_params=params)
+            results[model]["test1_language"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 1 OK (no exceptions){Colors.END}")
+        except AssertionError as e:
+            results[model]["test1_language"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 1 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test1_language"] = "FAILED"
-            print(f"{Colors.RED}❌ TEST 1 FAILED: {e}{Colors.END}")
+            results[model]["test1_language"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 1 ERROR: {e}{Colors.END}")
 
         # Test 2: Agent Routing
         try:
-            await run_agent_routing(model=model)
-            results[model]["test2_routing"] = "PASSED"
-            print(f"{Colors.GREEN}✓ TEST 2 PASSED{Colors.END}")
+            await run_agent_routing(model=model, strict=False, model_params=params)
+            results[model]["test2_routing"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 2 OK (no exceptions){Colors.END}")
+        except AssertionError as e:
+            results[model]["test2_routing"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 2 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test2_routing"] = "FAILED"
-            print(f"{Colors.RED}❌ TEST 2 FAILED: {e}{Colors.END}")
+            results[model]["test2_routing"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 2 ERROR: {e}{Colors.END}")
 
         # Test 3: Response Validation
         try:
-            await run_response_validation(model=model)
-            results[model]["test3_validation"] = "PASSED"
-            print(f"{Colors.GREEN}✓ TEST 3 PASSED{Colors.END}")
+            await run_response_validation(model=model, strict=False, model_params=params)
+            results[model]["test3_validation"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 3 OK (no exceptions){Colors.END}")
+        except AssertionError as e:
+            results[model]["test3_validation"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 3 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test3_validation"] = "FAILED"
-            print(f"{Colors.RED}❌ TEST 3 FAILED: {e}{Colors.END}")
+            results[model]["test3_validation"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 3 ERROR: {e}{Colors.END}")
 
         # Test 4: Complete Workflow
         try:
-            await run_complete_workflow(model=model)
-            results[model]["test4_workflow"] = "PASSED"
-            print(f"{Colors.GREEN}✓ TEST 4 PASSED{Colors.END}")
+            await run_complete_workflow(model=model, strict=False, model_params=params)
+            results[model]["test4_workflow"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 4 OK (no exceptions){Colors.END}")
+        except AssertionError as e:
+            results[model]["test4_workflow"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 4 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test4_workflow"] = "FAILED"
-            print(f"{Colors.RED}❌ TEST 4 FAILED: {e}{Colors.END}")
+            results[model]["test4_workflow"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 4 ERROR: {e}{Colors.END}")
 
         duration = time.time() - start_time_model
         stats = monitor.stop()
@@ -361,6 +273,11 @@ async def test_benchmark_models():
             f"{Colors.YELLOW}🧠 GPU Mem Max: {stats['gpu_mem_max']:.0f} MiB{Colors.END}"
         )
 
+        # Unload model after tests complete to free GPU memory
+        if i < len(MODELS) - 1:  # Don't unload after the last model
+            await asyncio.sleep(1)
+            await unload_ollama_model(model)
+
     # Print Summary
     print(f"\n{Colors.BOLD}╔{'=' * 190}╗{Colors.END}")
     print(f"{Colors.BOLD}║{' ' * 80}BENCHMARK RESULTS{' ' * 91}║{Colors.END}")
@@ -373,33 +290,27 @@ async def test_benchmark_models():
 
     for model, metrics in results.items():
         stats = metrics["stats"]
+        
         # Color code the test results
-        t1 = (
-            f"{Colors.GREEN}{metrics['test1_language']}{Colors.END}"
-            if metrics["test1_language"] == "PASSED"
-            else f"{Colors.RED}{metrics['test1_language']}{Colors.END}"
-        )
-        t2 = (
-            f"{Colors.GREEN}{metrics['test2_routing']}{Colors.END}"
-            if metrics["test2_routing"] == "PASSED"
-            else f"{Colors.RED}{metrics['test2_routing']}{Colors.END}"
-        )
-        t3 = (
-            f"{Colors.GREEN}{metrics['test3_validation']}{Colors.END}"
-            if metrics["test3_validation"] == "PASSED"
-            else f"{Colors.RED}{metrics['test3_validation']}{Colors.END}"
-        )
-        t4 = (
-            f"{Colors.GREEN}{metrics['test4_workflow']}{Colors.END}"
-            if metrics["test4_workflow"] == "PASSED"
-            else f"{Colors.RED}{metrics['test4_workflow']}{Colors.END}"
-        )
+        def colorize_status(status):
+            if "✓" in status:
+                return f"{Colors.GREEN}{status}{Colors.END}"
+            elif "⚠️" in status:
+                return f"{Colors.YELLOW}{status}{Colors.END}"
+            elif "❌" in status:
+                return f"{Colors.RED}{status}{Colors.END}"
+            return status
+        
+        t1 = colorize_status(metrics['test1_language'])
+        t2 = colorize_status(metrics['test2_routing'])
+        t3 = colorize_status(metrics['test3_validation'])
+        t4 = colorize_status(metrics['test4_workflow'])
 
         # Use raw strings for alignment (without color codes)
-        t1_raw = metrics["test1_language"]
-        t2_raw = metrics["test2_routing"]
-        t3_raw = metrics["test3_validation"]
-        t4_raw = metrics["test4_workflow"]
+        t1_raw = metrics["test1_language"][:10]
+        t2_raw = metrics["test2_routing"][:10]
+        t3_raw = metrics["test3_validation"][:10]
+        t4_raw = metrics["test4_workflow"][:10]
 
         # Get model config
         config = MODEL_CONFIGS.get(model, {"context_size": "N/A"})

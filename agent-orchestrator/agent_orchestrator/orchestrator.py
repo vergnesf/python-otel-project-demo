@@ -71,7 +71,7 @@ class Orchestrator:
         await self.client.aclose()
 
     async def analyze(
-        self, query: str, time_range: str = "1h", model: str | None = None
+        self, query: str, time_range: str = "1h", model: str | None = None, model_params: dict | None = None
     ) -> dict[str, Any]:
         """
         Main analysis flow:
@@ -84,11 +84,12 @@ class Orchestrator:
             query: User query
             time_range: Time range for analysis
             model: Optional model name to use for this request
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Analysis result with validation
         """
-        logger.info(f"Analyzing query: {query} (model: {model})")
+        logger.info(f"Analyzing query: {query} (model: {model}, params: {model_params})")
         from datetime import datetime
 
         # Step 1: Detect language and translate
@@ -146,7 +147,7 @@ class Orchestrator:
         }
 
     async def _detect_and_translate(
-        self, query: str, model: str | None = None
+        self, query: str, model: str | None = None, model_params: dict | None = None
     ) -> dict[str, Any]:
         """
         Functionality 1: Detect language and translate to English
@@ -154,10 +155,13 @@ class Orchestrator:
         Args:
             query: User query
             model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Dictionary with language and translated query
         """
+        logger.debug(f"_detect_and_translate() called with model={model}, params={model_params}, params={model_params}")
+        
         if not query:
             return {"language": "unknown", "translated_query": query}
 
@@ -168,10 +172,13 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = get_llm(model=model)
+                logger.info(f"Using specified model: {model}")
+                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
             elif self.llm_ephemeral:
-                llm_client = get_llm()
+                logger.info("Using ephemeral LLM client")
+                llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
+                logger.info("Using default LLM client")
                 llm_client = self.llm
 
             if not llm_client:
@@ -219,7 +226,7 @@ class Orchestrator:
             return {"language": "unknown", "translated_query": query}
 
     async def _route_to_agents(
-        self, query: str, model: str | None = None
+        self, query: str, model: str | None = None, model_params: dict | None = None
     ) -> dict[str, Any]:
         """
         Functionality 2: Decide which agents to call based on query
@@ -227,6 +234,7 @@ class Orchestrator:
         Args:
             query: User query (in English)
             model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Routing decision with agents to call
@@ -238,9 +246,9 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = get_llm(model=model)
+                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
             elif self.llm_ephemeral:
-                llm_client = get_llm()
+                llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
                 llm_client = self.llm
 
@@ -390,7 +398,7 @@ class Orchestrator:
             raise
 
     async def _validate_responses(
-        self, query: str, agent_responses: dict[str, Any], model: str | None = None
+        self, query: str, agent_responses: dict[str, Any], model: str | None = None, model_params: dict | None = None
     ) -> dict[str, Any]:
         """
         Functionality 3: Validate that responses properly answer the query
@@ -399,6 +407,7 @@ class Orchestrator:
             query: Original query
             agent_responses: Responses from agents
             model: Optional model override
+            model_params: Optional LLM parameters (temperature, top_k, max_tokens)
 
         Returns:
             Validation result
@@ -412,9 +421,9 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = get_llm(model=model)
+                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
             elif self.llm_ephemeral:
-                llm_client = get_llm()
+                llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
                 llm_client = self.llm
 
