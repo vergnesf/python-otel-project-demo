@@ -1,14 +1,14 @@
-# Agent Traces (Tempo Specialist)
+# Agent Traces
 
-The **Traces Agent** is specialized in analyzing distributed traces from **Tempo** via the Grafana MCP server. It identifies slow spans, analyzes service dependencies, and provides insights about request flows and bottlenecks.
+Tempo specialist agent that analyzes distributed traces via the Grafana MCP server.
 
-## 🛤️ Role
+## 📊 Features
 
-- **Distributed Tracing**: Analyze request flows across microservices
-- **Bottleneck Detection**: Identify slow spans and performance issues
-- **Service Dependency Mapping**: Understand service call patterns
-- **Error Propagation**: Track how errors cascade through services
-- **Latency Analysis**: Deep-dive into request timing
+- Distributed tracing and request flow analysis
+- Bottleneck detection and performance optimization
+- Service dependency mapping and visualization
+- Error propagation tracking across services
+- Latency analysis and timing breakdowns
 
 ## 🔍 Capabilities
 
@@ -126,6 +126,11 @@ uv sync
 # Run the traces agent
 uv run uvicorn agent_traces.main:app --reload --host 0.0.0.0 --port 8004
 ```
+
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)
 
 ## 📊 TraceQL Queries
 

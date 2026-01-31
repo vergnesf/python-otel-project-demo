@@ -1,6 +1,6 @@
 # Ordercheck Service
 
-The **Ordercheck Service** is a Kafka consumer that processes customer orders from the `orders` topic, validates them, and forwards valid orders to the Order Service API for processing.
+Kafka consumer that processes customer orders from the `orders` topic.
 
 ## 📋 Overview
 

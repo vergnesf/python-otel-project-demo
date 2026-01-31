@@ -1,6 +1,6 @@
 # Suppliercheck Service
 
-The **Suppliercheck Service** is a Kafka consumer that processes supplier stock updates from the `stocks` topic, validates them, and forwards valid updates to the Stock Service API for processing.
+Kafka consumer that processes supplier stock updates from the `stocks` topic.
 
 ## 📋 Overview
 

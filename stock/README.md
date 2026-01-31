@@ -1,13 +1,13 @@
 # Stock Service
 
-The **Stock Service** is a FastAPI-based REST API that manages wood stock inventory. It provides endpoints for creating, retrieving, updating, and decreasing stock levels, and integrates with the database for persistence.
+FastAPI-based REST API that manages wood stock inventory.
 
 ## 📋 Overview
 
-- **Type**: REST API (FastAPI)
+- **Type**: REST API (Flask)
 - **Port**: 5001
 - **Database**: PostgreSQL
-- **Dependencies**: common-models, FastAPI, SQLAlchemy
+- **Dependencies**: common-models, Flask, SQLAlchemy
 - **OpenTelemetry**: Auto-instrumented for observability
 
 ## 🚀 Running the Service
@@ -101,8 +101,8 @@ Decrease stock quantity (used by order processing)
 
 ## 📦 Dependencies
 
-- `fastapi`: Web framework
-- `uvicorn`: ASGI server
+- `flask`: Web framework
+- `flasgger`: API documentation
 - `sqlalchemy`: ORM for database
 - `psycopg2-binary`: PostgreSQL adapter
 - `common-models`: Shared business models

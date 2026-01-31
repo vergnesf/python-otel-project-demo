@@ -1,15 +1,15 @@
-# Agents UI (Reflex Chat Interface)
+# Agent UI
 
-The **Agents UI** is a modern web interface built with **Reflex** that allows users to interact with the observability agentic network through a chat interface.
+Reflex-based web interface for interacting with the observability agentic network.
 
-## 💬 Features
+## 📊 Features
 
-- **Chat Interface**: Natural language queries about observability
-- **Real-time Streaming**: Live updates as agents analyze data
-- **Rich Responses**: Formatted analysis with code blocks and links
-- **Multi-agent Visualization**: See responses from Logs, Metrics, and Traces agents
-- **Grafana Integration**: Direct links to explore data in Grafana
-- **Response History**: Chat history persisted during session
+- Chat interface for natural language queries
+- Real-time streaming of agent responses
+- Rich response formatting with code blocks
+- Multi-agent response visualization
+- Grafana integration with direct links
+- Response history and session management
 
 ## 🏗️ Architecture
 
@@ -42,6 +42,11 @@ uv run reflex export
 # Run production server
 uv run reflex run --env prod
 ```
+
+## 📦 Dependencies
+
+- `reflex`: Web framework for Python
+- `common-ai`: Shared AI utilities (agent models)
 
 ## 🐳 Docker
 

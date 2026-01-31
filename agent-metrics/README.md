@@ -1,14 +1,14 @@
-# Agent Metrics (Mimir Specialist)
+# Agent Metrics
 
-The **Metrics Agent** is specialized in analyzing performance metrics from **Mimir** via the Grafana MCP server. It detects anomalies, analyzes trends, and provides insights about system performance and resource utilization.
+Mimir specialist agent that analyzes performance metrics via the Grafana MCP server.
 
-## 📊 Role
+## 📊 Features
 
-- **Performance Analysis**: CPU, memory, request rates, latency
-- **Anomaly Detection**: Identify spikes and unusual patterns
-- **Trend Analysis**: Analyze metrics over time
-- **Resource Monitoring**: Track resource utilization
-- **SLI/SLO Tracking**: Monitor service level indicators
+- Performance analysis (CPU, memory, latency)
+- Anomaly detection and pattern recognition
+- Trend analysis over time
+- Resource utilization monitoring
+- SLI/SLO tracking and alerting
 
 ## 🔍 Capabilities
 
@@ -114,6 +114,11 @@ uv sync
 # Run the metrics agent
 uv run uvicorn agent_metrics.main:app --reload --host 0.0.0.0 --port 8003
 ```
+
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)
 
 ## 📊 PromQL Queries
 

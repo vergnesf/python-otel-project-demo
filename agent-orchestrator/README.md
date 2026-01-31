@@ -1,25 +1,14 @@
 # Agent Orchestrator
 
-The **Orchestrator Agent** is the main coordinator of the observability agentic network. It receives user queries, routes them to specialized agents (Logs, Metrics, Traces), and synthesizes their responses into a coherent analysis.
+Main coordinator of the observability agentic network.
 
-## 🎯 Core Functionalities
+## 📊 Features
 
-The orchestrator has **3 main AI-powered functionalities**, optimized for Small Language Models (SLM):
-
-### 1️⃣ Language Detection & Translation 🌐
-- Automatically detects if the query is in English
-- Translates to English if needed (supports French and other languages)
-- Uses prompts: `detect_language.md`, `translate_to_english.md`
-
-### 2️⃣ Intelligent Agent Routing 🎯
-- Determines which agent(s) to call: **logs**, **metrics**, or **traces**
-- AI-powered analysis with keyword-based fallback
-- Uses prompt: `route_agents.md`
-
-### 3️⃣ Response Validation ✅
-- Validates that agent responses properly answer the query
-- Identifies issues and provides improvement suggestions
-- Uses prompt: `validate_response.md`
+- User query processing and routing
+- Language detection and translation
+- Intelligent agent selection (logs, metrics, traces)
+- Response synthesis and validation
+- Multi-agent coordination and parallel execution
 
 ## 🏗️ Architecture
 
@@ -150,6 +139,12 @@ uv run uvicorn agent_orchestrator.main:app --reload --host 0.0.0.0 --port 8001
 # Or with environment variables
 PORT=8001 LOG_LEVEL=DEBUG uv run uvicorn agent_orchestrator.main:app --reload
 ```
+
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `langchain`: LLM framework
+- `common-ai`: Shared AI utilities (MCP client, LLM config, agent models)
 
 ### Testing the Service
 

@@ -1,6 +1,6 @@
 # Supplier Service
 
-The **Supplier Service** is a Kafka producer that simulates supplier stock updates being sent to the system. It generates random stock updates and sends them to the Kafka `stocks` topic for processing.
+Kafka producer that simulates supplier stock updates being sent to the system.
 
 ## 📋 Overview
 
@@ -49,13 +49,12 @@ OTEL_SERVICE_NAME=supplier
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-## 📊 Stock Generation
+## 📊 Features
 
 The service generates random stock updates with:
 
 - Random wood types (oak, maple, birch, elm, pine)
-- Random quantities (1-50 units)
-- Random supplier IDs
+- Random quantities (1-100 units)
 - Timestamps
 
 ## 🎯 Error Simulation

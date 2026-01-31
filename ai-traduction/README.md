@@ -1,8 +1,15 @@
-# AI Traduction Agent
+# AI Traduction
 
-Service dédié à la détection de langue et à la traduction des requêtes vers l'anglais.
+Service for language detection and query translation to English.
 
-## Endpoints
+## 📊 Features
 
-- `POST /translate` : détecte la langue et traduit si nécessaire.
-- `GET /health` : état de santé du service.
+- Language detection (French, English, etc.)
+- Automatic translation to English
+- REST API endpoints for integration
+- Health monitoring endpoint
+
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)

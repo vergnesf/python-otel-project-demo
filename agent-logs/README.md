@@ -1,14 +1,14 @@
-# Agent Logs (Loki Specialist)
+# Agent Logs
 
-The **Logs Agent** is specialized in analyzing log data from **Loki** via the Grafana MCP server. It identifies error patterns, extracts relevant log messages, and provides insights about application behavior.
+Loki specialist agent that analyzes log data via the Grafana MCP server.
 
-## 📜 Role
+## 📊 Features
 
-- **Error Pattern Detection**: Find recurring errors and exceptions
-- **Log Aggregation**: Count and categorize log messages
-- **Service Correlation**: Link logs to specific services
-- **Temporal Analysis**: Identify when errors started occurring
-- **Context Extraction**: Extract relevant error messages and stack traces
+- Error pattern detection and analysis
+- Log aggregation and categorization
+- Service correlation and trace linking
+- Temporal analysis of error trends
+- Context extraction from log messages
 
 ## 🔍 Capabilities
 
@@ -114,6 +114,11 @@ uv sync
 # Run the logs agent
 uv run uvicorn agent_logs.main:app --reload --host 0.0.0.0 --port 8002
 ```
+
+## 📦 Dependencies
+
+- `httpx`: HTTP client for API calls
+- `common-ai`: Shared AI utilities (MCP client, LLM config)
 
 ## 📊 LogQL Queries
 

@@ -1,13 +1,13 @@
 # Order Service
 
-The **Order Service** is a FastAPI-based REST API that manages customer orders. It provides endpoints for creating, retrieving, and updating orders, and integrates with the database for persistence.
+FastAPI-based REST API that manages customer orders.
 
 ## 📋 Overview
 
-- **Type**: REST API (FastAPI)
+- **Type**: REST API (Flask)
 - **Port**: 5000
 - **Database**: PostgreSQL
-- **Dependencies**: common-models, FastAPI, SQLAlchemy
+- **Dependencies**: common-models, Flask, SQLAlchemy
 - **OpenTelemetry**: Auto-instrumented for observability
 
 ## 🚀 Running the Service
@@ -108,8 +108,8 @@ Get orders with specific status
 
 ## 📦 Dependencies
 
-- `fastapi`: Web framework
-- `uvicorn`: ASGI server
+- `flask`: Web framework
+- `flasgger`: API documentation
 - `sqlalchemy`: ORM for database
 - `psycopg2-binary`: PostgreSQL adapter
 - `common-models`: Shared business models

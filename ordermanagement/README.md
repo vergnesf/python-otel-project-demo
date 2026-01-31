@@ -1,6 +1,6 @@
 # Ordermanagement Service
 
-The **Ordermanagement Service** is a background worker that periodically checks for registered orders, processes them by decreasing stock, and updates their status to reflect the processing state.
+Background worker that processes registered orders by decreasing stock.
 
 ## 📋 Overview
 

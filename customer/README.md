@@ -1,6 +1,6 @@
 # Customer Service
 
-The **Customer Service** is a Kafka producer that simulates customer orders being placed in the system. It generates random orders and sends them to the Kafka `orders` topic for processing.
+Kafka producer that simulates customer orders being placed in the system.
 
 ## 📋 Overview
 
@@ -49,13 +49,12 @@ OTEL_SERVICE_NAME=customer
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-## 📊 Order Generation
+## 📊 Features
 
 The service generates random orders with:
 
 - Random wood types (oak, maple, birch, elm, pine)
-- Random quantities (1-10 units)
-- Random customer IDs
+- Random quantities (1-100 units)
 - Timestamps
 
 ## 🎯 Error Simulation
