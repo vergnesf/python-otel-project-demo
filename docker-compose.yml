@@ -58,8 +58,8 @@ x-python-build: &python-build
     IMG_PYTHON: *python-image
     BUILD_TARGET: ${BUILD_TARGET:-dev}
 
-# Inline env to ensure containers get .env variables at runtime
-# Add variables commonly set in a .env file here so watches and rebuilds
+# Inline env to ensure containers get environment variables at runtime
+# Add variables commonly set in environment here so watches and rebuilds
 # have consistent values inside containers.
 x-inline-env: &inline-env
   DOCKER_REGISTRY: *docker-registry
@@ -125,7 +125,6 @@ x-develop-ignore: &develop-ignore # Python cache and compiled files
   - .travis.yml
 
   # Environment and config files (if not needed at runtime)
-  - .env.example
   - .editorconfig
   - pyrightconfig.json
   - pytest.ini
@@ -551,6 +550,7 @@ services:
       AGENT_LOGS_URL: http://agent-logs:8002
       AGENT_METRICS_URL: http://agent-metrics:8002
       AGENT_TRACES_URL: http://agent-traces:8002
+      AGENT_TRANSLATION_URL: http://ai-traduction:8002
     develop:
       watch:
         - action: rebuild
@@ -636,6 +636,29 @@ services:
           ignore: *develop-ignore
     depends_on:
       - grafana-mcp
+      - otel-collector
+
+  ai-traduction:
+    build:
+      context: .
+      dockerfile: ai-traduction/Dockerfile
+      <<: *python-build
+    container_name: ai-traduction
+    <<: *app-settings
+    ports:
+      - "8006:8002"
+    environment:
+      <<: [*inline-env, *common-llm-otel-env]
+      OTEL_SERVICE_NAME: ai-traduction
+    develop:
+      watch:
+        - action: rebuild
+          path: ./ai-traduction
+          ignore: *develop-ignore
+        - action: rebuild
+          path: ./common-ai
+          ignore: *develop-ignore
+    depends_on:
       - otel-collector
 
   agent-ui:

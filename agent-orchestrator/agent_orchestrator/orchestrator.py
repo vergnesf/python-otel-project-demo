@@ -48,6 +48,9 @@ class Orchestrator:
         self.traces_agent_url = os.getenv(
             "AGENT_TRACES_URL", "http://agent-traces:8004"
         )
+        self.translation_agent_url = os.getenv(
+            "AGENT_TRANSLATION_URL", "http://ai-traduction:8002"
+        )
 
         self.client = httpx.AsyncClient(timeout=60.0)
         self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "60"))
@@ -93,7 +96,9 @@ class Orchestrator:
         from datetime import datetime
 
         # Step 1: Detect language and translate
-        language_info = await self._detect_and_translate(query, model=model)
+        language_info = await self._detect_and_translate(
+            query, model=model, model_params=model_params
+        )
         translated_query = language_info["translated_query"]
         logger.info(
             f"Language: {language_info['language']}, Translated: {translated_query}"
@@ -160,70 +165,40 @@ class Orchestrator:
         Returns:
             Dictionary with language and translated query
         """
-        logger.debug(f"_detect_and_translate() called with model={model}, params={model_params}, params={model_params}")
-        
+        logger.debug(
+            "_detect_and_translate() called with model=%s, params=%s",
+            model,
+            model_params,
+        )
+
         if not query:
             return {"language": "unknown", "translated_query": query}
 
-        # If no LLM available, assume English
-        if not self.llm and not self.llm_ephemeral and not model:
-            return {"language": "unknown", "translated_query": query}
+        payload: dict[str, Any] = {"query": query}
+        if model:
+            payload["model"] = model
+        if model_params:
+            payload["model_params"] = model_params
 
         try:
-            # Always use provided model if specified, otherwise fall back to default
-            if model:
-                logger.info(f"Using specified model: {model}")
-                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
-            elif self.llm_ephemeral:
-                logger.info("Using ephemeral LLM client")
-                llm_client = get_llm(**model_params) if model_params else get_llm()
-            else:
-                logger.info("Using default LLM client")
-                llm_client = self.llm
-
-            if not llm_client:
-                logger.warning("No LLM available, assuming English")
-                return {"language": "unknown", "translated_query": query}
-
-            # First, detect if it's English
-            detect_prompt = load_prompt("detect_language.md")
-            if detect_prompt:
-                detect_prompt = detect_prompt.format(query=query)
-                response = llm_client.invoke(detect_prompt)
-                language_result = extract_text_from_response(response).strip().upper()
-
-                # If already English, no need to translate
-                # Check for exact "ENGLISH" but not "NOT_ENGLISH" or "NON_ENGLISH"
-                if language_result == "ENGLISH" or (
-                    "ENGLISH" in language_result
-                    and "NOT" not in language_result
-                    and "NON" not in language_result
-                ):
-                    return {"language": "english", "translated_query": query}
-
-            # Not English, translate
-            translate_prompt = load_prompt("translate_to_english.md")
-            if not translate_prompt:
-                return {"language": "unknown", "translated_query": query}
-
-            translate_prompt = translate_prompt.format(query=query)
-            response = llm_client.invoke(translate_prompt)
-            translated = extract_text_from_response(response).strip()
-
-            # Clean up translation (remove code blocks if any)
-            if translated.startswith("```"):
-                lines = translated.split("\n")
-                translated = "\n".join(lines[1:-1] if len(lines) > 2 else lines[1:])
-                translated = translated.strip()
-
-            return {
-                "language": "non-english",
-                "translated_query": translated if translated else query,
-            }
-
-        except Exception as e:
-            logger.warning(f"Language detection/translation failed: {e}")
+            response = await self.client.post(
+                f"{self.translation_agent_url}/translate",
+                json=payload,
+                timeout=self.agent_call_timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except httpx.HTTPError as exc:
+            logger.warning("Translation service error: %s", exc)
             return {"language": "unknown", "translated_query": query}
+
+        language = data.get("language", "unknown")
+        translated_query = data.get("translated_query", query)
+
+        if not translated_query:
+            translated_query = query
+
+        return {"language": language, "translated_query": translated_query}
 
     async def _route_to_agents(
         self, query: str, model: str | None = None, model_params: dict | None = None
@@ -262,8 +237,11 @@ class Orchestrator:
                 return self._keyword_based_routing(query)
 
             route_prompt = route_prompt.format(query=query)
-            response = llm_client.invoke(route_prompt)
-            response_text = extract_text_from_response(response).strip()
+            response_text = await self._invoke_llm_prompt(
+                route_prompt, model=model, model_params=model_params
+            )
+            if not response_text:
+                return self._keyword_based_routing(query)
 
             # Clean response
             if response_text.startswith("```"):
@@ -288,6 +266,82 @@ class Orchestrator:
         except Exception as e:
             logger.warning(f"LLM routing failed: {e}, using keyword fallback")
             return self._keyword_based_routing(query)
+
+    async def _invoke_llm_prompt(
+        self,
+        prompt: str,
+        *,
+        model: str | None,
+        model_params: dict | None,
+    ) -> str | None:
+        try:
+            if model:
+                llm_client = (
+                    get_llm(model=model, **model_params)
+                    if model_params
+                    else get_llm(model=model)
+                )
+            elif self.llm_ephemeral:
+                llm_client = get_llm(**model_params) if model_params else get_llm()
+            else:
+                llm_client = self.llm
+
+            if llm_client:
+                response = llm_client.invoke(prompt)
+                response_text = extract_text_from_response(response).strip()
+                if response_text:
+                    return response_text
+        except Exception as exc:
+            logger.warning("LLM invoke failed: %s", exc)
+
+        try:
+            return await self._ollama_generate(prompt, model, model_params)
+        except Exception as exc:
+            logger.warning("Ollama fallback failed: %s", exc)
+            return None
+
+    async def _ollama_generate(
+        self,
+        prompt: str,
+        model: str | None,
+        model_params: dict | None,
+    ) -> str | None:
+        base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        if base_url.endswith("/api"):
+            url = f"{base_url}/generate"
+        else:
+            url = f"{base_url}/api/generate"
+
+        model_name = model or os.getenv("LLM_MODEL", "qwen3:0.6b")
+        payload: dict[str, Any] = {
+            "model": model_name,
+            "prompt": prompt,
+            "stream": False,
+        }
+
+        options: dict[str, Any] = {}
+        params = model_params or {}
+        if "temperature" in params:
+            options["temperature"] = params["temperature"]
+        if params.get("top_k") is not None:
+            options["top_k"] = params["top_k"]
+        if "max_tokens" in params:
+            options["num_predict"] = params["max_tokens"]
+        if "context_size" in params:
+            options["num_ctx"] = params["context_size"]
+
+        if options:
+            payload["options"] = options
+
+        response = await self.client.post(
+            url, json=payload, timeout=self.agent_call_timeout
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data.get("response", "") if isinstance(data, dict) else ""
+        return text.strip() if text else None
 
     def _keyword_based_routing(self, query: str) -> dict[str, Any]:
         """
@@ -458,8 +512,14 @@ class Orchestrator:
             validate_prompt = validate_prompt.format(
                 query=query, response=combined_response
             )
-            response = llm_client.invoke(validate_prompt)
-            response_text = extract_text_from_response(response).strip()
+            response_text = await self._invoke_llm_prompt(
+                validate_prompt, model=model, model_params=model_params
+            )
+            if not response_text:
+                return {
+                    "validated": False,
+                    "reason": "LLM returned empty response",
+                }
 
             # Clean response
             if response_text.startswith("```"):
@@ -508,10 +568,12 @@ class Orchestrator:
             check_agent(self.logs_agent_url),
             check_agent(self.metrics_agent_url),
             check_agent(self.traces_agent_url),
+            check_agent(self.translation_agent_url),
         )
 
         return {
             "logs": results[0],
             "metrics": results[1],
             "traces": results[2],
+            "translation": results[3],
         }

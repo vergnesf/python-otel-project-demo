@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
 Integration tests for the simplified Orchestrator
-Tests the 3 key functionalities with real HTTP calls:
-1. Language detection and translation
-2. Agent routing (logs, traces, metrics)
-3. Response validation
+Tests the key functionalities with real HTTP calls:
+1. Agent routing (logs, traces, metrics)
+2. Response validation
 
 REQUIREMENTS:
 - Orchestrator must be running on http://localhost:8001
 - LLM must be running at http://172.17.0.1:12434/v1 (docker-compose default)
-- All tests require a working LLM for translation and validation
+- All tests require a working LLM for routing and validation
 """
 
 import httpx
@@ -130,105 +129,6 @@ async def check_orchestrator_available():
         pytest.skip(f"Orchestrator not running at {BASE_URL}: {e}")
 
 
-async def run_language_detection_and_translation(
-    model: str | None = None,
-    *,
-    strict: bool = True,
-    model_params: dict | None = None,
-):
-    """
-    Reusable logic for Language Detection and Translation
-    
-    Args:
-        model: Model name to use
-        strict: If True, raise assertions on failure; if False, print warnings
-        model_params: Optional LLM parameters (temperature, top_k, max_tokens)
-    """
-    await check_orchestrator_available()
-
-    print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(
-        f"{Colors.BOLD}TEST 1: LANGUAGE DETECTION AND TRANSLATION (Model: {model}){Colors.END}"
-    )
-    print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
-
-    test_cases = [
-        {
-            "query": "Montre-moi les erreurs récentes",
-            "expected_lang": "non-english",
-            "should_translate": True,
-        },
-        {
-            "query": "Show me recent errors",
-            "expected_lang": "english",
-            "should_translate": False,
-        },
-        {
-            "query": "Quels services sont lents?",
-            "expected_lang": "non-english",
-            "should_translate": True,
-        },
-    ]
-
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        for i, test_case in enumerate(test_cases, 1):
-            query = test_case["query"]
-            print(f"{Colors.BLUE}Test {i}: '{query}'{Colors.END}")
-
-            payload = {"query": query, "time_range": "1h"}
-            if model:
-                payload["model"] = model
-
-            response = await client.post(f"{BASE_URL}/analyze", json=payload)
-
-            assert response.status_code == 200, f"HTTP {response.status_code}"
-
-            data = response.json()
-            language = data.get("language", "unknown")
-            translated = data.get("translated_query", "")
-
-            print(f"  Detected language: {Colors.YELLOW}{language}{Colors.END}")
-            print(f"  Translated query: {Colors.YELLOW}{translated}{Colors.END}")
-
-            # Verify language detection
-            if test_case["expected_lang"] != "unknown":
-                if strict:
-                    assert (
-                        language == test_case["expected_lang"]
-                    ), f"Expected {test_case['expected_lang']}, got {language}"
-                elif language != test_case["expected_lang"]:
-                    print(
-                        f"  {Colors.YELLOW}⚠️  Expected {test_case['expected_lang']}, got {language}{Colors.END}"
-                    )
-
-            # Verify translation
-            if test_case["should_translate"]:
-                if strict:
-                    assert translated != query, "Query should have been translated"
-                    assert len(translated) > 0, "Translation is empty"
-                elif translated == query or not translated:
-                    print(
-                        f"  {Colors.YELLOW}⚠️  Translation missing or unchanged{Colors.END}"
-                    )
-            else:
-                if strict:
-                    assert translated == query, "Query should not have been translated"
-
-            print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
-            await asyncio.sleep(1)
-
-    print(f"{Colors.GREEN}{Colors.BOLD}✓ All translation tests passed!{Colors.END}\n")
-
-
-async def test_language_detection_and_translation():
-    """
-    TEST 1: Language Detection and Translation
-    Verify that French queries are detected and translated to English
-    """
-    model = await resolve_available_model()
-    await run_language_detection_and_translation(model=model)
-
-
 async def run_agent_routing(
     model: str | None = None,
     *,
@@ -246,7 +146,7 @@ async def run_agent_routing(
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}TEST 2: AGENT ROUTING (Model: {model}){Colors.END}")
+    print(f"{Colors.BOLD}TEST 1: AGENT ROUTING (Model: {model}){Colors.END}")
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
     test_cases = [
@@ -317,7 +217,7 @@ async def run_agent_routing(
 
 async def test_agent_routing():
     """
-    TEST 2: Agent Routing
+    TEST 1: Agent Routing
     Verify that queries are routed to the correct agents
     """
     model = await resolve_available_model()
@@ -336,7 +236,7 @@ async def run_response_validation(
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(f"{Colors.BOLD}TEST 3: RESPONSE VALIDATION (Model: {model}){Colors.END}")
+    print(f"{Colors.BOLD}TEST 2: RESPONSE VALIDATION (Model: {model}){Colors.END}")
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
     test_cases = [
@@ -390,7 +290,7 @@ async def run_response_validation(
 
 async def test_response_validation():
     """
-    TEST 3: Response Validation
+    TEST 2: Response Validation
     Verify that agent responses are validated
     """
     model = await resolve_available_model()
@@ -415,11 +315,11 @@ async def run_complete_workflow(
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
     print(
-        f"{Colors.BOLD}TEST 4: COMPLETE WORKFLOW (Translation → Routing → Validation) (Model: {model}){Colors.END}"
+        f"{Colors.BOLD}TEST 3: COMPLETE WORKFLOW (Routing → Validation) (Model: {model}){Colors.END}"
     )
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
-    query = "Montre-moi les erreurs récentes du service customer"
+    query = "Show me recent errors for the customer service"
     print(f"{Colors.BLUE}Query: '{query}'{Colors.END}\n")
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
@@ -435,28 +335,8 @@ async def run_complete_workflow(
 
         data = response.json()
 
-        # Step 1: Verify translation
-        print(f"{Colors.BOLD}1️⃣ TRANSLATION:{Colors.END}")
-        original = data.get("query")
-        translated = data.get("translated_query")
-        language = data.get("language")
-
-        print(f"  Original: {Colors.YELLOW}{original}{Colors.END}")
-        print(f"  Translated: {Colors.YELLOW}{translated}{Colors.END}")
-        print(f"  Language: {Colors.YELLOW}{language}{Colors.END}")
-
-        if strict:
-            assert (
-                translated != original or language == "english"
-            ), "French query should be translated"
-        elif translated == original and language != "english":
-            print(
-                f"  {Colors.YELLOW}⚠️  Translation missing or language unknown{Colors.END}"
-            )
-        print(f"  {Colors.GREEN}✓ Translation OK{Colors.END}\n")
-
-        # Step 2: Verify routing
-        print(f"{Colors.BOLD}2️⃣ ROUTING:{Colors.END}")
+        # Step 1: Verify routing
+        print(f"{Colors.BOLD}1️⃣ ROUTING:{Colors.END}")
         routing = data.get("routing", {})
         agents = routing.get("agents", [])
         reason = routing.get("reason", "")
@@ -468,8 +348,8 @@ async def run_complete_workflow(
             assert len(agents) > 0, "At least one agent should be called"
         print(f"  {Colors.GREEN}✓ Routing OK{Colors.END}\n")
 
-        # Step 3: Verify agent responses
-        print(f"{Colors.BOLD}3️⃣ AGENT RESPONSES:{Colors.END}")
+        # Step 2: Verify agent responses
+        print(f"{Colors.BOLD}2️⃣ AGENT RESPONSES:{Colors.END}")
         agent_responses = data.get("agent_responses", {})
 
         for agent_name, agent_resp in agent_responses.items():
@@ -486,8 +366,8 @@ async def run_complete_workflow(
             assert len(agent_responses) > 0, "Should have agent responses"
         print(f"  {Colors.GREEN}✓ Agents responded{Colors.END}\n")
 
-        # Step 4: Verify validation
-        print(f"{Colors.BOLD}4️⃣ VALIDATION:{Colors.END}")
+        # Step 3: Verify validation
+        print(f"{Colors.BOLD}3️⃣ VALIDATION:{Colors.END}")
         validation = data.get("validation", {})
 
         if validation:
@@ -504,8 +384,8 @@ async def run_complete_workflow(
 
         print(f"  {Colors.GREEN}✓ Validation present{Colors.END}\n")
 
-        # Step 5: Verify summary
-        print(f"{Colors.BOLD}5️⃣ SUMMARY:{Colors.END}")
+        # Step 4: Verify summary
+        print(f"{Colors.BOLD}4️⃣ SUMMARY:{Colors.END}")
         summary = data.get("summary", "")
         recommendations = data.get("recommendations", [])
 
@@ -539,16 +419,13 @@ async def main():
     print(f"{Colors.BOLD}╚{'=' * 78}╝{Colors.END}")
 
     try:
-        # Test 1: Language detection and translation
-        await test_language_detection_and_translation()
-
-        # Test 2: Agent routing
+        # Test 1: Agent routing
         await test_agent_routing()
 
-        # Test 3: Response validation
+        # Test 2: Response validation
         await test_response_validation()
 
-        # Test 4: Complete workflow
+        # Test 3: Complete workflow
         await test_complete_workflow()
 
         end_time = datetime.now()
@@ -560,9 +437,6 @@ async def main():
         print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
         print(f"{Colors.BOLD}📊 VERIFIED FUNCTIONALITIES:{Colors.END}")
-        print(
-            f"   {Colors.GREEN}✓ Language detection and translation (French ↔ English){Colors.END}"
-        )
         print(
             f"   {Colors.GREEN}✓ Intelligent routing to correct agents (logs/metrics/traces){Colors.END}"
         )

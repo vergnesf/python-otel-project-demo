@@ -14,7 +14,6 @@ import subprocess
 from pathlib import Path
 import yaml
 from tests.test_orchestrator_integration import (
-    run_language_detection_and_translation,
     run_agent_routing,
     run_response_validation,
     run_complete_workflow,
@@ -192,14 +191,12 @@ async def test_benchmark_models():
         print(f"{Colors.YELLOW}Using parameters: temp={params['temperature']}, top_k={params['top_k']}, max_tokens={params['max_tokens']}{Colors.END}")
         
         results[model] = {
-            "test1_language": "NOT_RUN",
-            "test2_routing": "NOT_RUN",
-            "test3_validation": "NOT_RUN",
-            "test4_workflow": "NOT_RUN",
+            "test1_routing": "NOT_RUN",
+            "test2_validation": "NOT_RUN",
+            "test3_workflow": "NOT_RUN",
             "test1_warnings": [],
             "test2_warnings": [],
             "test3_warnings": [],
-            "test4_warnings": [],
             "duration": 0,
             "stats": {},
         }
@@ -208,53 +205,41 @@ async def test_benchmark_models():
         monitor.start()
         start_time_model = time.time()
 
-        # Test 1: Language Detection and Translation
-        try:
-            await run_language_detection_and_translation(model=model, strict=False, model_params=params)
-            results[model]["test1_language"] = "✓ OK"
-            print(f"{Colors.GREEN}→ TEST 1 OK (no exceptions){Colors.END}")
-        except AssertionError as e:
-            results[model]["test1_language"] = f"⚠️  {str(e)[:40]}"
-            print(f"{Colors.YELLOW}⚠️  TEST 1 ASSERTION: {e}{Colors.END}")
-        except Exception as e:
-            results[model]["test1_language"] = f"❌ {str(e)[:40]}"
-            print(f"{Colors.RED}❌ TEST 1 ERROR: {e}{Colors.END}")
-
-        # Test 2: Agent Routing
+        # Test 1: Agent Routing
         try:
             await run_agent_routing(model=model, strict=False, model_params=params)
-            results[model]["test2_routing"] = "✓ OK"
-            print(f"{Colors.GREEN}→ TEST 2 OK (no exceptions){Colors.END}")
+            results[model]["test1_routing"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 1 OK (no exceptions){Colors.END}")
         except AssertionError as e:
-            results[model]["test2_routing"] = f"⚠️  {str(e)[:40]}"
-            print(f"{Colors.YELLOW}⚠️  TEST 2 ASSERTION: {e}{Colors.END}")
+            results[model]["test1_routing"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 1 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test2_routing"] = f"❌ {str(e)[:40]}"
-            print(f"{Colors.RED}❌ TEST 2 ERROR: {e}{Colors.END}")
+            results[model]["test1_routing"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 1 ERROR: {e}{Colors.END}")
 
-        # Test 3: Response Validation
+        # Test 2: Response Validation
         try:
             await run_response_validation(model=model, strict=False, model_params=params)
-            results[model]["test3_validation"] = "✓ OK"
-            print(f"{Colors.GREEN}→ TEST 3 OK (no exceptions){Colors.END}")
+            results[model]["test2_validation"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 2 OK (no exceptions){Colors.END}")
         except AssertionError as e:
-            results[model]["test3_validation"] = f"⚠️  {str(e)[:40]}"
-            print(f"{Colors.YELLOW}⚠️  TEST 3 ASSERTION: {e}{Colors.END}")
+            results[model]["test2_validation"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 2 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test3_validation"] = f"❌ {str(e)[:40]}"
-            print(f"{Colors.RED}❌ TEST 3 ERROR: {e}{Colors.END}")
+            results[model]["test2_validation"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 2 ERROR: {e}{Colors.END}")
 
-        # Test 4: Complete Workflow
+        # Test 3: Complete Workflow
         try:
             await run_complete_workflow(model=model, strict=False, model_params=params)
-            results[model]["test4_workflow"] = "✓ OK"
-            print(f"{Colors.GREEN}→ TEST 4 OK (no exceptions){Colors.END}")
+            results[model]["test3_workflow"] = "✓ OK"
+            print(f"{Colors.GREEN}→ TEST 3 OK (no exceptions){Colors.END}")
         except AssertionError as e:
-            results[model]["test4_workflow"] = f"⚠️  {str(e)[:40]}"
-            print(f"{Colors.YELLOW}⚠️  TEST 4 ASSERTION: {e}{Colors.END}")
+            results[model]["test3_workflow"] = f"⚠️  {str(e)[:40]}"
+            print(f"{Colors.YELLOW}⚠️  TEST 3 ASSERTION: {e}{Colors.END}")
         except Exception as e:
-            results[model]["test4_workflow"] = f"❌ {str(e)[:40]}"
-            print(f"{Colors.RED}❌ TEST 4 ERROR: {e}{Colors.END}")
+            results[model]["test3_workflow"] = f"❌ {str(e)[:40]}"
+            print(f"{Colors.RED}❌ TEST 3 ERROR: {e}{Colors.END}")
 
         duration = time.time() - start_time_model
         stats = monitor.stop()
@@ -284,7 +269,7 @@ async def test_benchmark_models():
     print(f"{Colors.BOLD}╚{'=' * 190}╝{Colors.END}")
 
     print(
-        f"{'Model':<40} | {'Time (s)':<9} | {'T1:Lang':<10} | {'T2:Route':<10} | {'T3:Valid':<10} | {'T4:Work':<10} | {'CPU (%)':<8} | {'GPU (%)':<8} | {'Mem (MiB)':<10} | {'Ctx Size':<10} | {'GPU Card':<25}"
+        f"{'Model':<40} | {'Time (s)':<9} | {'T1:Route':<10} | {'T2:Valid':<10} | {'T3:Work':<10} | {'CPU (%)':<8} | {'GPU (%)':<8} | {'Mem (MiB)':<10} | {'Ctx Size':<10} | {'GPU Card':<25}"
     )
     print("-" * 190)
 
@@ -301,16 +286,14 @@ async def test_benchmark_models():
                 return f"{Colors.RED}{status}{Colors.END}"
             return status
         
-        t1 = colorize_status(metrics['test1_language'])
-        t2 = colorize_status(metrics['test2_routing'])
-        t3 = colorize_status(metrics['test3_validation'])
-        t4 = colorize_status(metrics['test4_workflow'])
+        t1 = colorize_status(metrics['test1_routing'])
+        t2 = colorize_status(metrics['test2_validation'])
+        t3 = colorize_status(metrics['test3_workflow'])
 
         # Use raw strings for alignment (without color codes)
-        t1_raw = metrics["test1_language"][:10]
-        t2_raw = metrics["test2_routing"][:10]
-        t3_raw = metrics["test3_validation"][:10]
-        t4_raw = metrics["test4_workflow"][:10]
+        t1_raw = metrics["test1_routing"][:10]
+        t2_raw = metrics["test2_validation"][:10]
+        t3_raw = metrics["test3_workflow"][:10]
 
         # Get model config
         config = MODEL_CONFIGS.get(model, {"context_size": "N/A"})
@@ -318,6 +301,28 @@ async def test_benchmark_models():
         gpu_name = stats.get("gpu_name", "Unknown")
 
         print(
-            f"{model:<40} | {metrics['duration']:<9.2f} | {t1_raw:<10} | {t2_raw:<10} | {t3_raw:<10} | {t4_raw:<10} | "
+            f"{model:<40} | {metrics['duration']:<9.2f} | {t1_raw:<10} | {t2_raw:<10} | {t3_raw:<10} | "
             f"{stats['cpu_avg']:<8.1f} | {stats['gpu_util_avg']:<8.1f} | {stats['gpu_mem_max']:<10.0f} | {ctx_size:<10} | {gpu_name:<25}"
         )
+
+    # Check if any tests failed
+    print()
+    has_errors = False
+    has_assertions = False
+    
+    for model, metrics in results.items():
+        for test_key in ["test1_routing", "test2_validation", "test3_workflow"]:
+            status = metrics[test_key]
+            if "❌" in status:
+                has_errors = True
+                print(f"{Colors.RED}❌ {model} - {test_key}: {status}{Colors.END}")
+            elif "⚠️" in status:
+                has_assertions = True
+                print(f"{Colors.YELLOW}⚠️ {model} - {test_key}: {status}{Colors.END}")
+    
+    # Fail the test if there were any errors
+    if has_errors:
+        pytest.fail(f"Benchmark tests failed with {sum(1 for m in results.values() for t in ['test1_routing', 'test2_validation', 'test3_workflow'] if '❌' in m[t])} errors")
+    
+    if has_assertions:
+        print(f"\n{Colors.YELLOW}⚠️  Some assertions failed but tests continued{Colors.END}")

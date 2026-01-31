@@ -3,6 +3,8 @@
 # Models to pull
 MODELS := mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
 
+PROJECTS := agent-orchestrator agent-translator agent-logger agent-metrics
+
 models-init:
 	@echo "Detecting runtime and looking for running container 'ollama'..."
 	@RUNTIME=""; \
@@ -19,3 +21,10 @@ models-init:
 		fi; \
 	done; \
 	echo "models-init: done"
+
+tools-format:
+	#echo "Use black to format python files"
+	for project in $(PROJECTS); do \
+		echo "Formatting project $$project..."; \
+		cd $$project && uv run black . && cd ..; \
+	done
