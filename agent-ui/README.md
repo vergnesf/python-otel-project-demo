@@ -58,125 +58,36 @@ pytest tests/ -v
 
 ## 🐳 Development with Podman
 
-### Quick Start
+### Redeploy Command
+
+Use the generic `redeploy` command from the root Makefile to rebuild any service:
 
 ```bash
-# Build the image
-make podman-build-ui
-
-# Rebuild and restart (forces fresh build)
-make podman-rebuild-ui
-
-# Start all services
-make podman-up
-
-# Stop all services
-make podman-down
-
-# Full rebuild and restart (clean slate)
-make podman-rebuild
+# Redeploy any service (agent-ui, agent-orchestrator, agent-logs, etc.)
+make redeploy agent-ui
 ```
 
-### Manual Commands
+This command will:
+1. Stop the specified service
+2. Rebuild with `--no-cache` to ensure fresh code
+3. Restart the service
+
+**Note:** If no service is specified, the command will show an error with usage instructions.
+
+### Verification
+
+Check that your rebuild worked:
 
 ```bash
-# Build the Docker image
-cd agent-ui
-podman build -t agent-ui:latest .
-cd ..
-
-# Force rebuild with podman-compose
-podman-compose build --no-cache agent-ui
-
-# Restart the service
-podman-compose restart agent-ui
-
-# View logs
-podman-compose logs -f agent-ui
-```
-
-### Ensuring Fresh Builds
-
-To ensure you always have the latest code:
-
-```bash
-# 1. Stop the service
-podman-compose down agent-ui
-
-# 2. Remove old containers
-podman rm -f agent-ui
-
-# 3. Remove old images
-podman rmi agent-ui:latest
-
-# 4. Rebuild
-cd agent-ui
-podman build -t agent-ui:latest .
-cd ..
-
-# 5. Restart
-podman-compose up -d agent-ui
-```
-
-### Quick Rebuild Script
-
-For the easiest way to ensure you have the latest code, use the provided rebuild script:
-
-```bash
-# Make sure the script is executable
-chmod +x agent-ui/rebuild.sh
-
-# Run the rebuild script
-./agent-ui/rebuild.sh
-```
-
-This script will:
-1. Stop the running service
-2. Remove old containers and images
-3. Rebuild with fresh code (no cache)
-4. Restart the service
-5. Show build information
-
-### Debugging
-
-```bash
-# Check running containers
-podman ps
-
-# Inspect container
-podman inspect agent-ui
-
-# Enter container shell
-podman exec -it agent-ui /bin/bash
-
-# Check service logs
-podman-compose logs agent-ui
-
-# Check port mapping
-podman port agent-ui
-
-# Check build info
+# View build info (shows timestamp and git commit)
 podman exec agent-ui cat /app/BUILD_INFO.txt
+
+# Check logs
+podman-compose logs -f agent-ui
+
+# Test the API
+curl http://localhost:3002/health
 ```
-
-### Pro Tips
-
-1. **Always use `--no-cache`** when building to ensure fresh code:
-   ```bash
-   podman build --no-cache -t agent-ui:latest .
-   ```
-
-2. **Use build arguments** to force rebuilds:
-   ```bash
-   podman build --no-cache -t agent-ui:latest --build-arg BUILD_TIMESTAMP=$(date +%s) .
-   ```
-
-3. **Check the build info** to verify your code is up to date:
-   ```bash
-   podman exec agent-ui cat /app/BUILD_INFO.txt
-   ```
-
-4. **Use `make` commands** for common operations (see root Makefile)
 
 ## 📦 Dependencies
 

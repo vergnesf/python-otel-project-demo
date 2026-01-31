@@ -378,17 +378,20 @@ Output: Combined analysis
 - [ ] Add support for more languages
 - [ ] Implement response streaming
 
-## 🐳 Podman Compose (rebuild a service)
+## 🐳 Podman Compose
 
-To force the rebuild of a service without restarting the entire stack:
+### Redeploy Command
 
-```bash
-podman compose up -d --build --force-recreate --no-deps <service>
-```
-
-To ensure a rebuild without cache:
+Use the generic `redeploy` command from the root Makefile to rebuild any service:
 
 ```bash
-podman compose build --no-cache <service>
-podman compose up -d --force-recreate --no-deps <service>
+# Redeploy any service (agent-orchestrator, agent-logs, etc.)
+make redeploy agent-orchestrator
 ```
+
+This command will:
+1. Stop the specified service
+2. Rebuild with `--no-cache` to ensure fresh code
+3. Restart the service
+
+**Note:** If no service is specified, the command will show an error with usage instructions.
