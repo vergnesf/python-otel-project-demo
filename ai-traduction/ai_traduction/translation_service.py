@@ -126,9 +126,7 @@ class TranslationService:
 
         return translated_text or query
 
-    def _get_llm(
-        self, model: str | None, model_params: dict | None
-    ) -> Any:
+    def _get_llm(self, model: str | None, model_params: dict | None) -> Any:
         params = model_params or {}
         if model:
             return get_llm(model=model, **params)

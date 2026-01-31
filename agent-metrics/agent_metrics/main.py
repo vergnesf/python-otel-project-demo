@@ -74,7 +74,7 @@ async def analyze(request: AnalyzeRequest):
     """
     if not analyzer:
         raise HTTPException(status_code=503, detail="Analyzer not initialized")
-    
+
     try:
         logger.info(f"Metrics agent received query: {request.query}")
         result = await analyzer.analyze(
@@ -102,7 +102,7 @@ async def health():
             mcp_server="unreachable",
             timestamp=datetime.now(),
         )
-    
+
     mcp_status = await analyzer.check_mcp_health()
 
     return HealthResponse(

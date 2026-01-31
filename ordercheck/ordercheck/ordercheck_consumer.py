@@ -7,7 +7,6 @@ import sys
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
 
-
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(

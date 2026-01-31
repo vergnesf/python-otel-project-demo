@@ -20,15 +20,16 @@ from datetime import datetime
 
 class ExecutionResult:
     """Structure for test execution results"""
+
     def __init__(self, status: str = "NOT_RUN", warnings: list[str] | None = None):
         self.status = status  # "COMPLETED", "ERROR", "WARNING", "NOT_RUN"
         self.warnings = warnings or []
-    
+
     def add_warning(self, warning: str):
         self.warnings.append(warning)
         if self.status == "NOT_RUN":
             self.status = "WARNING"
-    
+
     def set_error(self, error: str):
         self.status = "ERROR"
         self.warnings = [error]
@@ -79,9 +80,7 @@ async def resolve_available_model() -> str | None:
 
     models = data.get("models", []) if isinstance(data, dict) else []
     if not models:
-        pytest.skip(
-            "No Ollama models found. Run `make models-init` before tests."
-        )
+        pytest.skip("No Ollama models found. Run `make models-init` before tests.")
 
     model_name = models[0].get("name") if isinstance(models[0], dict) else None
     if not model_name:
@@ -137,7 +136,7 @@ async def run_agent_routing(
 ):
     """
     Reusable logic for Agent Routing
-    
+
     Args:
         model: Model name to use
         strict: If True, raise assertions on failure; if False, print warnings
@@ -305,7 +304,7 @@ async def run_complete_workflow(
 ):
     """
     Reusable logic for Complete Workflow
-    
+
     Args:
         model: Model name to use
         strict: If True, raise assertions on failure; if False, print warnings

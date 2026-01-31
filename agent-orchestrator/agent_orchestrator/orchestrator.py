@@ -74,7 +74,11 @@ class Orchestrator:
         await self.client.aclose()
 
     async def analyze(
-        self, query: str, time_range: str = "1h", model: str | None = None, model_params: dict | None = None
+        self,
+        query: str,
+        time_range: str = "1h",
+        model: str | None = None,
+        model_params: dict | None = None,
     ) -> dict[str, Any]:
         """
         Main analysis flow:
@@ -92,7 +96,9 @@ class Orchestrator:
         Returns:
             Analysis result with validation
         """
-        logger.info(f"Analyzing query: {query} (model: {model}, params: {model_params})")
+        logger.info(
+            f"Analyzing query: {query} (model: {model}, params: {model_params})"
+        )
         from datetime import datetime
 
         # Step 1: Detect language and translate
@@ -221,7 +227,11 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
+                llm_client = (
+                    get_llm(model=model, **model_params)
+                    if model_params
+                    else get_llm(model=model)
+                )
             elif self.llm_ephemeral:
                 llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
@@ -452,7 +462,11 @@ class Orchestrator:
             raise
 
     async def _validate_responses(
-        self, query: str, agent_responses: dict[str, Any], model: str | None = None, model_params: dict | None = None
+        self,
+        query: str,
+        agent_responses: dict[str, Any],
+        model: str | None = None,
+        model_params: dict | None = None,
     ) -> dict[str, Any]:
         """
         Functionality 3: Validate that responses properly answer the query
@@ -475,7 +489,11 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
+                llm_client = (
+                    get_llm(model=model, **model_params)
+                    if model_params
+                    else get_llm(model=model)
+                )
             elif self.llm_ephemeral:
                 llm_client = get_llm(**model_params) if model_params else get_llm()
             else:

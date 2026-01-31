@@ -64,7 +64,9 @@ class AnalyzeRequest(BaseModel):
     query: str
     time_range: str = "1h"
     model: str | None = None
-    model_params: dict | None = None  # Optional LLM parameters (temperature, top_k, max_tokens)
+    model_params: dict | None = (
+        None  # Optional LLM parameters (temperature, top_k, max_tokens)
+    )
 
 
 class HealthResponse(BaseModel):

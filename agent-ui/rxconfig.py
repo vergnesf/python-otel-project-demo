@@ -4,7 +4,6 @@ Reflex configuration
 
 import reflex as rx
 
-
 config = rx.Config(
     app_name="agent_ui",
     frontend_port=3002,
