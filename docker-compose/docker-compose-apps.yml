@@ -1,0 +1,146 @@
+x-common-llm-otel-env: &common-llm-otel-env
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
+  OTEL_PYTHON_LOG_CORRELATION: "true"
+  LOG_LEVEL: INFO
+  ERROR_RATE: "0.1"  
+
+services:
+  customer:
+    build:
+      context: ..
+      dockerfile: customer/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_CUSTOMER:-customer:latest}
+    container_name: customer
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: customer
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      INTERVAL_SECONDS: 5
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  supplier:
+    build:
+      context: ..
+      dockerfile: supplier/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIER:-supplier:latest}
+    container_name: supplier
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: supplier
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      INTERVAL_SECONDS: 5
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  order:
+    build:
+      context: ..
+      dockerfile: order/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDER:-order:latest}
+    container_name: order
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: order
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  stock:
+    build:
+      context: ..
+      dockerfile: stock/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_STOCK:-stock:latest}
+    container_name: stock
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: stock
+      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  ordercheck:
+    build:
+      context: ..
+      dockerfile: ordercheck/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDERCHECK:-ordercheck:latest}
+    container_name: ordercheck
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: ordercheck
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      API_URL: http://order:5000
+    depends_on:
+      - order
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  suppliercheck:
+    build:
+      context: ..
+      dockerfile: suppliercheck/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIERCHECK:-suppliercheck:latest}
+    container_name: suppliercheck
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: suppliercheck
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      API_URL: http://stock:5001
+    depends_on:
+      - stock
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  ordermanagement:
+    build:
+      context: ..
+      dockerfile: ordermanagement/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+    image: ${DOCKER_REGISTRY:-}${IMG_ORDERMANAGEMENT:-ordermanagement:latest}
+    container_name: ordermanagement
+    environment:
+      <<: *common-llm-otel-env
+      OTEL_SERVICE_NAME: ordermanagement
+      API_URL_ORDERS: http://order:5000
+      API_URL_STOCKS: http://stock:5001
+      INTERVAL_SECONDS: 5
+    depends_on:
+      - order
+      - stock
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+networks:
+  otel-network:
+    external: true
