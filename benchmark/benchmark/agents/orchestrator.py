@@ -19,7 +19,7 @@ class OrchestratorBenchmark:
     def __init__(
         self,
         orchestrator_url: str = "http://traefik/agent-orchestrator",
-        timeout: float = 30.0,
+        timeout: float = 600.0,
     ):
         """Initialize orchestrator benchmark."""
         self.orchestrator_url = orchestrator_url
@@ -41,6 +41,7 @@ class OrchestratorBenchmark:
         model: str,
         query: str = "Analyze the system performance and provide insights",
         temperature: float = 0.7,
+        time_range: str = "1h",
         num_requests: int = 1,
     ) -> list[dict[str, Any]]:
         """
@@ -50,6 +51,7 @@ class OrchestratorBenchmark:
             model: Model to use for analysis
             query: Analysis query
             temperature: Model temperature (0-1)
+            time_range: Time range for analysis
             num_requests: Number of requests to send
 
         Returns:
@@ -66,8 +68,9 @@ class OrchestratorBenchmark:
             try:
                 request = OrchestratorRequest(
                     query=query,
+                    time_range=time_range,
                     model=model,
-                    temperature=temperature,
+                    model_params={"temperature": temperature},
                 )
 
                 start_time = time.perf_counter()
@@ -93,6 +96,8 @@ class OrchestratorBenchmark:
                     "request_num": i + 1,
                     "latency_ms": latency_ms,
                     "success": True,
+                    "request": request.model_dump(),
+                    "response": data,
                     "response_preview": str(data)[:100],
                 })
 
@@ -114,6 +119,7 @@ class OrchestratorBenchmark:
                     "request_num": i + 1,
                     "success": False,
                     "error": str(e),
+                    "request": request.model_dump() if 'request' in locals() else None,
                 })
 
             if i < num_requests - 1:

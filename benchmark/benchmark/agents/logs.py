@@ -19,7 +19,7 @@ class LogsBenchmark:
     def __init__(
         self,
         logs_url: str = "http://traefik/agent-logs",
-        timeout: float = 30.0,
+        timeout: float = 600.0,
     ):
         """Initialize logs benchmark."""
         self.logs_url = logs_url
@@ -46,7 +46,7 @@ class LogsBenchmark:
         Benchmark the /analyze endpoint.
 
         Args:
-            model: Model to use for analysis
+            model: Model to use for analysis (not used, kept for compatibility)
             query: Log analysis query
             time_range: Time range for log query
             num_requests: Number of requests to send
@@ -65,7 +65,6 @@ class LogsBenchmark:
             try:
                 request = LogsAnalysisRequest(
                     query=query,
-                    model=model,
                     time_range=time_range,
                 )
 
@@ -91,6 +90,8 @@ class LogsBenchmark:
                     "request_num": i + 1,
                     "latency_ms": latency_ms,
                     "success": True,
+                    "request": request.model_dump(),
+                    "response": data,
                     "response_preview": str(data)[:100],
                 })
 
@@ -112,6 +113,7 @@ class LogsBenchmark:
                     "request_num": i + 1,
                     "success": False,
                     "error": str(e),
+                    "request": request.model_dump() if 'request' in locals() else None,
                 })
 
             if i < num_requests - 1:

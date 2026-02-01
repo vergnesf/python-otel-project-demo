@@ -19,7 +19,7 @@ class TracesBenchmark:
     def __init__(
         self,
         traces_url: str = "http://traefik/agent-traces",
-        timeout: float = 30.0,
+        timeout: float = 600.0,
     ):
         """Initialize traces benchmark."""
         self.traces_url = traces_url
@@ -96,6 +96,8 @@ class TracesBenchmark:
                     "request_num": i + 1,
                     "latency_ms": latency_ms,
                     "success": True,
+                    "request": request.model_dump(),
+                    "response": data,
                     "response_preview": str(data)[:100],
                 })
 
@@ -117,6 +119,7 @@ class TracesBenchmark:
                     "request_num": i + 1,
                     "success": False,
                     "error": str(e),
+                    "request": request.model_dump() if 'request' in locals() else None,
                 })
 
             if i < num_requests - 1:

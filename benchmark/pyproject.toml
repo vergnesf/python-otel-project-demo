@@ -13,6 +13,8 @@ dependencies = [
     "httpx>=0.28.1",
     "pyyaml>=6.0.2",
     "psutil>=6.0.0",
+    "rich>=13.9.4",
+    "nvidia-ml-py>=12.535.108",
     "common-ai",
 ]
 

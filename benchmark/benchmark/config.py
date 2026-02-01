@@ -9,7 +9,8 @@ AGENT_TRACES_URL = "http://localhost:8080/agents/traces"
 TRANSLATION_URL = "http://localhost:8080/agents/traduction"
 
 # Benchmark Settings
-BENCHMARK_TIMEOUT = 30  # seconds
+BENCHMARK_TIMEOUT = 600  # seconds (10 minutes for AI requests)
+NUM_TEST_REQUESTS = 3  # Number of test requests per model to validate consistency
 
 # Default models for benchmarking (complete list from test_benchmark_models.py)
 BENCHMARK_MODELS = [

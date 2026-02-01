@@ -45,20 +45,19 @@ class OrchestratorRequest(BaseModel):
     """Request for orchestrator agent."""
 
     query: str
-    model: str = Field(default="mistral:7b", description="LLM model to use")
-    temperature: float = Field(default=0.7, ge=0.0, le=1.0)
-    max_tokens: int = Field(default=500, ge=1)
-    context: dict[str, Any] = Field(default_factory=dict)
+    time_range: str = Field(default="1h")
+    model: str | None = Field(default="mistral:7b", description="LLM model to use")
+    model_params: dict | None = Field(
+        default=None, description="Optional LLM parameters (temperature, top_k, max_tokens)"
+    )
 
 
 class LogsAnalysisRequest(BaseModel):
     """Request for logs agent."""
 
     query: str
-    model: str = Field(default="mistral:7b")
     time_range: str = Field(default="1h")
-    limit: int = Field(default=100, ge=1)
-    context: dict[str, Any] = Field(default_factory=dict)
+    context: dict = Field(default_factory=dict)
 
 
 class MetricsAnalysisRequest(BaseModel):
@@ -85,10 +84,9 @@ class TracesAnalysisRequest(BaseModel):
 class TranslationRequest(BaseModel):
     """Request for translation agent."""
 
-    text: str
-    model: str = Field(default="mistral:7b")
-    source_language: str = Field(default="auto")
-    target_language: str = Field(default="en")
+    query: str
+    model: str | None = Field(default=None)
+    model_params: dict | None = Field(default=None)
 
 
 class HealthStatus(BaseModel):

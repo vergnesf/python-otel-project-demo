@@ -19,7 +19,7 @@ class MetricsBenchmark:
     def __init__(
         self,
         metrics_url: str = "http://traefik/agent-metrics",
-        timeout: float = 30.0,
+        timeout: float = 600.0,
     ):
         """Initialize metrics benchmark."""
         self.metrics_url = metrics_url
@@ -93,6 +93,8 @@ class MetricsBenchmark:
                     "request_num": i + 1,
                     "latency_ms": latency_ms,
                     "success": True,
+                    "request": request.model_dump(),
+                    "response": data,
                     "response_preview": str(data)[:100],
                 })
 
@@ -114,6 +116,7 @@ class MetricsBenchmark:
                     "request_num": i + 1,
                     "success": False,
                     "error": str(e),
+                    "request": request.model_dump() if 'request' in locals() else None,
                 })
 
             if i < num_requests - 1:

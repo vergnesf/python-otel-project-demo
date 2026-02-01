@@ -19,7 +19,7 @@ class TranslationBenchmark:
     def __init__(
         self,
         translation_url: str = "http://traefik/agent-traduction",
-        timeout: float = 30.0,
+        timeout: float = 600.0,
     ):
         """Initialize translation benchmark."""
         self.translation_url = translation_url
@@ -40,8 +40,6 @@ class TranslationBenchmark:
         self,
         model: str,
         text: str = "Bonjour, ceci est un test de traduction",
-        source_language: str = "fr",
-        target_language: str = "en",
         num_requests: int = 1,
     ) -> list[dict[str, Any]]:
         """
@@ -49,9 +47,7 @@ class TranslationBenchmark:
 
         Args:
             model: Model to use for translation
-            text: Text to translate
-            source_language: Source language code
-            target_language: Target language code
+            text: Text to translate (used as query)
             num_requests: Number of requests to send
 
         Returns:
@@ -67,10 +63,8 @@ class TranslationBenchmark:
         for i in range(num_requests):
             try:
                 request = TranslationRequest(
-                    text=text,
+                    query=text,
                     model=model,
-                    source_language=source_language,
-                    target_language=target_language,
                 )
 
                 start_time = time.perf_counter()
@@ -96,6 +90,8 @@ class TranslationBenchmark:
                     "request_num": i + 1,
                     "latency_ms": latency_ms,
                     "success": True,
+                    "request": request.model_dump(),
+                    "response": data,
                     "response_preview": str(data)[:100],
                 })
 
@@ -117,6 +113,7 @@ class TranslationBenchmark:
                     "request_num": i + 1,
                     "success": False,
                     "error": str(e),
+                    "request": request.model_dump() if 'request' in locals() else None,
                 })
 
             if i < num_requests - 1:
