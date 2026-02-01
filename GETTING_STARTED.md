@@ -34,12 +34,19 @@ cd python-otel-project-demo
 
 ### 2. Start All Services
 
-```bash
-# Start the complete stack
-docker-compose up -d
+The compose configuration is split across several files and a `Makefile` helper is provided to start them in the correct order.
 
-# View logs to monitor startup
-docker-compose logs -f
+Order: observability → db → kafka → ai-tools → ai → apps
+
+```bash
+# Copy example environment and override images/tokens as needed
+cp .env.example .env
+
+# Recommended: use the Makefile which selects docker/podman and brings up all compose files
+make compose-up
+
+# View aggregated logs
+podman-compose logs -f || docker-compose logs -f
 ```
 
 ### 3. Access the Services
@@ -62,9 +69,11 @@ pip install podman-compose
 
 ### 2. Start Services with Podman
 
+You can still use `podman-compose` directly, but the `Makefile` automates the correct file ordering and will detect `podman` vs `docker`.
+
 ```bash
-# Use podman-compose instead of docker-compose
-podman-compose up -d
+# Recommended (Makefile will call podman when available)
+make compose-up
 
 # View logs
 podman-compose logs -f
@@ -206,29 +215,24 @@ docker-compose logs -f agent-logs
 ## 🔧 Common Commands
 
 ```bash
-# Start all services
-docker-compose up -d
-# podman-compose up -d
+# Start all services (preferred)
+make compose-up
 
 # Stop all services
-docker-compose down
-# podman-compose down
+make compose-down
 
-# Rebuild and start
-docker-compose up --build -d
-# podman-compose up --build -d
+# Rebuild a specific service (useful during development)
+podman-compose -f <compose-files...> up --build -d <service> || \
+   docker-compose -f <compose-files...> up --build -d <service>
 
 # View logs for specific service
-docker-compose logs -f order
-# podman-compose logs -f order
+podman-compose logs -f order || docker-compose logs -f order
 
 # Restart a service
-docker-compose restart agent-logs
-# podman-compose restart agent-logs
+make restart-service SERVICE=agent-logs  # (calls the underlying compose command)
 
 # Complete cleanup (removes all data)
-docker-compose down -v
-# podman-compose down -v
+make compose-down && podman-compose down -v || docker-compose down -v
 ```
 
 ## 🎓 Next Steps

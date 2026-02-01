@@ -10,6 +10,11 @@
 
 For a complete getting started guide including Docker, Podman, and GPU setup, see [GETTING_STARTED.md](GETTING_STARTED.md).
 
+Note: the compose configuration is split across multiple files. Use the provided Makefile helpers to bring the full stack up and down in the correct order:
+
+- `make compose-up` — starts observability → db → kafka → ai-tools → ai → apps
+- `make compose-down` — stops services in reverse order and removes orphans
+
 ## 📚 Documentation
 
 📚 **Detailed documentation available in the [`docs/`](docs/) directory:**
@@ -134,23 +139,24 @@ See [Configuration Guide](docs/handbook/configuration.md) for detailed setup.
 ## 🔧 Common Commands
 
 ```bash
-# Start all services
-docker-compose up -d
+# Start the full stack (preferred)
+make compose-up
 
 # Stop all services
-docker-compose down
+make compose-down
 
-# Rebuild and start
-docker-compose up --build -d
+# Rebuild a single service (example)
+podman compose up -d --build --no-deps agent-logs || \
+  docker compose up -d --build --no-deps agent-logs
 
 # View logs for specific service
-docker-compose logs -f order
+podman-compose logs -f order || docker-compose logs -f order
 
 # Restart a service
-docker-compose restart agent-logs
+make restart-service SERVICE=agent-logs
 
 # Complete cleanup (removes all data)
-docker-compose down -v
+make compose-down && podman-compose down -v || docker-compose down -v
 ```
 
 ## 🐳 Podman Compose (rebuild a service)
