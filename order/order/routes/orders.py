@@ -36,8 +36,8 @@ def log_response(response):
         current_app.logger.warning(
             f"HTTP {response.status_code} client error for {request.method} {request.path}"
         )
-    elif response.status_code == 200:
-        current_app.logger.debug(
+    elif 200 <= response.status_code < 300:
+        current_app.logger.info(
             f"HTTP {response.status_code} success for {request.method} {request.path}"
         )
     return response

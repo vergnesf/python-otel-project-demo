@@ -29,7 +29,7 @@ User Query (FR/EN)
     ↓
 Validated Response with Summary
 ```
-
+> **Note**: External access via Traefik at `http://localhost:8010/agents/orchestrator/`. Internal services communicate directly via Docker network.
 ## 🚀 API Endpoints
 
 ### POST /analyze
@@ -150,15 +150,19 @@ PORT=8001 LOG_LEVEL=DEBUG uv run uvicorn agent_orchestrator.main:app --reload
 
 ```bash
 # Quick health check
-curl http://localhost:8001/health
+# Via Traefik (external access)
+curl http://localhost:8080/agents/orchestrator/health
 
-# Test with an English query
-curl -X POST http://localhost:8001/analyze \
+# Or direct internal access (from containers)
+curl http://agent-orchestrator:8001/health
+
+# Test with an English query (via Traefik)
+curl -X POST http://localhost:8080/agents/orchestrator/analyze \
   -H "Content-Type: application/json" \
   -d '{"query": "Show me recent errors", "time_range": "1h"}'
 
-# Test with a French query
-curl -X POST http://localhost:8001/analyze \
+# Test with a French query (via Traefik)
+curl -X POST http://localhost:8080/agents/orchestrator/analyze \
   -H "Content-Type: application/json" \
   -d '{"query": "Montre-moi les erreurs récentes", "time_range": "1h"}'
 ```
@@ -198,7 +202,7 @@ uv run pytest tests/test_orchestrator_core.py::TestLanguageDetectionAndTranslati
 **4 integration tests** with real HTTP calls:
 
 **REQUIREMENTS:**
-- ✅ Orchestrator must be running on `http://localhost:8001`
+- ✅ Orchestrator must be running (accessible at `http://localhost:8080/agents/orchestrator/` or internally at `http://agent-orchestrator:8001`)
 - ✅ **LLM must be running at `http://172.17.0.1:12434/v1`** (docker-compose default)
 
 All integration tests **require a working LLM**. The tests use the hardcoded LLM URL from docker-compose.
@@ -208,6 +212,9 @@ All integration tests **require a working LLM**. The tests use the hardcoded LLM
 ```bash
 # Step 1: Make sure docker-compose services are running
 docker compose up -d
+
+# Step 2: Verify orchestrator is accessible
+curl http://localhost:8080/agents/orchestrator/health
 
 # Step 2: Start orchestrator (Terminal 1)
 uv run uvicorn agent_orchestrator.main:app --port 8001

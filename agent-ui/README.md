@@ -16,8 +16,10 @@ FastAPI-based web interface for interacting with the observability agentic netwo
 The UI communicates with the **Orchestrator Agent** which coordinates the specialized agents:
 
 ```
-User → FastAPI UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
+User → Traefik → FastAPI UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
 ```
+
+> **Access**: External via Traefik at `http://localhost:8080/agents/ui/`. Services communicate internally via Docker network.
 
 ## 🚀 Running the UI
 
@@ -33,7 +35,9 @@ uv run start-dev
 # Or directly
 uv run uvicorn agent_ui.main:app --reload
 
-# Access at http://localhost:8000
+# Access at:
+# - Via Traefik: http://localhost:8080/agents/ui/
+# - Direct (dev only): http://localhost:8000
 ```
 
 ### Production Mode
@@ -86,7 +90,11 @@ podman exec agent-ui cat /app/BUILD_INFO.txt
 podman-compose logs -f agent-ui
 
 # Test the API
-curl http://localhost:3002/health
+# Via Traefik (external)
+curl http://localhost:8080/agents/ui/health
+
+# Or direct internal access (from containers)
+curl http://agent-ui:8000/health
 ```
 
 ## 📦 Dependencies

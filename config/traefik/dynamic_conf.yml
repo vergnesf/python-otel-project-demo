@@ -1,0 +1,168 @@
+http:
+  middlewares:
+    strip-akhq:
+      stripPrefix:
+        prefixes:
+          - /akhq
+    strip-adminer:
+      stripPrefix:
+        prefixes:
+          - /adminer
+    strip-app-order:
+      stripPrefix:
+        prefixes:
+          - /apps/order
+    strip-app-stock:
+      stripPrefix:
+        prefixes:
+          - /apps/stock
+    strip-agent-orchestrator:
+      stripPrefix:
+        prefixes:
+          - /agents/orchestrator
+    strip-agent-logs:
+      stripPrefix:
+        prefixes:
+          - /agents/logs
+    strip-agent-metrics:
+      stripPrefix:
+        prefixes:
+          - /agents/metrics
+    strip-agent-traces:
+      stripPrefix:
+        prefixes:
+          - /agents/traces
+    strip-agent-traduction:
+      stripPrefix:
+        prefixes:
+          - /agents/traduction
+    strip-agent-ui:
+      stripPrefix:
+        prefixes:
+          - /agents/ui
+
+  routers:
+    traefik-dashboard-router:
+      rule: "PathPrefix(`/dashboard`)"
+      entryPoints: [web]
+      service: "api@internal"
+
+    akhq-router:
+      rule: "PathPrefix(`/akhq`)"
+      entryPoints: [web]
+      service: akhq-service
+
+    grafana-router:
+      rule: "PathPrefix(`/grafana`)"
+      entryPoints: [web]
+      service: grafana-service
+
+    apps-order-router:
+      rule: "PathPrefix(`/apps/order`)"
+      entryPoints: [web]
+      service: apps-order-service
+      middlewares: [strip-app-order]
+
+    apps-stock-router:
+      rule: "PathPrefix(`/apps/stock`)"
+      entryPoints: [web]
+      service: apps-stock-service
+      middlewares: [strip-app-stock]
+
+    agents-orchestrator-router:
+      rule: "PathPrefix(`/agents/orchestrator`)"
+      entryPoints: [web]
+      service: agents-orchestrator-service
+      middlewares: [strip-agent-orchestrator]
+
+    agents-logs-router:
+      rule: "PathPrefix(`/agents/logs`)"
+      entryPoints: [web]
+      service: agents-logs-service
+      middlewares: [strip-agent-logs]
+
+    agents-metrics-router:
+      rule: "PathPrefix(`/agents/metrics`)"
+      entryPoints: [web]
+      service: agents-metrics-service
+      middlewares: [strip-agent-metrics]
+
+    agents-traces-router:
+      rule: "PathPrefix(`/agents/traces`)"
+      entryPoints: [web]
+      service: agents-traces-service
+      middlewares: [strip-agent-traces]
+
+    agents-traduction-router:
+      rule: "PathPrefix(`/agents/traduction`)"
+      entryPoints: [web]
+      service: agents-traduction-service
+      middlewares: [strip-agent-traduction]
+
+    agents-ui-router:
+      rule: "PathPrefix(`/agents/ui`)"
+      entryPoints: [web]
+      service: agents-ui-service
+      middlewares: [strip-agent-ui]
+
+    adminer-router:
+      rule: "PathPrefix(`/adminer`)"
+      entryPoints: [web]
+      service: adminer-service
+      middlewares: [strip-adminer]
+
+  services:
+    akhq-service:
+      loadBalancer:
+        servers:
+          - url: http://akhq:8080
+
+    grafana-service:
+      loadBalancer:
+        servers:
+          - url: http://grafana:3000
+
+    apps-order-service:
+      loadBalancer:
+        servers:
+          - url: http://order:5000
+
+    apps-stock-service:
+      loadBalancer:
+        servers:
+          - url: http://stock:5001
+
+    agents-orchestrator-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-orchestrator:8001
+
+    agents-logs-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-logs:8002
+
+    agents-metrics-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-metrics:8002
+
+    agents-traces-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-traces:8002
+
+    agents-traduction-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-traduction:8002
+
+    agents-ui-service:
+      loadBalancer:
+        servers:
+          - url: http://agent-ui:8000
+
+    adminer-service:
+      loadBalancer:
+        servers:
+          - url: http://adminer:8080

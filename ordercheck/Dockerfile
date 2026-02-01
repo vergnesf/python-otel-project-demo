@@ -19,11 +19,11 @@ COPY common-models ./common-models/
 WORKDIR /app/ordercheck
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --directory ordercheck --no-dev && \
-    uv run --directory ordercheck --no-dev opentelemetry-bootstrap -a install
+    uv sync --no-dev && \
+    uv run --no-dev opentelemetry-bootstrap -a install
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-CMD ["uv", "run", "--directory", "ordercheck", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]

@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  traefik:
+    image: traefik:v3.6.7
+    container_name: traefik
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "8888:8080"  # Traefik API/dashboard
+    volumes:
+      - ${PWD}/config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro,Z
+      - ${PWD}/config/traefik/dynamic_conf.yml:/etc/traefik/dynamic/dynamic_conf.yml:ro,Z
+    command:
+      - --providers.docker=false
+      - --providers.file.filename=/etc/traefik/dynamic/dynamic_conf.yml
+      - --entryPoints.web.address=:80
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=DEBUG
+    networks:
+      - otel-network
+
+networks:
+  otel-network:
+    external: true

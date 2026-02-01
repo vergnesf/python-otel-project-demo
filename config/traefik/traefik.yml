@@ -1,0 +1,14 @@
+log:
+  level: INFO
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic/dynamic_conf.yml
+
+api:
+  dashboard: true
+  insecure: true

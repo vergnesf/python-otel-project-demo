@@ -47,8 +47,9 @@ compose-up:
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-db.yml up -d
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-kafka.yml up -d
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai-tools.yml up -d
-	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai.yml up -d
-	$(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai.yml up -d --build
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml up -d --build
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-traefik.yml up -d
 compose-down:
 	@echo "Tearing down apps, ai, ai-tools, kafka, db, then observability (reverse order)..."
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml down
@@ -57,3 +58,4 @@ compose-down:
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-kafka.yml down
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-db.yml down
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-observability.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-traefik.yml down

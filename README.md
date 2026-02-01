@@ -91,28 +91,37 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 
 ## 🎯 Access Points
 
-| Service             | URL                   | Description                      |
-| ------------------- | --------------------- | -------------------------------- |
-| **Observability**   |                       |                                  |
-| Grafana             | http://localhost:3000 | Main observability dashboard     |
-| **Agentic Network** |                       |                                  |
-| Agents Web UI       | http://localhost:3002 | AI-powered observability queries |
-| Orchestrator API    | http://localhost:8001 | Main agent coordinator           |
-| Logs Agent          | http://localhost:8002 | Loki log analysis                |
-| Metrics Agent       | http://localhost:8003 | Mimir metrics analysis           |
-| Traces Agent        | http://localhost:8004 | Tempo traces analysis            |
-| Translation Agent   | http://localhost:8006 | Language detection & translation |
-| **Tools**           |                       |                                  |
-| AKHQ (Kafka UI)     | http://localhost:8080 | Kafka management                 |
-| Adminer (Database)  | http://localhost:8081 | PostgreSQL administration        |
+**All services are accessible via Traefik reverse proxy on port 8080**
+
+| Service             | URL                                | Description                      |
+| ------------------- | ---------------------------------- | -------------------------------- |
+| **Reverse Proxy**   |                                    |                                  |
+| Traefik Dashboard   | http://localhost:8888              | Traefik management dashboard     |
+| **Observability**   |                                    |                                  |
+| Grafana             | http://localhost:8080/grafana/     | Main observability dashboard     |
+| **Agentic Network** |                                    |                                  |
+| Agents Web UI       | http://localhost:8080/agents/ui/   | AI-powered observability queries |
+| Orchestrator API    | http://localhost:8080/agents/orchestrator/ | Main agent coordinator |
+| Logs Agent          | http://localhost:8080/agents/logs/ | Loki log analysis                |
+| Metrics Agent       | http://localhost:8080/agents/metrics/ | Mimir metrics analysis        |
+| Traces Agent        | http://localhost:8080/agents/traces/ | Tempo traces analysis          |
+| Translation Agent   | http://localhost:8080/agents/traduction/ | Language detection & translation |
+| **Applications**    |                                    |                                  |
+| Order Service       | http://localhost:8080/apps/order/  | Order management API             |
+| Stock Service       | http://localhost:8080/apps/stock/  | Stock management API             |
+| **Tools**           |                                    |                                  |
+| AKHQ (Kafka UI)     | http://localhost:8080/akhq/        | Kafka management                 |
+| Adminer (Database)  | http://localhost:8080/adminer/     | PostgreSQL administration        |
 
 **Default Grafana credentials**: `admin` / `admin`
+
+> **Note**: All services communicate internally via Docker network. Only Traefik exposes services externally.
 
 ## 🤖 Using the AI Agents
 
 ### Quick Example
 
-Open http://localhost:3002 and ask questions in natural language:
+Open http://localhost:8080/agents/ui/ and ask questions in natural language:
 
 - "Show me errors in the order service"
 - "What's the CPU usage of customer service?"
@@ -124,7 +133,7 @@ Open http://localhost:3002 and ask questions in natural language:
 For agents to work, create a Grafana service account:
 
 ```bash
-# 1. Open Grafana: http://localhost:3000
+# 1. Open Grafana: http://localhost:8080/grafana/
 # 2. Go to Configuration → Service accounts → Create service account
 # 3. Generate token and copy it
 # 4. Add to environment:
