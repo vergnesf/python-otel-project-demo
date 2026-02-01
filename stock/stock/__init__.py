@@ -2,7 +2,7 @@ import os
 import logging
 
 from flasgger import Swagger
-from flask import Flask
+from flask import Flask, jsonify
 
 from .database import DATABASE_URL, db
 
@@ -23,6 +23,11 @@ def create_app():
     db.init_app(app)
 
     swagger = Swagger(app)  # noqa: F841
+
+    @app.route("/health", methods=["GET"])
+    def health_check():
+        """Health check endpoint."""
+        return jsonify({"status": "healthy", "service": "stock"}), 200
 
     with app.app_context():
         from .models import Stock  # noqa: F401

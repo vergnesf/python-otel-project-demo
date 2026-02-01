@@ -519,23 +519,38 @@ class LogsAnalyzer:
 
             # If logs empty and user asked for short window, return structured fallback
             if total_logs == 0 and (
-                "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
-                        except Exception:
-                            logger.warning("Failed to parse JSON from LLM response")
+                "5m" in time_range
+                or "5" in time_range
+                or "5 minutes" in prompt.lower()
+            ):
+                return {
+                    "summary": f"No logs available for the last {time_range}.",
+                    "data": {
+                        "total_logs": total_logs,
+                        "time_range_checked": time_range,
+                        "insights": "insufficient logs for requested window",
+                    },
+                    "recommendations": [],
+                    "confidence": 0.3,
+                }
 
-                    return {
-                        "summary": llm_analysis.strip(),
-                        "data": {
-                            "raw_response": llm_analysis.strip(),
-                            "total_logs": total_logs,
-                            "time_range_checked": time_range,
-                        },
-                        "recommendations": [],
-                        "confidence": 0.7,
-                    }
+            return {
+                "summary": llm_analysis.strip(),
+                "data": {
+                    "raw_response": llm_analysis.strip(),
+                    "total_logs": total_logs,
+                    "time_range_checked": time_range,
+                },
+                "recommendations": [],
+                "confidence": 0.7,
+            }
+        except Exception as e:
+            logger.warning(f"LLM analysis failed: {e}, using fallback")
+            return self._analyze_logs(logs_data, query, context)
+
     async def check_mcp_health(self) -> bool:
-                    logger.error(f"LLM analysis failed: {e}", exc_info=True)
-                    raise
+        """
+        Check if MCP Grafana server is reachable
 
         Returns:
             True if healthy, False otherwise
