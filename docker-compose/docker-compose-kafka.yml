@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   broker:
-    image: ${DOCKER_REGISTRY:-}confluentinc/cp-kafka:8.1.0
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_KAFKA}
     container_name: broker
     ports:
       - "9092:9092"
@@ -37,7 +37,7 @@ services:
       - otel-network
 
   akhq:
-    image: ${DOCKER_REGISTRY:-}tchiotludo/akhq:0.26.0
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_AKHQ}
     container_name: akhq
     ports:
       - "8081:8080"

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: ${DOCKER_REGISTRY:-}postgres:18
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_POSTGRES}
     container_name: postgres
     ports:
       - "5432:5432"
@@ -23,7 +23,7 @@ services:
       - otel-network
 
   adminer:
-    image: ${DOCKER_REGISTRY:-}adminer:5.4.1
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_ADMINER}
     container_name: adminer
     ports:
       - "8080:8080"

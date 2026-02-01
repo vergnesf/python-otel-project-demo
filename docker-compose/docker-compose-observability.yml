@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   grafana:
-    image: ${DOCKER_REGISTRY:-}grafana/grafana:12.2
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_GRAFANA}
     container_name: grafana
     ports:
       - "3000:3000"
@@ -25,7 +25,7 @@ services:
       - otel-network
 
   otel-collector:
-    image: ${DOCKER_REGISTRY:-}otel/opentelemetry-collector-contrib:0.139.0
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_OTEL_COLLECTOR}
     container_name: otel-collector
     command: ["--config=/etc/otel-conf.yml"]
     ports:
@@ -42,7 +42,7 @@ services:
       - otel-network
 
   loki:
-    image: ${DOCKER_REGISTRY:-}grafana/loki:3.5.8
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_LOKI}
     container_name: loki
     command: ["-config.file=/etc/config/loki.yaml"]
     user: "0:0"
@@ -60,7 +60,7 @@ services:
       - otel-network
 
   tempo:
-    image: ${DOCKER_REGISTRY:-}grafana/tempo:2.9.0
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_TEMPO}
     container_name: tempo
     command: ["-config.file=/etc/tempo.yaml"]
     user: "0:0"
@@ -72,7 +72,7 @@ services:
       - otel-network
 
   mimir:
-    image: ${DOCKER_REGISTRY:-}grafana/mimir:3.0.0
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_MIMIR}
     container_name: mimir
     command: ["-config.file=/etc/mimir-config.yml"]
     volumes:

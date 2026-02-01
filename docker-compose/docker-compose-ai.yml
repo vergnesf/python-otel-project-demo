@@ -7,7 +7,7 @@ services:
       dockerfile: agent-orchestrator/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-orchestrator
     ports:
       - "8001:8001"
@@ -27,7 +27,7 @@ services:
       dockerfile: agent-logs/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-logs
     ports:
       - "8002:8002"
@@ -44,7 +44,7 @@ services:
       dockerfile: agent-metrics/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-metrics
     ports:
       - "8003:8002"
@@ -61,7 +61,7 @@ services:
       dockerfile: agent-traces/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-traces
     ports:
       - "8004:8002"
@@ -78,7 +78,7 @@ services:
       dockerfile: agent-traduction/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-traduction
     ports:
       - "8006:8002"
@@ -94,8 +94,7 @@ services:
       dockerfile: agent-ui/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_AGENT_UI:-agent-ui:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: agent-ui
     ports:
       - "3002:8000"

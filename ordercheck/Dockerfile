@@ -1,5 +1,5 @@
-ARG DOCKER_REGISTRY=""
-ARG IMG_PYTHON="python:3.14-slim"
+ARG DOCKER_REGISTRY
+ARG IMG_PYTHON
 
 FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
@@ -13,6 +13,7 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
 COPY ordercheck/pyproject.toml ./ordercheck/
+COPY ordercheck/ordercheck /app/ordercheck/ordercheck/
 COPY common-models ./common-models/
 
 WORKDIR /app/ordercheck
@@ -20,8 +21,6 @@ WORKDIR /app/ordercheck
 RUN pip install --no-cache-dir uv && \
     uv sync --directory ordercheck --no-dev && \
     uv run --directory ordercheck --no-dev opentelemetry-bootstrap -a install
-
-COPY ordercheck/ordercheck /app/ordercheck/ordercheck/
 
 RUN chown -R appuser:appuser /app
 

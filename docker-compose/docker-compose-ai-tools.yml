@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   grafana-mcp:
-    image: ${DOCKER_REGISTRY:-}mcp/grafana:latest
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_GRAFANA_MCP}
     container_name: grafana-mcp
     ports:
       - "8000:8000"
@@ -14,7 +14,7 @@ services:
       - otel-network
 
   ollama:
-    image: ollama/ollama:latest
+    image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_OLLAMA}
     container_name: ollama
     ports:
       - "11434:11434"

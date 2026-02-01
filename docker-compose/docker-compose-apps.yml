@@ -15,8 +15,7 @@ services:
       dockerfile: customer/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_CUSTOMER:-customer:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: customer
     environment:
       <<: *common-llm-otel-env
@@ -33,8 +32,7 @@ services:
       dockerfile: supplier/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIER:-supplier:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: supplier
     environment:
       <<: *common-llm-otel-env
@@ -51,8 +49,7 @@ services:
       dockerfile: order/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_ORDER:-order:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: order
     environment:
       <<: *common-llm-otel-env
@@ -68,8 +65,7 @@ services:
       dockerfile: stock/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_STOCK:-stock:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: stock
     environment:
       <<: *common-llm-otel-env
@@ -85,8 +81,7 @@ services:
       dockerfile: ordercheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_ORDERCHECK:-ordercheck:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: ordercheck
     environment:
       <<: *common-llm-otel-env
@@ -105,8 +100,7 @@ services:
       dockerfile: suppliercheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_SUPPLIERCHECK:-suppliercheck:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: suppliercheck
     environment:
       <<: *common-llm-otel-env
@@ -125,8 +119,7 @@ services:
       dockerfile: ordermanagement/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
-        IMG_PYTHON: ${IMG_PYTHON:-python:3.14-slim}
-    image: ${DOCKER_REGISTRY:-}${IMG_ORDERMANAGEMENT:-ordermanagement:latest}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
     container_name: ordermanagement
     environment:
       <<: *common-llm-otel-env
