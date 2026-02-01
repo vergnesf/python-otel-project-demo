@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  agent-orchestrator:
+    build:
+      context: ..
+      dockerfile: agent-orchestrator/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-orchestrator
+    ports:
+      - "8001:8001"
+    environment:
+      OTEL_SERVICE_NAME: agent-orchestrator
+      AGENT_LOGS_URL: http://agent-logs:8002
+      AGENT_METRICS_URL: http://agent-metrics:8002
+      AGENT_TRACES_URL: http://agent-traces:8002
+      AGENT_TRANSLATION_URL: http://agent-traduction:8002
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  agent-logs:
+    build:
+      context: ..
+      dockerfile: agent-logs/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-logs
+    ports:
+      - "8002:8002"
+    environment:
+      OTEL_SERVICE_NAME: agent-logs
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  agent-metrics:
+    build:
+      context: ..
+      dockerfile: agent-metrics/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-metrics
+    ports:
+      - "8003:8002"
+    environment:
+      OTEL_SERVICE_NAME: agent-metrics
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  agent-traces:
+    build:
+      context: ..
+      dockerfile: agent-traces/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-traces
+    ports:
+      - "8004:8002"
+    environment:
+      OTEL_SERVICE_NAME: agent-traces
+      MCP_GRAFANA_URL: http://grafana-mcp:8000
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  agent-traduction:
+    build:
+      context: ..
+      dockerfile: agent-traduction/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-traduction
+    ports:
+      - "8006:8002"
+    environment:
+      OTEL_SERVICE_NAME: agent-traduction
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+  agent-ui:
+    build:
+      context: ..
+      dockerfile: agent-ui/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: agent-ui
+    ports:
+      - "3002:8000"
+    environment:
+      ORCHESTRATOR_URL: http://agent-orchestrator:8001
+    depends_on:
+      - agent-orchestrator
+    restart: unless-stopped
+    networks:
+      - otel-network
+
+volumes:
+  ollama-data:
+
+networks:
+  otel-network:
+    external: true
