@@ -17,7 +17,7 @@ from benchmark.ui import (
     print_summary,
     print_validation,
 )
-from benchmark.validation import validate_orchestrator_response
+from benchmark.validation import validate_orchestrator_response, validate_routing
 from benchmark.benchmarks.base import (
     check_service_available,
     extract_query,
@@ -45,15 +45,23 @@ async def benchmark_orchestrator() -> dict:
             
             print_model_header(model)
             
+            # Test routing to different agents
             queries = [
-                "Analyze the system performance and provide insights",
-                "Investigate latency spikes and error rates in the last hour",
+                # LOGS routing - specific error queries
+                "Show me the 5 most recent errors and exceptions",
+                # METRICS routing - performance questions
+                "What are the CPU and memory usage across all services?",
+                # TRACES routing - request flow questions
+                "Show me the slowest requests in the last hour",
+                # COMBINED - requires multiple agents
+                "Analyze system performance, errors, and request latencies",
             ]
             
             tracker = start_resource_tracker()
             timings = []
             all_results = []
             validation_failed = False
+            valid_tests = 0
             
             try:
                 # Test: Execute each query NUM_TEST_REQUESTS times for consistency
@@ -86,7 +94,18 @@ async def benchmark_orchestrator() -> dict:
                                 result["response"]
                             )
                             print_validation(is_valid, validation_msg)
-                            if not is_valid:
+                            # Also validate routing
+                            routing_valid = True
+                            if is_valid and result.get("request"):
+                                routing_valid, routing_msg = validate_routing(
+                                    result["response"], 
+                                    extract_query(result["request"])
+                                )
+                                print_validation(routing_valid, f"routing: {routing_msg}")
+                            # Count as valid only if both structure and routing are valid
+                            if is_valid and routing_valid:
+                                valid_tests += 1
+                            else:
                                 validation_failed = True
                         timings.append(result['latency_ms'])
                         all_results.append(result)
@@ -137,7 +156,7 @@ async def benchmark_orchestrator() -> dict:
             print_summary(
                 total_time,
                 avg_time,
-                f"{len(all_results)}/{total_expected}",
+                f"{valid_tests}/{total_expected}",
                 tracker.cpu_max,
                 tracker.ram_max_mb,
                 tracker.gpu_util_max,
@@ -152,7 +171,7 @@ async def benchmark_orchestrator() -> dict:
                 "gpu_util_max": tracker.gpu_util_max,
                 "vram_max_mb": tracker.vram_max_mb,
                 "timings": timings,
-                "success_rate": f"{len(all_results)}/{total_expected}",
+                "success_rate": f"{valid_tests}/{total_expected}",
                 "is_valid": not validation_failed,
             }
             

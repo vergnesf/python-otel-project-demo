@@ -43,20 +43,21 @@ async def benchmark_traces_agent() -> dict:
             print_model_header(model)
             
             # 2 different test queries
-            trace_queries = [
-                {"service": None},  # All services
-                {"service": "order-service"},  # Specific service
+            queries = [
+                "Analyze request latency and error rates across all services",
+                "Show traces for order-service with highest latencies",
             ]
             
             tracker = start_resource_tracker()
             timings = []
             all_results = []
             validation_failed = False
+            valid_tests = 0
             
             try:
                 # Execute each query NUM_TEST_REQUESTS times for consistency checking
                 results = []
-                for query in trace_queries:
+                for query in queries:
                     results.extend(
                         await benchmark.benchmark_analyze(
                             model=model,
@@ -66,8 +67,8 @@ async def benchmark_traces_agent() -> dict:
                     )
                 
                 # Display request/response details
-                total_expected = len(trace_queries) * NUM_TEST_REQUESTS
-                print_endpoint_header("Analyze endpoint", f"{len(trace_queries)} tests × {NUM_TEST_REQUESTS} runs = {total_expected} total")
+                total_expected = len(queries) * NUM_TEST_REQUESTS
+                print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {NUM_TEST_REQUESTS} runs = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
                         print_request_result(i, result['latency_ms'], True)
@@ -83,7 +84,9 @@ async def benchmark_traces_agent() -> dict:
                                 "traces", result["response"]
                             )
                             print_validation(is_valid, validation_msg)
-                            if not is_valid:
+                            if is_valid:
+                                valid_tests += 1
+                            else:
                                 validation_failed = True
                         timings.append(result['latency_ms'])
                         all_results.append(result)
@@ -130,7 +133,7 @@ async def benchmark_traces_agent() -> dict:
             print_summary(
                 total_time,
                 avg_time,
-                f"{len(all_results)}/{total_expected}",
+                f"{valid_tests}/{total_expected}",
                 tracker.cpu_max,
                 tracker.ram_max_mb,
                 tracker.gpu_util_max,
@@ -144,7 +147,7 @@ async def benchmark_traces_agent() -> dict:
                 "ram_max_mb": tracker.ram_max_mb,
                 "gpu_util_max": tracker.gpu_util_max,
                 "vram_max_mb": tracker.vram_max_mb,
-                "success_rate": f"{len(all_results)}/{total_expected}",
+                "success_rate": f"{valid_tests}/{total_expected}",
                 "is_valid": not validation_failed,
             }
             

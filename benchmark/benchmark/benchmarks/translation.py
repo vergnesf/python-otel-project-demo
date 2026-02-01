@@ -52,6 +52,7 @@ async def benchmark_translation_agent() -> dict:
             timings = []
             all_results = []
             validation_failed = False
+            valid_tests = 0
             total_expected = len(translation_inputs) * NUM_TEST_REQUESTS
             
             try:
@@ -83,7 +84,9 @@ async def benchmark_translation_agent() -> dict:
                                 "translation", result["response"]
                             )
                             print_validation(is_valid, validation_msg)
-                            if not is_valid:
+                            if is_valid:
+                                valid_tests += 1
+                            else:
                                 validation_failed = True
                         timings.append(result['latency_ms'])
                         all_results.append(result)
@@ -129,7 +132,7 @@ async def benchmark_translation_agent() -> dict:
             print_summary(
                 total_time,
                 avg_time,
-                f"{len(all_results)}/{total_expected}",
+                f"{valid_tests}/{total_expected}",
                 tracker.cpu_max,
                 tracker.ram_max_mb,
                 tracker.gpu_util_max,
@@ -143,7 +146,7 @@ async def benchmark_translation_agent() -> dict:
                 "ram_max_mb": tracker.ram_max_mb,
                 "gpu_util_max": tracker.gpu_util_max,
                 "vram_max_mb": tracker.vram_max_mb,
-                "success_rate": f"{len(all_results)}/{total_expected}",
+                "success_rate": f"{valid_tests}/{total_expected}",
                 "is_valid": not validation_failed,
             }
             

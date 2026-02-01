@@ -23,6 +23,17 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
             results = all_results.get(agent_name, {})
             if model in results:
                 stats = results[model]
+                success_rate_str = stats.get("success_rate", "0/0")
+                is_valid = stats.get("is_valid", True)
+                # Parse success count and total from "X/Y" format
+                try:
+                    success_count, total_count = map(int, success_rate_str.split("/"))
+                    has_failures = success_count < total_count
+                except ValueError:
+                    success_count = 0
+                    total_count = 0
+                    has_failures = True
+                
                 row = {
                     "model": model,
                     "agent": agent_name,
@@ -31,8 +42,9 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
                     "ram": stats.get("ram_max_mb"),
                     "gpu": stats.get("gpu_util_max"),
                     "vram": stats.get("vram_max_mb"),
-                    "success": stats.get("success_rate", "N/A"),
-                    "valid": "✓" if stats.get("is_valid", True) else "✗",
+                    "success_rate": success_rate_str,
+                    "is_valid": is_valid,
+                    "has_failures": has_failures,
                 }
                 table_rows.append(row)
 
@@ -52,8 +64,7 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
     table.add_column("RAM MB", justify="right", width=12)
     table.add_column("GPU %", justify="right", width=10)
     table.add_column("VRAM MB", justify="right", width=12)
-    table.add_column("Success", justify="center", width=10)
-    table.add_column("Valid", justify="center", width=8)
+    table.add_column("Status", justify="center", width=12)
 
     # Add rows grouped by model
     current_model: str | None = None
@@ -61,6 +72,16 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
         model_display = row["model"] if current_model != row["model"] else ""
         current_model = row["model"]
 
+        # Build status: format is "X/Y" with color based on failures/valid status
+        valid_icon = "✓" if row["is_valid"] else "✗"
+        status_text = f"{row['success_rate']} {valid_icon}"
+        
+        # Color red if failures exist or validation failed
+        if row["has_failures"] or not row["is_valid"]:
+            status_display = f"[red]{status_text}[/red]"
+        else:
+            status_display = f"[green]{status_text}[/green]"
+        
         table.add_row(
             str(model_display),
             str(row["agent"]),
@@ -69,10 +90,7 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
             format_optional_metric(row["ram"], " MB"),
             format_optional_metric(row["gpu"], "%"),
             format_optional_metric(row["vram"], " MB"),
-            str(row["success"]),
-            f"[green]{row['valid']}[/green]"
-            if row["valid"] == "✓"
-            else f"[red]{row['valid']}[/red]",
+            status_display,
         )
 
     console.print(table)

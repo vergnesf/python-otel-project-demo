@@ -62,7 +62,11 @@ class TranslationService:
             Dictionary with language and translated query.
         """
         if not query:
-            return {"language": "unknown", "translated_query": query}
+            return {
+                "agent_name": "translation",
+                "language": "unknown",
+                "translated_query": query,
+            }
 
         try:
             language = self._detect_language(query, model, model_params)
@@ -76,10 +80,18 @@ class TranslationService:
             if not translated_query:
                 translated_query = query
 
-            return {"language": language, "translated_query": translated_query}
+            return {
+                "agent_name": "translation",
+                "language": language,
+                "translated_query": translated_query,
+            }
         except Exception as exc:
             logger.warning("Translation failed: %s", exc)
-            return {"language": "unknown", "translated_query": query}
+            return {
+                "agent_name": "translation",
+                "language": "unknown",
+                "translated_query": query,
+            }
 
     def _detect_language(
         self,

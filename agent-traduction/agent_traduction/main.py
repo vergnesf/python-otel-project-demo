@@ -53,6 +53,7 @@ class TranslateRequest(BaseModel):
 class TranslateResponse(BaseModel):
     """Translation response payload."""
 
+    agent_name: str
     language: str
     translated_query: str
 
