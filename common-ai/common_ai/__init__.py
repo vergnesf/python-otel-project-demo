@@ -3,6 +3,7 @@ Common AI - Shared AI utilities for AI agents
 
 Includes:
 - Agent models: AgentRequest, AgentResponse, AgentType, OrchestratorResponse
+- Agent requests: Pydantic models for API requests/responses
 - MCP client: MCPGrafanaClient
 - LLM configuration: get_llm
 - LLM utilities: extract_text_from_response
