@@ -69,7 +69,8 @@ async def benchmark_orchestrator() -> dict:
                     )
                 
                 # Display request/response details
-                print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {NUM_TEST_REQUESTS} iterations")
+                total_expected = len(results)
+                print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {NUM_TEST_REQUESTS} iterations = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
                         print_request_result(i, result['latency_ms'], True)
@@ -106,13 +107,14 @@ async def benchmark_orchestrator() -> dict:
                         "ram_max_mb": tracker.ram_max_mb,
                         "gpu_util_max": tracker.gpu_util_max,
                         "vram_max_mb": tracker.vram_max_mb,
-                        "success_rate": "0/" + str(len(queries) * NUM_TEST_REQUESTS),
+                        "success_rate": f"0/{total_expected}",
                     }
                     continue
                     
             except Exception as e:
                 console.print(f"[red]✗ {model}: {e}[/red]")
                 # Store failed result for summary table
+                total_expected = len(queries) * NUM_TEST_REQUESTS
                 results_by_model[model] = {
                     "total_time_ms": 0,
                     "avg_time_ms": 0,
@@ -120,7 +122,7 @@ async def benchmark_orchestrator() -> dict:
                     "ram_max_mb": tracker.ram_max_mb,
                     "gpu_util_max": tracker.gpu_util_max,
                     "vram_max_mb": tracker.vram_max_mb,
-                    "success_rate": "0/" + str(len(queries) * NUM_TEST_REQUESTS),
+                    "success_rate": f"0/{total_expected}",
                 }
                 continue
             
@@ -131,7 +133,7 @@ async def benchmark_orchestrator() -> dict:
             print_summary(
                 total_time,
                 avg_time,
-                f"{len(all_results)}/{NUM_TEST_REQUESTS}",
+                f"{len(all_results)}/{total_expected}",
                 tracker.cpu_max,
                 tracker.ram_max_mb,
                 tracker.gpu_util_max,
@@ -146,7 +148,7 @@ async def benchmark_orchestrator() -> dict:
                 "gpu_util_max": tracker.gpu_util_max,
                 "vram_max_mb": tracker.vram_max_mb,
                 "timings": timings,
-                "success_rate": f"{len(all_results)}/{len(queries) * NUM_TEST_REQUESTS}",
+                "success_rate": f"{len(all_results)}/{total_expected}",
                 "is_valid": not validation_failed,
             }
             

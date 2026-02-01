@@ -44,29 +44,29 @@ async def benchmark_translation_agent() -> dict:
             
             # 2 different test inputs
             translation_inputs = [
-                {"text": "Bonjour, comment allez-vous?", "source": "fr", "target": "en"},
-                {"text": "Je suis très heureux de vous rencontrer", "source": "fr", "target": "en"},
+                "Bonjour, comment allez-vous?",
+                "Je suis très heureux de vous rencontrer",
             ]
             
             tracker = start_resource_tracker()
             timings = []
             all_results = []
             validation_failed = False
+            total_expected = len(translation_inputs) * NUM_TEST_REQUESTS
             
             try:
                 # Execute each input NUM_TEST_REQUESTS times for consistency checking
                 results = []
-                for input_data in translation_inputs:
+                for text in translation_inputs:
                     results.extend(
                         await benchmark.benchmark_translate(
                             model=model,
-                            input_data=input_data,
+                            text=text,
                             num_requests=NUM_TEST_REQUESTS,
                         )
                     )
                 
                 # Display request/response details
-                total_expected = len(translation_inputs) * NUM_TEST_REQUESTS
                 print_endpoint_header("Translate endpoint", f"{len(translation_inputs)} tests × {NUM_TEST_REQUESTS} runs = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):

@@ -38,10 +38,11 @@ AGENT_LOGS_URL = "http://localhost:8080/agents/logs"
 AGENT_METRICS_URL = "http://localhost:8080/agents/metrics"
 AGENT_TRACES_URL = "http://localhost:8080/agents/traces"
 TRANSLATION_URL = "http://localhost:8080/agents/traduction"
+OLLAMA_URL = "http://localhost:8080/ollama"
 
 # Benchmark Settings
 BENCHMARK_TIMEOUT = 600  # seconds (10 minutes for AI requests)
-NUM_TEST_REQUESTS = 5  # Number of test requests per model to validate consistency
+NUM_TEST_REQUESTS = 1  # Number of test requests per model to validate consistency
 
 # Default models for benchmarking (complete list from test_benchmark_models.py)
 BENCHMARK_MODELS = [

@@ -32,7 +32,9 @@ async def unload_ollama_model(model_name: str | None = None) -> bool:
     """
     try:
         # Get Ollama base URL from environment or use default
-        ollama_base = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        # For agents in Docker: http://ollama:11434
+        # For external tools via Traefik: http://localhost:8080/ollama
+        ollama_base = os.getenv("OLLAMA_URL") or os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
         # Remove /v1 suffix if present to get base API URL
         if ollama_base.endswith("/v1"):
             ollama_base = ollama_base[:-3]
@@ -52,17 +54,54 @@ async def unload_ollama_model(model_name: str | None = None) -> bool:
             response = await client.post(url, json=payload)
 
             if response.status_code in [200, 404]:  # 404 is OK if model not loaded
-                print(f"{Colors.GREEN}✓ Unloaded Ollama model(s){Colors.END}")
                 await asyncio.sleep(1)  # Give system time to release GPU memory
                 return True
             else:
-                print(
-                    f"{Colors.YELLOW}⚠️  Ollama API returned status {response.status_code}{Colors.END}"
-                )
                 return False
 
     except Exception as e:
-        print(
-            f"{Colors.YELLOW}⚠️  Could not unload Ollama model via API: {e}{Colors.END}"
-        )
+        return False
+
+
+async def load_ollama_model(model_name: str) -> bool:
+    """
+    Load/warm up an Ollama model by making a minimal request.
+    
+    This ensures the model is loaded into memory before benchmarking,
+    so that the first test doesn't include model loading time.
+    
+    Args:
+        model_name: Name of the model to load (e.g., "qwen3:0.6b")
+    
+    Returns:
+        bool: True if load was successful, False otherwise.
+    """
+    try:
+        # Get Ollama base URL from environment or use default
+        # For agents in Docker: http://ollama:11434
+        # For external tools via Traefik: http://localhost:8080/ollama
+        ollama_base = os.getenv("OLLAMA_URL") or os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        # Remove /v1 suffix if present to get base API URL
+        if ollama_base.endswith("/v1"):
+            ollama_base = ollama_base[:-3]
+        
+        url = f"{ollama_base}/api/generate"
+        
+        # Make a minimal request to load the model (only 1 token)
+        payload = {
+            "model": model_name,
+            "prompt": "Hi",
+            "stream": False,
+            "options": {
+                "num_predict": 1,  # Only generate 1 token for fast warm-up
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+        
+        return True
+        
+    except Exception as e:
         return False
