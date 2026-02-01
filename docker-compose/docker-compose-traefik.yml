@@ -8,8 +8,8 @@ services:
       - "8443:443"
       - "8888:8080"  # Traefik API/dashboard
     volumes:
-      - ${PWD}/conf/traefik/traefik.yml:/etc/traefik/traefik.yml:ro,Z
-      - ${PWD}/conf/traefik/dynamic_conf.yml:/etc/traefik/dynamic/dynamic_conf.yml:ro,Z
+      - ${PWD}/config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro,Z
+      - ${PWD}/config/traefik/dynamic_conf.yml:/etc/traefik/dynamic/dynamic_conf.yml:ro,Z
     command:
       - --providers.docker=false
       - --providers.file.filename=/etc/traefik/dynamic/dynamic_conf.yml

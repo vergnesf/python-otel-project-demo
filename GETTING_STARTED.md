@@ -53,10 +53,15 @@ podman-compose logs -f || docker-compose logs -f
 
 Once all containers are running (may take 1-2 minutes for first startup):
 
-- **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000) (admin/admin)
-- **Agents Web UI**: [http://localhost:3002](http://localhost:3002)
-- **Kafka UI**: [http://localhost:8080](http://localhost:8080)
-- **Database Admin**: [http://localhost:8081](http://localhost:8081)
+**All services are accessible via Traefik reverse proxy:**
+
+- **Traefik Dashboard**: [http://localhost:8888](http://localhost:8888)
+- **Grafana Dashboard**: [http://localhost:8080/grafana/](http://localhost:8080/grafana/) (admin/admin)
+- **Agents Web UI**: [http://localhost:8080/agents/ui/](http://localhost:8080/agents/ui/)
+- **Kafka UI (AKHQ)**: [http://localhost:8080/akhq/](http://localhost:8080/akhq/)
+- **Database Admin (Adminer)**: [http://localhost:8080/adminer/](http://localhost:8080/adminer/)
+
+> **Note**: Services are no longer exposed on individual ports. Traefik handles all external access.
 
 ## 🐋 Using Podman Instead of Docker
 
@@ -184,7 +189,7 @@ docker-compose up -d
 podman-compose up -d
 
 # 2. Wait for Grafana to be ready (about 30-40 seconds)
-# 3. Open Grafana: http://localhost:3000
+# 3. Open Grafana: http://localhost:8080/grafana/
 # 4. Login with admin/admin
 # 5. Go to Configuration → Service accounts (or use the menu)
 # 6. Create a new service account with a descriptive name (e.g., "MCP Integration")
