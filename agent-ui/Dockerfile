@@ -13,7 +13,7 @@ COPY agent-ui/pyproject.toml ./
 COPY agent-ui/uv.lock ./
 
 RUN pip install --no-cache-dir uv && \
-    uv add pip
+    uv sync --no-dev
 
 # Copy application code
 COPY agent-ui/agent_ui ./agent_ui/

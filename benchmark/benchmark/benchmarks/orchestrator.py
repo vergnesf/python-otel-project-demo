@@ -108,6 +108,7 @@ async def benchmark_orchestrator() -> dict:
                         "gpu_util_max": tracker.gpu_util_max,
                         "vram_max_mb": tracker.vram_max_mb,
                         "success_rate": f"0/{total_expected}",
+                        "is_valid": False,
                     }
                     continue
                     
@@ -129,6 +130,9 @@ async def benchmark_orchestrator() -> dict:
             # Calculate statistics
             total_time = sum(timings)
             avg_time = statistics.mean(timings)
+            
+            # Stop continuous sampling
+            tracker.stop_continuous_sampling()
             
             print_summary(
                 total_time,

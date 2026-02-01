@@ -104,6 +104,7 @@ async def benchmark_logs_agent() -> dict:
                         "gpu_util_max": tracker.gpu_util_max,
                         "vram_max_mb": tracker.vram_max_mb,
                         "success_rate": f"0/{total_expected}",
+                        "is_valid": False,
                     }
                     continue
                     
@@ -122,6 +123,9 @@ async def benchmark_logs_agent() -> dict:
             
             total_time = sum(timings)
             avg_time = statistics.mean(timings) if timings else 0
+            
+            # Stop continuous sampling
+            tracker.stop_continuous_sampling()
             
             print_summary(
                 total_time,

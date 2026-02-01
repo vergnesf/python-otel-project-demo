@@ -24,27 +24,27 @@ Generate a TraceQL query for **BUSINESS SERVICES ONLY**.
 
 **All traces from business services**:
 ```
-{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}
+{{{{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}}}}
 ```
 
 **Traces from one service**:
 ```
-{service.name="order"}
+{{{{service.name="order"}}}}
 ```
 
 **Error traces**:
 ```
-{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && status=error}
+{{{{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && status=error}}}}
 ```
 
 **Slow traces (> 500ms)**:
 ```
-{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && duration > 500ms}
+{{{{service.name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck" && duration > 500ms}}}}
 ```
 
 **Slow errors from specific service**:
 ```
-{service.name="order" && status=error && duration > 300ms}
+{{{{service.name="order" && status=error && duration > 300ms}}}}
 ```
 
 ### Rules

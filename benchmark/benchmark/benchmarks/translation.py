@@ -123,6 +123,9 @@ async def benchmark_translation_agent() -> dict:
             total_time = sum(timings)
             avg_time = statistics.mean(timings) if timings else 0
             
+            # Stop continuous sampling
+            tracker.stop_continuous_sampling()
+            
             print_summary(
                 total_time,
                 avg_time,

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import threading
+import time
 
 import psutil
 
@@ -61,6 +63,8 @@ class ResourceTracker:
     ram_max_mb: float = 0.0
     gpu_util_max: float | None = None
     vram_max_mb: float | None = None
+    _sampling_thread: threading.Thread | None = None
+    _stop_sampling: bool = False
 
     def sample(self) -> None:
         """Sample current resource usage and update peaks."""
@@ -82,12 +86,36 @@ class ResourceTracker:
                     self.vram_max_mb, vram_mb
                 )
 
+    def start_continuous_sampling(self, interval: float = 0.1) -> None:
+        """Start a background thread that samples resources continuously."""
+        if self._sampling_thread is not None and self._sampling_thread.is_alive():
+            return
+        
+        self._stop_sampling = False
+        
+        def sampling_loop() -> None:
+            while not self._stop_sampling:
+                self.sample()
+                time.sleep(interval)
+        
+        self._sampling_thread = threading.Thread(target=sampling_loop, daemon=True)
+        self._sampling_thread.start()
+
+    def stop_continuous_sampling(self) -> None:
+        """Stop the background sampling thread."""
+        self._stop_sampling = True
+        if self._sampling_thread is not None:
+            self._sampling_thread.join(timeout=1.0)
+
 
 def start_resource_tracker() -> ResourceTracker:
     """Create a resource tracker and prime CPU measurement."""
     process = psutil.Process()
     process.cpu_percent(interval=None)
-    return ResourceTracker(process=process)
+    tracker = ResourceTracker(process=process)
+    # Start continuous sampling in background
+    tracker.start_continuous_sampling(interval=0.05)  # Sample every 50ms
+    return tracker
 
 
 def format_optional_metric(value: float | None, unit: str) -> str:
