@@ -68,3 +68,4 @@ htmlcov/
 *.log
 results/
 benchmarks/output/
+benchmark_results.html
