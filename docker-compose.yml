@@ -54,7 +54,6 @@ x-python-build: &python-build
   args:
     DOCKER_REGISTRY: *docker-registry
     IMG_PYTHON: *python-image
-    BUILD_TARGET: ${BUILD_TARGET:-dev}
 
 # Inline env to ensure containers get environment variables at runtime
 # Add variables commonly set in environment here so watches and rebuilds
@@ -62,7 +61,6 @@ x-python-build: &python-build
 x-inline-env: &inline-env
   DOCKER_REGISTRY: *docker-registry
   IMG_PYTHON: *python-image
-  BUILD_TARGET: dev
 
 x-common-settings: &common-settings
   pull_policy: always
