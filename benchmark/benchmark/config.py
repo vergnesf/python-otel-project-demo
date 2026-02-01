@@ -47,7 +47,7 @@ NUM_TEST_REQUESTS = 1  # Number of test requests per model to validate consisten
 # Default models for benchmarking (complete list from test_benchmark_models.py)
 BENCHMARK_MODELS = [
     "qwen3:0.6b",  # Temporary: testing with one small model
-    # "mistral:7b",
+    "mistral:7b",
     # "llama3.2:3b",
     # "granite4:3b",
     # "mistral-nemo:12b",

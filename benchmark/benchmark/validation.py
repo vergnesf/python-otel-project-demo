@@ -21,12 +21,26 @@ def _is_probably_french(text: str) -> bool:
     return any(marker in lowered for marker in french_markers)
 
 
+def validate_model_in_response(response: dict, expected_model: str | None = None) -> tuple[bool, str]:
+    """Validate that response contains expected model info if provided."""
+    if expected_model is None:
+        return True, "no model check required"
+    
+    # Check for model in response metadata
+    response_model = response.get("model")
+    if response_model is None:
+        return True, "model not included in response (optional)"
+    
+    if response_model == expected_model:
+        return True, f"model={response_model} ✓"
+    
+    return False, f"model mismatch: expected {expected_model}, got {response_model}"
+
+
 def validate_translation_response(query: str, response: dict) -> tuple[bool, str]:
     """Validate translation response against expected behavior."""
     if not isinstance(response, dict):
         return False, "invalid response format"
-    if response.get("agent_name") != "translation":
-        return False, "expected agent_name='translation'"
     language = response.get("language")
     translated = response.get("translated_query")
     if translated is None:

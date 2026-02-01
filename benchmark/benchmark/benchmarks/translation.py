@@ -3,7 +3,7 @@
 import logging
 import statistics
 from benchmark.agents.translation import TranslationBenchmark
-from benchmark.config import BENCHMARK_MODELS, BENCHMARK_TIMEOUT, NUM_TEST_REQUESTS, TRANSLATION_URL
+import benchmark.config
 from benchmark.resources import start_resource_tracker
 from benchmark.ui import (
     console,
@@ -30,16 +30,16 @@ async def benchmark_translation_agent() -> dict:
     """Benchmark translation agent."""
     print_section_header("Translation Agent Benchmarks")
 
-    available = await check_service_available(TRANSLATION_URL)
+    available = await check_service_available(benchmark.config.TRANSLATION_URL)
     if not available:
-        logger.warning("Translation agent service not available, skipping")
+        logger.warning("Translation service not available, skipping")
         return {}
 
     results_by_model = {}
-    benchmark = TranslationBenchmark(TRANSLATION_URL, timeout=BENCHMARK_TIMEOUT)
+    benchmark_agent = TranslationBenchmark(benchmark.config.TRANSLATION_URL, timeout=benchmark.config.BENCHMARK_TIMEOUT)
     
     try:
-        for model in BENCHMARK_MODELS:
+        for model in benchmark.config.BENCHMARK_MODELS:
             print_model_header(model)
             
             # 2 different test inputs
@@ -53,22 +53,22 @@ async def benchmark_translation_agent() -> dict:
             all_results = []
             validation_failed = False
             valid_tests = 0
-            total_expected = len(translation_inputs) * NUM_TEST_REQUESTS
+            total_expected = len(translation_inputs) * benchmark.config.NUM_TEST_REQUESTS
             
             try:
-                # Execute each input NUM_TEST_REQUESTS times for consistency checking
+                # Execute each input benchmark.config.NUM_TEST_REQUESTS times for consistency checking
                 results = []
                 for text in translation_inputs:
                     results.extend(
-                        await benchmark.benchmark_translate(
+                        await benchmark_agent.benchmark_translate(
                             model=model,
                             text=text,
-                            num_requests=NUM_TEST_REQUESTS,
+                            num_requests=benchmark.config.NUM_TEST_REQUESTS,
                         )
                     )
                 
                 # Display request/response details
-                print_endpoint_header("Translate endpoint", f"{len(translation_inputs)} tests × {NUM_TEST_REQUESTS} runs = {total_expected} total")
+                print_endpoint_header("Translate endpoint", f"{len(translation_inputs)} tests × {benchmark.config.NUM_TEST_REQUESTS} runs = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
                         print_request_result(i, result['latency_ms'], True)
@@ -151,6 +151,6 @@ async def benchmark_translation_agent() -> dict:
             }
             
     finally:
-        await benchmark.close()
+        await benchmark_agent.close()
     
     return results_by_model

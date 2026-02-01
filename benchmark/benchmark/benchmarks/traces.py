@@ -3,7 +3,7 @@
 import logging
 import statistics
 from benchmark.agents.traces import TracesBenchmark
-from benchmark.config import BENCHMARK_MODELS, BENCHMARK_TIMEOUT, NUM_TEST_REQUESTS, AGENT_TRACES_URL
+import benchmark.config
 from benchmark.resources import start_resource_tracker
 from benchmark.ui import (
     console,
@@ -30,16 +30,16 @@ async def benchmark_traces_agent() -> dict:
     """Benchmark traces agent."""
     print_section_header("Traces Agent Benchmarks")
 
-    available = await check_service_available(AGENT_TRACES_URL)
+    available = await check_service_available(benchmark.config.AGENT_TRACES_URL)
     if not available:
         logger.warning("Traces agent service not available, skipping")
         return {}
 
     results_by_model = {}
-    benchmark = TracesBenchmark(AGENT_TRACES_URL, timeout=BENCHMARK_TIMEOUT)
+    benchmark_agent = TracesBenchmark(benchmark.config.AGENT_TRACES_URL, timeout=benchmark.config.BENCHMARK_TIMEOUT)
     
     try:
-        for model in BENCHMARK_MODELS:
+        for model in benchmark.config.BENCHMARK_MODELS:
             print_model_header(model)
             
             # 2 different test queries
@@ -53,22 +53,22 @@ async def benchmark_traces_agent() -> dict:
             all_results = []
             validation_failed = False
             valid_tests = 0
+            total_expected = len(queries) * benchmark.config.NUM_TEST_REQUESTS
             
             try:
-                # Execute each query NUM_TEST_REQUESTS times for consistency checking
+                # Execute each query benchmark.config.NUM_TEST_REQUESTS times for consistency checking
                 results = []
                 for query in queries:
                     results.extend(
-                        await benchmark.benchmark_analyze(
+                        await benchmark_agent.benchmark_analyze(
                             model=model,
                             query=query,
-                            num_requests=NUM_TEST_REQUESTS,
+                            num_requests=benchmark.config.NUM_TEST_REQUESTS,
                         )
                     )
                 
                 # Display request/response details
-                total_expected = len(queries) * NUM_TEST_REQUESTS
-                print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {NUM_TEST_REQUESTS} runs = {total_expected} total")
+                print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {benchmark.config.NUM_TEST_REQUESTS} runs = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
                         print_request_result(i, result['latency_ms'], True)
@@ -152,6 +152,6 @@ async def benchmark_traces_agent() -> dict:
             }
             
     finally:
-        await benchmark.close()
+        await benchmark_agent.close()
     
     return results_by_model
