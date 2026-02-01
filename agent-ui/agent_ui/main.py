@@ -52,8 +52,9 @@ class ChatState:
 # Global state
 chat_state = ChatState()
 
-# FastAPI app
-app = FastAPI(title="Observability Assistant")
+# FastAPI app with root_path for Traefik proxy (strips /agents/ui prefix)
+root_path = os.getenv("ROOT_PATH", "")
+app = FastAPI(title="Observability Assistant", root_path=root_path)
 
 # Templates
 templates = Jinja2Templates(directory="agent_ui/templates")
@@ -72,7 +73,8 @@ async def read_root(request: Request):
         {
             "request": request,
             "chats": chat_state.chats,
-            "processing": chat_state.processing
+            "processing": chat_state.processing,
+            "root_path": root_path
         }
     )
 

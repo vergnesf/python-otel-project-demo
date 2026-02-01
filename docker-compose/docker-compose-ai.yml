@@ -103,6 +103,7 @@ services:
     container_name: agent-ui
     environment:
       ORCHESTRATOR_URL: http://agent-orchestrator:8001
+      ROOT_PATH: /agents/ui
       <<: *common-agent-env
     depends_on:
       - agent-orchestrator
