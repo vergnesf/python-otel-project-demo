@@ -11,6 +11,8 @@ services:
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       GF_FEATURE_TOGGLES_ENABLE: tempoServiceGraph,traceToMetrics
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SERVER_ROOT_URL: 'http://localhost:8010/grafana'
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
     volumes:
       - ${PWD}/config/grafana/datasources:/etc/grafana/provisioning/datasources:Z
       - grafana-data:/var/lib/grafana

@@ -48,6 +48,7 @@ services:
             docker-kafka-server:
               properties:
                 bootstrap.servers: "broker:29092"
+      MICRONAUT_APPLICATION_JSON: '{"micronaut":{"server":{"context-path":"/akhq"}}}'
     depends_on:
       broker:
         condition: service_healthy
