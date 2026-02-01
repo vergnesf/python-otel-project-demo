@@ -4,7 +4,7 @@ services:
     image: traefik:v3.6.7
     container_name: traefik
     ports:
-      - "8010:80"
+      - "8080:80"
       - "8443:443"
       - "8888:8080"  # Traefik API/dashboard
     volumes:
