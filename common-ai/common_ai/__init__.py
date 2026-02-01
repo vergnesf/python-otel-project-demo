@@ -3,6 +3,7 @@ Common AI - Shared AI utilities for AI agents
 
 Includes:
 - Agent models: AgentRequest, AgentResponse, AgentType, OrchestratorResponse
+- Agent requests: Pydantic models for API requests/responses
 - MCP client: MCPGrafanaClient
 - LLM configuration: get_llm
 - LLM utilities: extract_text_from_response
@@ -26,7 +27,7 @@ from .mcp_client import MCPGrafanaClient
 from .llm_utils import extract_text_from_response
 
 # Ollama utilities
-from .ollama_utils import unload_ollama_model
+from .ollama_utils import unload_ollama_model, load_ollama_model
 
 __all__ = [
     # Agent models
@@ -42,4 +43,5 @@ __all__ = [
     "extract_text_from_response",
     # Ollama
     "unload_ollama_model",
+    "load_ollama_model",
 ]

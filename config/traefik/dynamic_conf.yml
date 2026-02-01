@@ -40,6 +40,10 @@ http:
       stripPrefix:
         prefixes:
           - /agents/ui
+    strip-ollama:
+      stripPrefix:
+        prefixes:
+          - /ollama
 
   routers:
     traefik-dashboard-router:
@@ -111,6 +115,12 @@ http:
       service: adminer-service
       middlewares: [strip-adminer]
 
+    ollama-router:
+      rule: "PathPrefix(`/ollama`)"
+      entryPoints: [web]
+      service: ollama-service
+      middlewares: [strip-ollama]
+
   services:
     akhq-service:
       loadBalancer:
@@ -166,3 +176,8 @@ http:
       loadBalancer:
         servers:
           - url: http://adminer:8080
+
+    ollama-service:
+      loadBalancer:
+        servers:
+          - url: http://ollama:11434

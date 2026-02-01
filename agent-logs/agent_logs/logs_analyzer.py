@@ -88,24 +88,25 @@ class LogsAnalyzer:
         # Query Loki via MCP
         logs_data = await self._query_loki(logql_query, time_range)
 
-        requested_limit = self._extract_error_limit(query)
-        if requested_limit and logs_data.get("logs"):
-            analysis = self._build_recent_errors_response(
-                logs_data=logs_data,
-                limit=requested_limit,
-                time_range=time_range,
-            )
-            return {
-                "agent_name": "logs",
-                "analysis": analysis["summary"],
-                "data": analysis["data"],
-                "recommendations": analysis.get("recommendations", []),
-                "confidence": analysis["confidence"],
-                "grafana_links": self._generate_grafana_links(
-                    logql_query, time_range
-                ),
-                "timestamp": datetime.now().isoformat(),
-            }
+        # TODO: Implement _extract_error_limit and _build_recent_errors_response if needed
+        # requested_limit = self._extract_error_limit(query)
+        # if requested_limit and logs_data.get("logs"):
+        #     analysis = self._build_recent_errors_response(
+        #         logs_data=logs_data,
+        #         limit=requested_limit,
+        #         time_range=time_range,
+        #     )
+        #     return {
+        #         "agent_name": "logs",
+        #         "analysis": analysis["summary"],
+        #         "data": analysis["data"],
+        #         "recommendations": analysis.get("recommendations", []),
+        #         "confidence": analysis["confidence"],
+        #         "grafana_links": self._generate_grafana_links(
+        #             logql_query, time_range
+        #         ),
+        #         "timestamp": datetime.now().isoformat(),
+        #     }
 
         # Always analyze with LLM (no hardcoded responses)
         analysis = await self._analyze_logs_with_llm(

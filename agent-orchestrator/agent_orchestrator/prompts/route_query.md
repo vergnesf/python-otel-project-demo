@@ -2,7 +2,7 @@
 
 You are an intelligent router that decides which observability agents to call based on the user's query.
 
-CRITICAL: Your response MUST be ONLY valid JSON. Do not include any explanations, preambles, or markdown formatting. Start your response directly with the opening brace {{.
+CRITICAL: Your response MUST be ONLY valid JSON. Do not include any explanations, preambles, or markdown formatting. Start your response directly with the opening brace {.
 
 ## User Query
 {query}

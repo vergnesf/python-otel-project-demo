@@ -25,42 +25,42 @@ Generate a LogQL query for **BUSINESS SERVICES ONLY**.
 
 **Recent logs from all business services**:
 ```
-{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}
+{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}}
 ```
 
 **Logs from one service**:
 ```
-{service_name="order"}
+{{service_name="order"}}
 ```
 
 **Logs for a specific trace** (when user provides trace_id):
 ```
-{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d"}
+{{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d"}}
 ```
 
 **Logs for a specific trace AND service**:
 ```
-{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d", service_name="order"}
+{{trace_id="71bbc86ec66e292fa06d95ae2f8fba6d", service_name="order"}}
 ```
 
 **Error logs**:
 ```
-{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"} |= "error"
+{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}} |= "error"
 ```
 
 **Errors from specific service**:
 ```
-{service_name="order"} |= "error"
+{{service_name="order"}} |= "error"
 ```
 
 **Search text in logs**:
 ```
-{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"} |= "search text"
+{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}} |= "search text"
 ```
 
 **Critical/Error level logs**:
 ```
-{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck", severity_text=~"ERROR|CRITICAL"}
+{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck", severity_text=~"ERROR|CRITICAL"}}
 ```
 
 ### Rules
@@ -75,8 +75,8 @@ Generate a LogQL query for **BUSINESS SERVICES ONLY**.
 
 ### User Query Examples
 
-- "logs for trace_id abc123" → `{trace_id="abc123"}`
-- "last 5 logs" → `{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}`
-- "errors on order" → `{service_name="order"} |= "error"`
+- "logs for trace_id abc123" → `{{trace_id="abc123"}}`
+- "last 5 logs" → `{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}}`
+- "errors on order" → `{{service_name="order"}} |= "error"`
 
 Return ONLY the LogQL query. No explanation.

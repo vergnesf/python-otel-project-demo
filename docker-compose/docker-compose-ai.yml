@@ -1,6 +1,7 @@
 x-common-agent-env: &common-agent-env
   LLM_BASE_URL: http://ollama:11434/v1
   LOG_LEVEL: INFO
+  AGENT_CALL_TIMEOUT: "600"
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_TRACES_EXPORTER: otlp
   OTEL_METRICS_EXPORTER: otlp
@@ -102,6 +103,7 @@ services:
     container_name: agent-ui
     environment:
       ORCHESTRATOR_URL: http://agent-orchestrator:8001
+      ROOT_PATH: /agents/ui
       <<: *common-agent-env
     depends_on:
       - agent-orchestrator

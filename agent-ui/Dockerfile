@@ -13,11 +13,11 @@ COPY agent-ui/pyproject.toml ./
 COPY agent-ui/uv.lock ./
 
 RUN pip install --no-cache-dir uv && \
-    uv add pip
+    uv sync --no-dev
 
 # Copy application code
 COPY agent-ui/agent_ui ./agent_ui/
 
 EXPOSE 8000
 
-CMD ["uv", "run", "--no-dev", "uvicorn", "agent_ui.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "agent_ui.main:app", "--host", "0.0.0.0", "--port", "8000", "--root-path=/agents/ui", "--timeout-keep-alive", "600", "--timeout-graceful-shutdown", "600"]

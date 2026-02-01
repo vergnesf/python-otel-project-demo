@@ -1,25 +1,71 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 *.pyc
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Packages
-/dist/*
-
-# Unit test / coverage reports
-.coverage
-.pytest_cache
-
-.DS_Store
-.idea/*
-.python-version
-.vscode/*
-
-/docs/site/*
-.mypy_cache
-
+# Virtual environments
 .venv
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/*
+.idea/*
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project files
+.python-version
 /poetry.toml
 uv.lock
 
-.env
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
 
-*.egg-info
-build/
+# mypy
+.mypy_cache/
+
+# Documentation
+/docs/site/*
+
+# Project specific
+*.log
+results/
+benchmarks/output/
+benchmark_results.html

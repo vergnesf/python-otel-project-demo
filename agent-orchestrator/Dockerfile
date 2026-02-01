@@ -18,7 +18,8 @@ COPY common-ai /app/common-ai/
 WORKDIR /app/agent-orchestrator
 
 RUN pip install --no-cache-dir uv && \
-    uv add pip && \
+    uv sync --no-dev && \
+    uv pip install pip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
 COPY agent-orchestrator/agent_orchestrator /app/agent-orchestrator/agent_orchestrator/
@@ -29,4 +30,4 @@ USER appuser
 
 EXPOSE 8001
 
-CMD ["uv", "run", "--no-dev","opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "--no-dev","opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001", "--timeout-keep-alive", "600", "--timeout-graceful-shutdown", "600"]

@@ -179,7 +179,11 @@
             `;
 
             try {
-                const response = await fetch('send_message', {
+                // Build the endpoint URL using root_path if available
+                const rootPath = '{{ root_path }}' || '';
+                const endpoint = rootPath ? `${rootPath}/send_message` : '/send_message';
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',

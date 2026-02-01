@@ -33,27 +33,27 @@ Generate a PromQL query for **BUSINESS SERVICES ONLY**.
 
 **Request rate for a service**:
 ```
-rate(http_server_duration_count{service_name="order"}[5m])
+rate(http_server_duration_count{{{{service_name="order"}}}}[5m])
 ```
 
 **Error rate (5xx)**:
 ```
-rate(http_server_duration_count{service_name="order",http_status_code=~"5.."}[5m])
+rate(http_server_duration_count{{{{service_name="order",http_status_code=~"5.."}}}}[5m])
 ```
 
 **Latency p95**:
 ```
-histogram_quantile(0.95, rate(http_server_duration_bucket{service_name="order"}[5m]))
+histogram_quantile(0.95, rate(http_server_duration_bucket{{{{service_name="order"}}}}[5m]))
 ```
 
 **DB connections**:
 ```
-db_client_connections_usage{service_name="order"}
+db_client_connections_usage{{{{service_name="order"}}}}
 ```
 
 **All business services request rate**:
 ```
-sum by(service_name) (rate(http_server_duration_count{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}[5m]))
+sum by(service_name) (rate(http_server_duration_count{{{{service_name=~"customer|order|stock|supplier|ordercheck|ordermanagement|suppliercheck"}}}}[5m]))
 ```
 
 ### Rules

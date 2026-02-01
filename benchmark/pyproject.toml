@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benchmark"
+version = "0.1.0"
+description = "Comprehensive benchmark suite for agent APIs with model comparison"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.12.4",
+    "httpx>=0.28.1",
+    "pyyaml>=6.0.2",
+    "psutil>=6.0.0",
+    "rich>=13.9.4",
+    "nvidia-ml-py>=12.535.108",
+    "common-ai",
+]
+
+[project.scripts]
+benchmark = "benchmark.main:cli_main"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "black",
+    "pyright",
+]
+
+[tool.uv.sources]
+common-ai = { path = "../common-ai", editable = true }
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pyright]
+include = ["benchmark"]
+exclude = ["**/node_modules", "**/__pycache__"]
+typeCheckingMode = "strict"
+

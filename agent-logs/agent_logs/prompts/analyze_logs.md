@@ -46,9 +46,9 @@ Input: `- [1762762728482868480] [suppliercheck] Failed to send stock data: timeo
 Output in summary: `[1762762728482868480] [suppliercheck] Failed to send stock data: timeout`
 
 **FORBIDDEN**:
-- ❌ Inventing error messages not in {log_samples}
+- ❌ Inventing error messages not in {{log_samples}}
 - ❌ Changing timestamps
 - ❌ Changing service names
-- ❌ Adding made-up details like "{{detowentetet}}"
+- ❌ Adding made-up details
 
 Return ONLY valid JSON.
