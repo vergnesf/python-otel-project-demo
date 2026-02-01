@@ -1,5 +1,36 @@
 """Configuration settings for benchmark project."""
 
+from pathlib import Path
+import yaml
+
+
+def load_model_configs():
+    """Load model configurations from config/ai/model-params.yml"""
+    config_file = Path(__file__).parent.parent.parent / "config" / "ai" / "model-params.yml"
+    try:
+        with open(config_file, "r") as f:
+            config_data = yaml.safe_load(f)
+
+        model_configs = {}
+        models_section = config_data.get("models", {})
+
+        for model_name, model_data in models_section.items():
+            context_size = model_data.get("context_size", "N/A")
+            temperature = model_data.get("temperature", 0.1)
+            top_k = model_data.get("top_k")
+            max_tokens = model_data.get("max_tokens", 2000)
+            model_configs[model_name] = {
+                "context_size": context_size,
+                "temperature": temperature,
+                "top_k": top_k,
+                "max_tokens": max_tokens,
+            }
+
+        return model_configs
+    except Exception as e:
+        return {}
+
+
 # Service URLs (localhost:8080 - benchmark runs outside docker-compose)
 # Traefik container port 80 is mapped to host port 8080
 ORCHESTRATOR_URL = "http://localhost:8080/agents/orchestrator"
@@ -10,7 +41,7 @@ TRANSLATION_URL = "http://localhost:8080/agents/traduction"
 
 # Benchmark Settings
 BENCHMARK_TIMEOUT = 600  # seconds (10 minutes for AI requests)
-NUM_TEST_REQUESTS = 3  # Number of test requests per model to validate consistency
+NUM_TEST_REQUESTS = 5  # Number of test requests per model to validate consistency
 
 # Default models for benchmarking (complete list from test_benchmark_models.py)
 BENCHMARK_MODELS = [
@@ -22,6 +53,9 @@ BENCHMARK_MODELS = [
     # "qwen2.5:7b",
     # "phi4:14b",
 ]
+
+# Model configurations
+MODEL_CONFIGS = load_model_configs()
 
 # Logging
 LOG_LEVEL = "INFO"
