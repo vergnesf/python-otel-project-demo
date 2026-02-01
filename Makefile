@@ -1,3 +1,5 @@
+.PHONY: models-init tools-format compose-up compose-down
+
 # Models to pull
 MODELS := mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
 
@@ -9,13 +11,10 @@ PODMAN_AVAILABLE := $(shell command -v podman >/dev/null 2>&1 && echo true || ec
 
 ifeq ($(PODMAN_AVAILABLE),true)
 	COMPOSE_CMD := podman-compose
-	COMPOSE_RUN_ARGS := --podman-run-args="--replace"
 else ifeq ($(DOCKER_AVAILABLE),true)
 	COMPOSE_CMD := docker-compose
-	COMPOSE_RUN_ARGS :=
 else
 	COMPOSE_CMD := podman-compose
-	COMPOSE_RUN_ARGS := --podman-run-args="--replace"
 endif
 
 models-init:
@@ -35,24 +34,26 @@ models-init:
 	done; \
 	echo "models-init: done"
 
-# Generic redeploy command (usage: make redeploy agent-ui)
-redeploy:
-	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
-	if [ -z "$$SERVICE" ]; then \
-	    echo "❌ Error: No service specified!"; \
-	    echo "Usage: make redeploy <service-name>"; \
-	    echo "Example: make redeploy agent-ui"; \
-	    exit 1; \
-	fi; \
-	echo "Redeploying service: $$SERVICE using $(COMPOSE_CMD)..."; \
-	$(COMPOSE_CMD) $(COMPOSE_RUN_ARGS) up -d --force-recreate --no-deps --build --no-cache $$SERVICE
-
-%:
-	@echo "Target '$@' not found. Use 'make help' or check available targets."
-
 tools-format:
 	#echo "Use black to format python files"
 	for project in $(PROJECTS); do \
 		echo "Formatting project $$project..."; \
 		cd $$project && uv run black . && cd ..; \
 	done
+
+compose-up:
+	@echo "Bringing up observability, db, kafka, ai-tools, ai, then apps (in that order)..."
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-observability.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-db.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-kafka.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai-tools.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai.yml up -d
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml up -d
+compose-down:
+	@echo "Tearing down apps, ai, ai-tools, kafka, db, then observability (reverse order)..."
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-ai-tools.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-kafka.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-db.yml down
+	$(COMPOSE_CMD) -f docker-compose/docker-compose-observability.yml down
