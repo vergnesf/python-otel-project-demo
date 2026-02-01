@@ -30,4 +30,4 @@ USER appuser
 
 EXPOSE 8002
 
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8002", "--timeout-keep-alive", "600", "--timeout-graceful-shutdown", "600"]

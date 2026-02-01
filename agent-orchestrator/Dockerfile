@@ -30,4 +30,4 @@ USER appuser
 
 EXPOSE 8001
 
-CMD ["uv", "run", "--no-dev","opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uv", "run", "--no-dev","opentelemetry-instrument", "uvicorn", "agent_orchestrator.main:app", "--host", "0.0.0.0", "--port", "8001", "--timeout-keep-alive", "600", "--timeout-graceful-shutdown", "600"]

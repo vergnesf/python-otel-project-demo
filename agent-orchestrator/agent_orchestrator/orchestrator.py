@@ -52,8 +52,9 @@ class Orchestrator:
             "AGENT_TRANSLATION_URL", "http://agent-traduction:8002"
         )
 
-        self.client = httpx.AsyncClient(timeout=60.0)
-        self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "60"))
+        # Use configured timeout (600s by default to allow model loading)
+        self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "600"))
+        self.client = httpx.AsyncClient(timeout=self.agent_call_timeout)
 
         # Initialize LLM
         self.llm_ephemeral = (

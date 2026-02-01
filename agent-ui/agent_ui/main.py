@@ -113,7 +113,8 @@ async def send_message(
         time_range = "5m"
 
     try:
-        orchestrator_timeout = int(os.getenv("ORCHESTRATOR_TIMEOUT", "120"))
+        # Orchestrator timeout should match agent call timeout to allow model loading (default 600s)
+        orchestrator_timeout = int(os.getenv("ORCHESTRATOR_TIMEOUT", "600"))
         async with httpx.AsyncClient(timeout=orchestrator_timeout) as client:
             response = await client.post(
                 f"{orchestrator_url}/analyze",
