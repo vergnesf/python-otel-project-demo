@@ -43,6 +43,13 @@ tools-format:
 
 compose-up:
 	@echo "Bringing up observability, db, kafka, ai-tools, ai, then apps (in that order)..."
+	@echo "Ensuring network otel-network exists..."
+	@# create otel-network if it doesn't exist (support docker and podman)
+	@if command -v docker >/dev/null 2>&1; then \
+		docker network inspect otel-network >/dev/null 2>&1 || docker network create otel-network; \
+	elif command -v podman >/dev/null 2>&1; then \
+		podman network inspect otel-network >/dev/null 2>&1 || podman network create otel-network; \
+	fi
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-observability.yml up -d
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-db.yml up -d
 	$(COMPOSE_CMD) -f docker-compose/docker-compose-kafka.yml up -d

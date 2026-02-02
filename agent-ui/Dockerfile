@@ -10,7 +10,6 @@ WORKDIR /app/agent-ui
 
 # Copy and install dependencies
 COPY agent-ui/pyproject.toml ./
-COPY agent-ui/uv.lock ./
 
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev

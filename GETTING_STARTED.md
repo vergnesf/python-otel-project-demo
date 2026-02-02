@@ -164,6 +164,97 @@ podman logs ollama | grep -i "inference compute"
    sudo setsebool -P container_use_devices true
    ```
 
+## 🎮 GPU Setup with AMD GPUs (Vulkan)
+
+Ollama supports AMD GPUs through Vulkan, which is simpler than ROCm and works out-of-the-box on most modern Linux distributions.
+
+### 1. Verify Vulkan Support
+
+```bash
+# Check Vulkan installation
+vulkaninfo | grep -i "deviceName\|driverName"
+
+# Example output for AMD GPU:
+# deviceName = AMD Radeon RX 9070 XT
+# driverName = radv
+```
+
+### 2. Configure Compose File for AMD
+
+Edit `docker-compose/docker-compose-ai-tools.yml` - the configuration is already optimized for AMD:
+
+```yaml
+ollama:
+  image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_OLLAMA}
+  container_name: ollama
+  environment:
+    OLLAMA_VULKAN: "1"  # Enable Vulkan support for AMD
+  devices:
+    - /dev/dri
+  group_add:
+    - video
+  volumes:
+    - ollama-data:/root/.ollama:Z
+```
+
+### 3. Verify Device Permissions
+
+```bash
+# Check device permissions
+ls -l /dev/dri
+
+# Add your user to video group if needed
+sudo usermod -aG video $USER
+# Log out and back in for group changes to take effect
+```
+
+### 4. Start Services with AMD GPU
+
+```bash
+# Start the stack
+make compose-up
+
+# Verify Ollama is using Vulkan
+podman logs ollama | grep -i -E "vulkan|gpu|compute"
+# Should show: "Vulkan support enabled" and GPU info
+```
+
+### 5. Troubleshooting AMD GPU Issues
+
+**If AMD GPU is not detected:**
+
+1. Verify Vulkan installation:
+   ```bash
+   vulkaninfo | head -20
+   # Should show your AMD GPU
+   ```
+
+2. Check device permissions:
+   ```bash
+   ls -l /dev/dri
+   # Should be accessible by video group
+   ```
+
+3. Ensure user is in video group:
+   ```bash
+   groups | grep video
+   ```
+
+4. Check Ollama logs for specific errors:
+   ```bash
+   podman logs ollama 2>&1 | grep -i -A5 "error\|warn"
+   ```
+
+5. For Podman on SELinux systems:
+   ```bash
+   sudo setsebool -P container_use_devices true
+   ```
+
+**Supported AMD GPUs:**
+- All RDNA architecture GPUs (RX 5000, 6000, 7000, 9000 series)
+- Most GCN architecture GPUs (Vega, Polaris)
+- Vulkan provides broad compatibility without needing ROCm
+
 ## 🎯 Post-Installation Setup
 
 ### 1. Create Environment Configuration

@@ -15,17 +15,13 @@ services:
     image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_OLLAMA}
     container_name: ollama
     environment:
-      NVIDIA_VISIBLE_DEVICES: "all"
-      NVIDIA_DRIVER_CAPABILITIES: "compute,utility"
+      OLLAMA_VULKAN: "1"  # Enable Vulkan support for AMD
+    devices:
+      - /dev/dri
+    group_add:
+      - video
     volumes:
       - ollama-data:/root/.ollama:Z
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/version || exit 1"]
       interval: 10s
