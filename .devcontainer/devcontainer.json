@@ -22,7 +22,12 @@
   "mounts": [
     "source=${localEnv:XDG_RUNTIME_DIR}/podman/podman.sock,target=/var/run/docker.sock,type=bind",
     // Persistent volume for zsh config (p10k, etc.) — survives container rebuilds
-    "source=vscode-zsh-config,target=/home/vscode/.zsh-config,type=volume"
+    "source=vscode-zsh-config,target=/home/vscode/.zsh-config,type=volume",
+    // SSH agent socket forwarding — allows git over SSH (GitHub) without copying keys
+    // Host prerequisite: ssh-agent must be running (SSH_AUTH_SOCK must be set on the host)
+    "source=${localEnv:SSH_AUTH_SOCK},target=/run/host-services/ssh-auth.sock,type=bind",
+    // Mount host ~/.ssh read-only so SSH keys are available (fallback if agent forwarding fails)
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
   ],
 
   // Environment variables available inside the container
@@ -34,7 +39,9 @@
     "DOCKER_HOST": "unix:///var/run/docker.sock",
     // From the devcontainer, services are reachable via otel-network (not localhost)
     // Port 80 = Traefik web entrypoint (routing); port 8080 = dashboard only
-    "BENCHMARK_BASE_URL": "http://traefik"
+    "BENCHMARK_BASE_URL": "http://traefik",
+    // Forward SSH agent from host so git over SSH (GitHub) works without copying keys
+    "SSH_AUTH_SOCK": "/run/host-services/ssh-auth.sock"
   },
 
   // Workspace mount with SELinux :Z label (required on Fedora/SELinux)
