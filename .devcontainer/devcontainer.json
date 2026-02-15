@@ -23,6 +23,8 @@
     "source=${localEnv:XDG_RUNTIME_DIR}/podman/podman.sock,target=/var/run/docker.sock,type=bind",
     // Persistent volume for zsh config (p10k, etc.) — survives container rebuilds
     "source=vscode-zsh-config,target=/home/vscode/.zsh-config,type=volume",
+    // Persistent volume for Claude Code auth — survives container rebuilds
+    "source=vscode-claude-config,target=/home/vscode/.claude,type=volume",
     // SSH agent socket forwarding — allows git over SSH (GitHub) without copying keys
     // Host prerequisite: ssh-agent must be running (SSH_AUTH_SOCK must be set on the host)
     "source=${localEnv:SSH_AUTH_SOCK},target=/run/host-services/ssh-auth.sock,type=bind",

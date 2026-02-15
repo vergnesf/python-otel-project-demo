@@ -6,28 +6,10 @@ echo "==> Setting up Python OTel Demo dev environment..."
 # S'assurer que uv est dans le PATH
 export PATH="$HOME/.local/bin:$PATH"
 
-# Installer powerlevel10k comme thème zsh
-if [ -d "$HOME/.oh-my-zsh" ] && [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
-  echo "  -> Installation de powerlevel10k..."
-  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-    "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
-  # Activer le thème dans .zshrc
-  sed -i 's/ZSH_THEME="devcontainers"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
-  echo "  -> powerlevel10k installé (lance 'p10k configure' pour le personnaliser)"
-fi
-
-# Persister la config p10k dans le named volume ~/.zsh-config
-# Le volume survit aux rebuilds, ~/.p10k.zsh est un symlink vers ce volume.
-mkdir -p "$HOME/.zsh-config"
-if [ ! -f "$HOME/.zsh-config/.p10k.zsh" ]; then
-  # Fichier vide pour éviter les warnings zsh au premier démarrage
-  touch "$HOME/.zsh-config/.p10k.zsh"
-fi
-# Remplacer ~/.p10k.zsh par un symlink (sauf si c'est déjà le bon symlink)
-if [ ! -L "$HOME/.p10k.zsh" ] || [ "$(readlink "$HOME/.p10k.zsh")" != "$HOME/.zsh-config/.p10k.zsh" ]; then
-  [ -f "$HOME/.p10k.zsh" ] && mv "$HOME/.p10k.zsh" "$HOME/.zsh-config/.p10k.zsh"
-  ln -sf "$HOME/.zsh-config/.p10k.zsh" "$HOME/.p10k.zsh"
-  echo "  -> ~/.p10k.zsh → ~/.zsh-config/.p10k.zsh (volume persistant)"
+# Activer le thème agnoster dans .zshrc
+if [ -d "$HOME/.oh-my-zsh" ]; then
+  sed -i 's/ZSH_THEME="[^"]*"/ZSH_THEME="agnoster"/' ~/.zshrc
+  echo "  -> Thème agnoster activé"
 fi
 
 # Vérification des outils
