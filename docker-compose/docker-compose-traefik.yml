@@ -4,9 +4,9 @@ services:
     image: traefik:v3.6.7
     container_name: traefik
     ports:
-      - "8080:80"
+      - "8081:80"
       - "8443:443"
-      - "8888:8080"  # Traefik API/dashboard
+      - "8082:8080"  # Traefik API/dashboard
     volumes:
       - ${PWD}/config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro,Z
       - ${PWD}/config/traefik/dynamic_conf.yml:/etc/traefik/dynamic/dynamic_conf.yml:ro,Z

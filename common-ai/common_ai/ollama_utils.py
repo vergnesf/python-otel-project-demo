@@ -33,7 +33,7 @@ async def unload_ollama_model(model_name: str | None = None) -> bool:
     try:
         # Get Ollama base URL from environment or use default
         # For agents in Docker: http://ollama:11434
-        # For external tools via Traefik: http://localhost:8080/ollama
+        # For external tools via Traefik: http://localhost:8081/ollama
         ollama_base = os.getenv("OLLAMA_URL") or os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
         # Remove /v1 suffix if present to get base API URL
         if ollama_base.endswith("/v1"):
@@ -79,7 +79,7 @@ async def load_ollama_model(model_name: str) -> bool:
     try:
         # Get Ollama base URL from environment or use default
         # For agents in Docker: http://ollama:11434
-        # For external tools via Traefik: http://localhost:8080/ollama
+        # For external tools via Traefik: http://localhost:8081/ollama
         ollama_base = os.getenv("OLLAMA_URL") or os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
         # Remove /v1 suffix if present to get base API URL
         if ollama_base.endswith("/v1"):

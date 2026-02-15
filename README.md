@@ -91,27 +91,27 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 
 ## 🎯 Access Points
 
-**All services are accessible via Traefik reverse proxy on port 8080**
+**All services are accessible via Traefik reverse proxy on port 8081**
 
 | Service             | URL                                | Description                      |
 | ------------------- | ---------------------------------- | -------------------------------- |
 | **Reverse Proxy**   |                                    |                                  |
-| Traefik Dashboard   | http://localhost:8888              | Traefik management dashboard     |
+| Traefik Dashboard   | http://localhost:8082              | Traefik management dashboard     |
 | **Observability**   |                                    |                                  |
-| Grafana             | http://localhost:8080/grafana/     | Main observability dashboard     |
+| Grafana             | http://localhost:8081/grafana/     | Main observability dashboard     |
 | **Agentic Network** |                                    |                                  |
-| Agents Web UI       | http://localhost:8080/agents/ui/   | AI-powered observability queries |
-| Orchestrator API    | http://localhost:8080/agents/orchestrator/ | Main agent coordinator |
-| Logs Agent          | http://localhost:8080/agents/logs/ | Loki log analysis                |
-| Metrics Agent       | http://localhost:8080/agents/metrics/ | Mimir metrics analysis        |
-| Traces Agent        | http://localhost:8080/agents/traces/ | Tempo traces analysis          |
-| Translation Agent   | http://localhost:8080/agents/traduction/ | Language detection & translation |
+| Agents Web UI       | http://localhost:8081/agents/ui/   | AI-powered observability queries |
+| Orchestrator API    | http://localhost:8081/agents/orchestrator/ | Main agent coordinator |
+| Logs Agent          | http://localhost:8081/agents/logs/ | Loki log analysis                |
+| Metrics Agent       | http://localhost:8081/agents/metrics/ | Mimir metrics analysis        |
+| Traces Agent        | http://localhost:8081/agents/traces/ | Tempo traces analysis          |
+| Translation Agent   | http://localhost:8081/agents/traduction/ | Language detection & translation |
 | **Applications**    |                                    |                                  |
-| Order Service       | http://localhost:8080/apps/order/  | Order management API             |
-| Stock Service       | http://localhost:8080/apps/stock/  | Stock management API             |
+| Order Service       | http://localhost:8081/apps/order/  | Order management API             |
+| Stock Service       | http://localhost:8081/apps/stock/  | Stock management API             |
 | **Tools**           |                                    |                                  |
-| AKHQ (Kafka UI)     | http://localhost:8080/akhq/        | Kafka management                 |
-| Adminer (Database)  | http://localhost:8080/adminer/     | PostgreSQL administration        |
+| AKHQ (Kafka UI)     | http://localhost:8081/akhq/        | Kafka management                 |
+| Adminer (Database)  | http://localhost:8081/adminer/     | PostgreSQL administration        |
 
 **Default Grafana credentials**: `admin` / `admin`
 
@@ -121,7 +121,7 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 
 ### Quick Example
 
-Open http://localhost:8080/agents/ui/ and ask questions in natural language:
+Open http://localhost:8081/agents/ui/ and ask questions in natural language:
 
 - "Show me errors in the order service"
 - "What's the CPU usage of customer service?"
@@ -133,7 +133,7 @@ Open http://localhost:8080/agents/ui/ and ask questions in natural language:
 For agents to work, create a Grafana service account:
 
 ```bash
-# 1. Open Grafana: http://localhost:8080/grafana/
+# 1. Open Grafana: http://localhost:8081/grafana/
 # 2. Go to Configuration → Service accounts → Create service account
 # 3. Generate token and copy it
 # 4. Add to environment:

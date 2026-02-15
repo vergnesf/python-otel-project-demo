@@ -151,18 +151,18 @@ PORT=8001 LOG_LEVEL=DEBUG uv run uvicorn agent_orchestrator.main:app --reload
 ```bash
 # Quick health check
 # Via Traefik (external access)
-curl http://localhost:8080/agents/orchestrator/health
+curl http://localhost:8081/agents/orchestrator/health
 
 # Or direct internal access (from containers)
 curl http://agent-orchestrator:8001/health
 
 # Test with an English query (via Traefik)
-curl -X POST http://localhost:8080/agents/orchestrator/analyze \
+curl -X POST http://localhost:8081/agents/orchestrator/analyze \
   -H "Content-Type: application/json" \
   -d '{"query": "Show me recent errors", "time_range": "1h"}'
 
 # Test with a French query (via Traefik)
-curl -X POST http://localhost:8080/agents/orchestrator/analyze \
+curl -X POST http://localhost:8081/agents/orchestrator/analyze \
   -H "Content-Type: application/json" \
   -d '{"query": "Montre-moi les erreurs récentes", "time_range": "1h"}'
 ```
@@ -202,7 +202,7 @@ uv run pytest tests/test_orchestrator_core.py::TestLanguageDetectionAndTranslati
 **4 integration tests** with real HTTP calls:
 
 **REQUIREMENTS:**
-- ✅ Orchestrator must be running (accessible at `http://localhost:8080/agents/orchestrator/` or internally at `http://agent-orchestrator:8001`)
+- ✅ Orchestrator must be running (accessible at `http://localhost:8081/agents/orchestrator/` or internally at `http://agent-orchestrator:8001`)
 - ✅ **LLM must be running at `http://172.17.0.1:12434/v1`** (docker-compose default)
 
 All integration tests **require a working LLM**. The tests use the hardcoded LLM URL from docker-compose.
@@ -214,7 +214,7 @@ All integration tests **require a working LLM**. The tests use the hardcoded LLM
 docker compose up -d
 
 # Step 2: Verify orchestrator is accessible
-curl http://localhost:8080/agents/orchestrator/health
+curl http://localhost:8081/agents/orchestrator/health
 
 # Step 2: Start orchestrator (Terminal 1)
 uv run uvicorn agent_orchestrator.main:app --port 8001

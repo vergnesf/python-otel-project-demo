@@ -1,5 +1,6 @@
 """Configuration settings for benchmark project."""
 
+import os
 from pathlib import Path
 import yaml
 
@@ -31,14 +32,16 @@ def load_model_configs():
         return {}
 
 
-# Service URLs (localhost:8080 - benchmark runs outside docker-compose)
-# Traefik container port 80 is mapped to host port 8080
-ORCHESTRATOR_URL = "http://localhost:8080/agents/orchestrator"
-AGENT_LOGS_URL = "http://localhost:8080/agents/logs"
-AGENT_METRICS_URL = "http://localhost:8080/agents/metrics"
-AGENT_TRACES_URL = "http://localhost:8080/agents/traces"
-TRANSLATION_URL = "http://localhost:8080/agents/traduction"
-OLLAMA_URL = "http://localhost:8080/ollama"
+# Service URLs via Traefik
+# Override with BENCHMARK_BASE_URL env var when running inside the devcontainer:
+#   export BENCHMARK_BASE_URL=http://traefik  (port 80 = web entrypoint)
+_BASE_URL = os.getenv("BENCHMARK_BASE_URL", "http://localhost:8081")
+ORCHESTRATOR_URL = f"{_BASE_URL}/agents/orchestrator"
+AGENT_LOGS_URL = f"{_BASE_URL}/agents/logs"
+AGENT_METRICS_URL = f"{_BASE_URL}/agents/metrics"
+AGENT_TRACES_URL = f"{_BASE_URL}/agents/traces"
+TRANSLATION_URL = f"{_BASE_URL}/agents/traduction"
+OLLAMA_URL = f"{_BASE_URL}/ollama"
 
 # Benchmark Settings
 BENCHMARK_TIMEOUT = 600  # seconds (10 minutes for AI requests)

@@ -19,7 +19,7 @@ The UI communicates with the **Orchestrator Agent** which coordinates the specia
 User → Traefik → FastAPI UI → Orchestrator → [Logs, Metrics, Traces] Agents → MCP → Grafana Stack
 ```
 
-> **Access**: External via Traefik at `http://localhost:8080/agents/ui/`. Services communicate internally via Docker network.
+> **Access**: External via Traefik at `http://localhost:8081/agents/ui/`. Services communicate internally via Docker network.
 
 ## 🚀 Running the UI
 
@@ -36,7 +36,7 @@ uv run start-dev
 uv run uvicorn agent_ui.main:app --reload
 
 # Access at:
-# - Via Traefik: http://localhost:8080/agents/ui/
+# - Via Traefik: http://localhost:8081/agents/ui/
 # - Direct (dev only): http://localhost:8000
 ```
 
@@ -91,7 +91,7 @@ podman-compose logs -f agent-ui
 
 # Test the API
 # Via Traefik (external)
-curl http://localhost:8080/agents/ui/health
+curl http://localhost:8081/agents/ui/health
 
 # Or direct internal access (from containers)
 curl http://agent-ui:8000/health

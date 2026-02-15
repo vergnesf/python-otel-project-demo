@@ -1,0 +1,138 @@
+{
+  "name": "Python OTel Demo",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+
+  // git via feature (no docker-outside-of-docker: we mount the Podman socket instead)
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "installOhMyZshConfig": true
+    }
+  },
+
+  // Mount the rootless Podman socket from the host as /var/run/docker.sock
+  // Tools that speak "docker" (docker CLI, docker-compose) use it via DOCKER_HOST.
+  // Host prerequisite: systemctl --user enable --now podman.socket
+  "mounts": [
+    "source=${localEnv:XDG_RUNTIME_DIR}/podman/podman.sock,target=/var/run/docker.sock,type=bind",
+    // Persistent volume for zsh config (p10k, etc.) — survives container rebuilds
+    "source=vscode-zsh-config,target=/home/vscode/.zsh-config,type=volume"
+  ],
+
+  // Environment variables available inside the container
+  "containerEnv": {
+    "UV_LINK_MODE": "copy",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    // Point Docker/Compose tools to the mounted Podman socket
+    "DOCKER_HOST": "unix:///var/run/docker.sock",
+    // From the devcontainer, services are reachable via otel-network (not localhost)
+    // Port 80 = Traefik web entrypoint (routing); port 8080 = dashboard only
+    "BENCHMARK_BASE_URL": "http://traefik"
+  },
+
+  // Workspace mount with SELinux :Z label (required on Fedora/SELinux)
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached,Z",
+  "workspaceFolder": "/workspace",
+
+  // Podman runArgs:
+  //   --userns=keep-id        : maps host UID → container (avoids permission issues in rootless mode)
+  //   --network=otel-network  : joins the stack network for direct access to services
+  //   --security-opt label=disable : disables SELinux on this container (simplifies mounts)
+  // Network prerequisite: podman network create otel-network  (or make compose-up)
+  "runArgs": [
+    "--userns=keep-id",
+    "--network=otel-network",
+    "--security-opt", "label=disable",
+    // tmpfs on /tmp: fixes "Permission denied" on /tmp/.X11-unix with --userns=keep-id
+    "--tmpfs=/tmp:exec,mode=1777"
+  ],
+
+  // VS Code extensions
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Python
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        // Docker & containers
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        // YAML (docker-compose, config files)
+        "redhat.vscode-yaml",
+        // Makefile
+        "ms-vscode.makefile-tools",
+        // OpenTelemetry / observability
+        "grafana.vscode-jsonnet",
+        // Git
+        "eamodio.gitlens",
+        // REST / API testing
+        "humao.rest-client",
+        // Env files
+        "mikestead.dotenv",
+        // Claude Code
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        // Tell the Dev Containers extension to use Podman
+        "dev.containers.dockerPath": "podman",
+        "python.defaultInterpreterPath": "/home/vscode/.local/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll.ruff": "explicit",
+            "source.organizeImports.ruff": "explicit"
+          }
+        },
+        "ruff.enable": true,
+        "ruff.organizeImports": true,
+        "editor.rulers": [88],
+        "files.trimTrailingWhitespace": true,
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  },
+
+  // Ports to automatically forward to the host browser
+  // Note: with --network=otel-network, services are reachable DIRECTLY
+  // from the devcontainer by name (e.g. http://agent-traduction:8002)
+  // forwardPorts also makes them accessible from the host browser.
+  "forwardPorts": [
+    8081,  // Traefik (main entrypoint — host:8081 → container:80)
+    8082,  // Traefik dashboard
+    3000,  // Grafana (direct)
+    8001,  // agent-orchestrator
+    8002,  // agents (logs/metrics/traces/traduction) — used by promptfoo
+    8000,  // agent-ui
+    5432,  // PostgreSQL
+    9092,  // Kafka
+    11434  // Ollama
+  ],
+  "portsAttributes": {
+    "8081": { "label": "Traefik / Apps", "onAutoForward": "notify" },
+    "8082": { "label": "Traefik Dashboard", "onAutoForward": "silent" },
+    "3000": { "label": "Grafana", "onAutoForward": "silent" },
+    "8001": { "label": "Agent Orchestrator", "onAutoForward": "silent" },
+    "8002": { "label": "Agents (logs/metrics/traces/traduction)", "onAutoForward": "silent" },
+    "8000": { "label": "Agent UI", "onAutoForward": "silent" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" },
+    "9092": { "label": "Kafka", "onAutoForward": "silent" },
+    "11434": { "label": "Ollama", "onAutoForward": "silent" }
+  },
+
+  // Command run once the container is created
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  // Use non-root user
+  "remoteUser": "vscode"
+}
