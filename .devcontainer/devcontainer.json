@@ -5,9 +5,11 @@
     "context": ".."
   },
 
-  // git via feature (no docker-outside-of-docker: we mount the Podman socket instead)
+  // dev tooling via features (git, node, zsh + oh-my-zsh)
+  // uv + promptfoo are installed in postCreateCommand (post-create.sh)
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
       "configureZshAsDefaultShell": true,
@@ -58,9 +60,7 @@
   "runArgs": [
     "--userns=keep-id",
     "--network=otel-network",
-    "--security-opt", "label=disable",
-    // tmpfs on /tmp: fixes "Permission denied" on /tmp/.X11-unix with --userns=keep-id
-    "--tmpfs=/tmp:exec,mode=1777"
+    "--security-opt", "label=disable"
   ],
 
   // VS Code extensions
@@ -74,7 +74,6 @@
         "charliermarsh.ruff",
         // Docker & containers
         "ms-azuretools.vscode-docker",
-        "ms-vscode-remote.remote-containers",
         // YAML (docker-compose, config files)
         "redhat.vscode-yaml",
         // Makefile
@@ -93,7 +92,6 @@
       "settings": {
         // Tell the Dev Containers extension to use Podman
         "dev.containers.dockerPath": "podman",
-        "python.defaultInterpreterPath": "/home/vscode/.local/bin/python",
         "python.terminal.activateEnvironment": true,
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter",
@@ -103,8 +101,6 @@
             "source.organizeImports.ruff": "explicit"
           }
         },
-        "ruff.enable": true,
-        "ruff.organizeImports": true,
         "editor.rulers": [88],
         "files.trimTrailingWhitespace": true,
         "terminal.integrated.defaultProfile.linux": "zsh"

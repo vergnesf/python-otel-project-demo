@@ -3,8 +3,13 @@ set -euo pipefail
 
 echo "==> Setting up Python OTel Demo dev environment..."
 
-# S'assurer que uv est dans le PATH
+# Installer uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
+
+# Installer promptfoo
+echo "  -> Installation de promptfoo..."
+npm install -g promptfoo
 
 # Activer le thème agnoster dans .zshrc
 if [ -d "$HOME/.oh-my-zsh" ]; then
