@@ -48,7 +48,13 @@ class MCPGrafanaClient:
     async def _ensure_session(self) -> ClientSession:
         """Ensure MCP session is initialized and connected"""
         if self._session and self._initialized:
-            return self._session
+            # Verify the session is still alive with a lightweight ping
+            try:
+                await asyncio.wait_for(self._session.list_tools(), timeout=5.0)
+                return self._session
+            except Exception:
+                logger.warning("MCP session appears dead, reconnecting...")
+                await self._cleanup()
 
         try:
             # Create exit stack to manage context
@@ -85,6 +91,10 @@ class MCPGrafanaClient:
         """Clean up session resources"""
         self._initialized = False
         self._session = None
+        self._tools_cache = None
+        self.loki_uid = None
+        self.prometheus_uid = None
+        self.tempo_uid = None
         if self._exit_stack:
             await self._exit_stack.aclose()
             self._exit_stack = None

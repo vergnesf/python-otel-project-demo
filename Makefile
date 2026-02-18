@@ -12,10 +12,18 @@ PODMAN_AVAILABLE := $(shell command -v podman >/dev/null 2>&1 && echo true || ec
 ifeq ($(PODMAN_AVAILABLE),true)
 	COMPOSE_CMD := podman-compose
 else ifeq ($(DOCKER_AVAILABLE),true)
-	COMPOSE_CMD := docker-compose
+	COMPOSE_CMD := docker compose
 else
 	COMPOSE_CMD := podman-compose
 endif
+
+COMPOSE_CMD += --env-file $(CURDIR)/.env
+
+# When running inside a devcontainer with a Podman socket, bind mount paths must be host paths.
+# Detect the host path from the btrfs subvolume source (format: /dev/xxx[/host/path]).
+_MOUNT_SRC := $(shell findmnt -n -o SOURCE "$(CURDIR)" 2>/dev/null)
+HOST_PWD   := $(if $(findstring [,$(_MOUNT_SRC)),$(shell echo '$(_MOUNT_SRC)' | sed 's|.*\[||;s|\].*||'),$(CURDIR))
+COMPOSE_CMD := env PWD=$(HOST_PWD) $(COMPOSE_CMD)
 
 models-init:
 	@echo "Detecting runtime and looking for running container 'ollama'..."
