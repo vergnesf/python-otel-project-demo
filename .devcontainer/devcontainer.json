@@ -23,6 +23,7 @@
 
     "mounts": [
         "type=bind,source=/run/user/1000/podman/podman.sock,target=/var/run/docker.sock", // Bind mount the Podman socket to allow using Podman inside the container.
-        "source=vscode-claude-config,target=/home/vscode/.claude,type=volume" // Use a named volume to persist the Claude configuration across container restarts.
+        "source=vscode-claude-config,target=/home/vscode/.claude,type=volume", // Use a named volume to persist the Claude configuration across container restarts.
+        "type=bind,source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,readonly" // Mount host SSH keys (read-only) so git and ssh work inside the container.
     ]
 }
