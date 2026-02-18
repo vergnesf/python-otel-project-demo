@@ -1,0 +1,157 @@
+# Promptfoo - Tests d'intégration HTTP pour l'agent-traduction
+# Teste l'endpoint /translate en boîte noire
+#
+# Prérequis: l'agent doit tourner sur http://localhost:8002
+# Usage: promptfoo eval -c tests/promptfoo/promptfooconfig.yaml
+
+description: "agent-traduction - Tests HTTP intégration"
+
+providers:
+  - id: http
+    config:
+      url: http://localhost:8002/translate
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        query: "{{query}}"
+      transformResponse: "json"
+
+prompts:
+  - "{{query}}"
+
+defaultTest:
+  assert:
+    - type: is-json
+      description: "La réponse doit être du JSON valide"
+    - type: javascript
+      value: "output.agent_name === 'translation'"
+      description: "agent_name doit toujours être 'translation'"
+
+tests:
+  # ── Cas ENGLISH ──────────────────────────────────────────────────
+  - description: "Texte anglais simple"
+    vars:
+      query: "What is the weather today?"
+    assert:
+      - type: javascript
+        value: "output.language === 'english'"
+        description: "Doit détecter l'anglais"
+      - type: javascript
+        value: "output.translated_query === 'What is the weather today?'"
+        description: "Doit retourner la query inchangée"
+
+  - description: "Texte anglais technique"
+    vars:
+      query: "How do I configure OpenTelemetry for a Python FastAPI service?"
+    assert:
+      - type: javascript
+        value: "output.language === 'english'"
+        description: "Doit détecter l'anglais"
+      - type: javascript
+        value: "output.translated_query.toLowerCase().includes('opentelemetry')"
+        description: "Doit conserver les termes techniques"
+
+  # ── Cas FRANÇAIS → traduction ─────────────────────────────────────
+  - description: "Texte français simple"
+    vars:
+      query: "Quel temps fait-il aujourd'hui ?"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+        description: "Doit détecter le non-anglais"
+      - type: llm-rubric
+        value: "The translated_query field contains a correct English translation of 'Quel temps fait-il aujourd'hui ?'. It should mean 'What is the weather today?' or equivalent."
+        description: "La traduction FR→EN doit être correcte"
+
+  - description: "Texte français avec termes techniques"
+    vars:
+      query: "Comment configurer une base de données PostgreSQL avec Docker ?"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+        description: "Doit détecter le non-anglais"
+      - type: javascript
+        value: "output.translated_query.toLowerCase().includes('postgresql') && output.translated_query.toLowerCase().includes('docker')"
+        description: "Doit conserver PostgreSQL et Docker dans la traduction"
+      - type: llm-rubric
+        value: "The translated_query is a proper English translation that preserves the technical terms PostgreSQL and Docker."
+        description: "Traduction correcte avec termes techniques préservés"
+
+  - description: "Question française sur le code"
+    vars:
+      query: "Comment déboguer une application Python avec des traces OpenTelemetry ?"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+      - type: llm-rubric
+        value: "The translated_query is an English question about debugging a Python application with OpenTelemetry traces."
+
+  # ── Cas ESPAGNOL → traduction ─────────────────────────────────────
+  - description: "Texte espagnol"
+    vars:
+      query: "¿Cómo puedo instalar Python en Ubuntu?"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+        description: "Doit détecter l'espagnol comme non-anglais"
+      - type: llm-rubric
+        value: "The translated_query is a correct English translation of the Spanish question about installing Python on Ubuntu."
+
+  # ── Cas ALLEMAND → traduction ─────────────────────────────────────
+  - description: "Texte allemand"
+    vars:
+      query: "Wie kann ich eine REST API mit FastAPI erstellen?"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+      - type: llm-rubric
+        value: "The translated_query correctly translates the German question about creating a REST API with FastAPI to English. FastAPI should be preserved."
+
+  # ── Cas limites ───────────────────────────────────────────────────
+  - description: "Query vide"
+    vars:
+      query: ""
+    assert:
+      - type: javascript
+        value: "output.language === 'unknown'"
+        description: "Query vide doit retourner language=unknown"
+      - type: javascript
+        value: "output.translated_query === ''"
+        description: "Query vide doit retourner translated_query vide"
+
+  - description: "Mot unique anglais"
+    vars:
+      query: "Hello"
+    assert:
+      - type: javascript
+        value: "output.language === 'english'"
+      - type: javascript
+        value: "output.translated_query === 'Hello'"
+
+  - description: "Mot unique français"
+    vars:
+      query: "Bonjour"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+
+  - description: "Chiffres et nombres"
+    vars:
+      query: "42"
+    assert:
+      - type: javascript
+        value: "typeof output.language === 'string'"
+        description: "Doit retourner une langue même pour les chiffres"
+      - type: javascript
+        value: "typeof output.translated_query === 'string'"
+
+  - description: "Texte avec code source"
+    vars:
+      query: "Pourquoi ce code Python lève une KeyError: `data['user']['id']`"
+    assert:
+      - type: javascript
+        value: "output.language === 'non-english'"
+      - type: llm-rubric
+        value: "The translated_query translates the French question to English and preserves the code snippet `data['user']['id']` unchanged."
+        description: "Le snippet de code doit être préservé"

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   grafana-mcp:
     image: ${DOCKER_REGISTRY:-}${DOCKER_IMG_GRAFANA_MCP}
