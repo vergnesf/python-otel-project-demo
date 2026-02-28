@@ -20,14 +20,14 @@ from .agent_models import (
 # LLM configuration
 from .llm_config import get_llm, get_model_params
 
-# MCP client
-from .mcp_client import MCPGrafanaClient
-
 # LLM utilities
 from .llm_utils import extract_text_from_response
 
+# MCP client
+from .mcp_client import MCPGrafanaClient
+
 # Ollama utilities
-from .ollama_utils import unload_ollama_model, load_ollama_model
+from .ollama_utils import load_ollama_model, unload_ollama_model
 
 __all__ = [
     # Agent models

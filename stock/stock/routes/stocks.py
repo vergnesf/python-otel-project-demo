@@ -1,15 +1,16 @@
-from pydantic import ValidationError
-from flask import Blueprint, jsonify, request, current_app
-import random
-import os
 import logging
+import os
+import random
+
+from flask import Blueprint, current_app, jsonify, request
+from pydantic import ValidationError
 
 from .. import schemas
 from ..crud import (
     create_stock,
+    decrease_stock_quantity,
     get_stock_by_wood_type,
     get_stocks,
-    decrease_stock_quantity,
 )
 from ..database import get_db
 from ..schemas import StockDecrease

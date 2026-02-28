@@ -1,7 +1,8 @@
-import random
-import os
-import time
 import logging
+import os
+import random
+import time
+
 import requests
 from common_models.models import OrderStatus
 

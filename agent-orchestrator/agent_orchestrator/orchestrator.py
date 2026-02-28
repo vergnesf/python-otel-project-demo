@@ -13,8 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
-from common_ai import get_llm, extract_text_from_response
+from common_ai import get_llm
 
 logger = logging.getLogger(__name__)
 
@@ -308,7 +307,7 @@ class Orchestrator:
         model_params: dict | None,
     ) -> str | None:
         logger.info(f"_invoke_llm_prompt called with model={model}, params={model_params}")
-        
+
         # Always use Ollama directly for visibility in logs
         logger.info("Using Ollama API directly")
         try:
@@ -339,7 +338,7 @@ class Orchestrator:
 
         model_name = model or os.getenv("LLM_MODEL", "qwen3:0.6b")
         logger.info(f"Calling Ollama at {url} with model={model_name}")
-        
+
         payload: dict[str, Any] = {
             "model": model_name,
             "prompt": prompt,
@@ -423,12 +422,12 @@ class Orchestrator:
 
         prompt = prompt.format(query=query)
         logger.debug(f"Classify intent prompt: {prompt}")
-        
+
         # Use direct Ollama call to make LLM calls visible
         logger.info("Calling Ollama for intent classification (direct call)")
         response_text = await self._ollama_generate(prompt, model, model_params)
         logger.info(f"LLM intent response (raw): {repr(response_text)}")
-        
+
         if not response_text:
             logger.warning("LLM returned empty response, defaulting to 'observability'")
             return "observability"
@@ -445,7 +444,7 @@ class Orchestrator:
         last_brace = response_text.rfind("}")
         if first_brace != -1 and last_brace != -1:
             response_text = response_text[first_brace : last_brace + 1]
-        
+
         logger.debug(f"After extraction: {repr(response_text)}")
 
         try:
@@ -459,8 +458,8 @@ class Orchestrator:
             logger.error(f"Failed to parse intent response: {e}", exc_info=True)
             logger.error(f"Response text was: {response_text}")
             return "observability"
-        
-        logger.info(f"Intent not recognized, defaulting to 'observability'")
+
+        logger.info("Intent not recognized, defaulting to 'observability'")
         return "observability"
 
     async def _generate_chat_response(
@@ -477,11 +476,11 @@ class Orchestrator:
 
         prompt = prompt.format(query=query)
         logger.debug(f"Chat prompt: {prompt}")
-        
+
         # Always use direct Ollama call for chat to make calls visible in logs
         logger.info("Using direct Ollama API call (bypassing LangChain)")
         response_text = await self._ollama_generate(prompt, model, model_params)
-        
+
         if not response_text:
             logger.error("LLM failed to generate chat response")
             raise RuntimeError("Failed to generate chat response from LLM")

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import threading
 import time
+from dataclasses import dataclass
 
 import psutil
 
@@ -90,14 +90,14 @@ class ResourceTracker:
         """Start a background thread that samples resources continuously."""
         if self._sampling_thread is not None and self._sampling_thread.is_alive():
             return
-        
+
         self._stop_sampling = False
-        
+
         def sampling_loop() -> None:
             while not self._stop_sampling:
                 self.sample()
                 time.sleep(interval)
-        
+
         self._sampling_thread = threading.Thread(target=sampling_loop, daemon=True)
         self._sampling_thread.start()
 

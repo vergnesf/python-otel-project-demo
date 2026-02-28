@@ -25,15 +25,15 @@ def validate_model_in_response(response: dict, expected_model: str | None = None
     """Validate that response contains expected model info if provided."""
     if expected_model is None:
         return True, "no model check required"
-    
+
     # Check for model in response metadata
     response_model = response.get("model")
     if response_model is None:
         return True, "model not included in response (optional)"
-    
+
     if response_model == expected_model:
         return True, f"model={response_model} ✓"
-    
+
     return False, f"model mismatch: expected {expected_model}, got {response_model}"
 
 
@@ -93,19 +93,18 @@ def validate_routing(response: dict, query: str) -> tuple[bool, str]:
     """Validate that routing matches query intent."""
     if not isinstance(response, dict):
         return False, "invalid response format"
-    
+
     routed_agents = response.get("routing", {}).get("agents", [])
-    agent_responses = response.get("agent_responses", {})
-    
+
     query_lower = query.lower()
-    
+
     # Define keywords for each agent type
     logs_keywords = {"error", "exception", "warning", "log", "failed", "failure"}
     metrics_keywords = {"cpu", "memory", "ram", "performance", "usage", "latency", "throughput"}
     traces_keywords = {"trace", "request", "slow", "latency", "span", "flow"}
-    
+
     expected_agents = set()
-    
+
     # Determine expected agents based on query keywords
     if any(kw in query_lower for kw in logs_keywords):
         expected_agents.add("logs")
@@ -113,22 +112,22 @@ def validate_routing(response: dict, query: str) -> tuple[bool, str]:
         expected_agents.add("metrics")
     if any(kw in query_lower for kw in traces_keywords):
         expected_agents.add("traces")
-    
+
     # If no specific keywords found, query might be combined
     if not expected_agents:
         # For combined queries, we might expect multiple agents
         if len(routed_agents) == 0:
             return False, "no agents routed"
         return True, f"combined query routed to {', '.join(routed_agents)}"
-    
+
     routed_set = set(routed_agents)
-    
+
     # Check if routed agents match or exceed expected agents
     if expected_agents.issubset(routed_set):
         return True, f"correct routing: {', '.join(sorted(routed_set))}"
-    
+
     # Allow partial matches for closely related queries
     if len(expected_agents & routed_set) > 0:
         return True, f"partial match: expected {expected_agents}, got {routed_set}"
-    
+
     return False, f"expected {expected_agents}, got {routed_set}"

@@ -1,12 +1,11 @@
-import os
-import random
 import json
 import logging
+import os
+import random
 import time
 
-from confluent_kafka import Producer
-
 from common_models.models import Stock, WoodType
+from confluent_kafka import Producer
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()

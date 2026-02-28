@@ -3,15 +3,15 @@ Logs analysis logic using MCP Grafana client and LLM
 NO business logic - just MCP data retrieval + LLM analysis
 """
 
+import json
 import logging
 import os
-from datetime import datetime
-import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from common_ai import MCPGrafanaClient, get_llm, extract_text_from_response
+from common_ai import MCPGrafanaClient, extract_text_from_response, get_llm
 
 logger = logging.getLogger(__name__)
 
