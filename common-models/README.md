@@ -1,5 +1,7 @@
 # Common Models
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Shared business models used by all microservices.
 
 ## Contents

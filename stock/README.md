@@ -1,5 +1,7 @@
 # Stock Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 FastAPI-based REST API that manages wood stock inventory.
 
 ## 📋 Overview

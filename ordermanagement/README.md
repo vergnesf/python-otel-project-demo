@@ -1,5 +1,7 @@
 # Ordermanagement Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Background worker that processes registered orders by decreasing stock.
 
 ## 📋 Overview

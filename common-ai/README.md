@@ -1,5 +1,7 @@
 # Common AI
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Shared AI utilities and MCP client for AI agents.
 
 ## Contents

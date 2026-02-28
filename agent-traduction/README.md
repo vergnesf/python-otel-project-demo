@@ -1,5 +1,7 @@
 # Agent Traduction
 
+> **Status:** `ACTIVE` — In active development. Functional and open to improvements.
+
 Service for language detection and query translation to English.
 
 ## 📊 Features

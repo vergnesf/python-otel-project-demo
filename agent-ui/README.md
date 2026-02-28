@@ -1,5 +1,7 @@
 # Agent UI
 
+> **Status:** `DRAFT` — Code written but not yet operational. No maintenance required.
+
 FastAPI-based web interface for interacting with the observability agentic network.
 
 ## 📊 Features

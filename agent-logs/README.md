@@ -1,5 +1,7 @@
 # Agent Logs
 
+> **Status:** `DRAFT` — Code written but not yet operational. No maintenance required.
+
 Loki specialist agent that analyzes log data via the Grafana MCP server.
 
 ## 📊 Features

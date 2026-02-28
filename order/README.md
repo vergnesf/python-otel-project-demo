@@ -1,5 +1,7 @@
 # Order Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 FastAPI-based REST API that manages customer orders.
 
 ## 📋 Overview

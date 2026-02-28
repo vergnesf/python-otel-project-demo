@@ -1,5 +1,7 @@
 # Ordercheck Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Kafka consumer that processes customer orders from the `orders` topic.
 
 ## 📋 Overview

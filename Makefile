@@ -1,9 +1,9 @@
-.PHONY: models-init tools-format compose-up compose-down
+.PHONY: models-init tools-format lint compose-up compose-down
 
 # Models to pull
 MODELS := mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
 
-PROJECTS := agent-logs agent-metrics agent-orchestrator agent-traces agent-ui agent-traduction benchmarks common-ai common-models customer order ordercheck ordermanagement stock supplier suppliercheck
+PROJECTS := agent-logs agent-metrics agent-orchestrator agent-traces agent-ui agent-traduction benchmark common-ai common-models customer order ordercheck ordermanagement stock supplier suppliercheck
 
 # Detect container runtime (docker or podman)
 DOCKER_AVAILABLE := $(shell command -v docker >/dev/null 2>&1 && echo true || echo false)
@@ -41,6 +41,10 @@ models-init:
 		fi; \
 	done; \
 	echo "models-init: done"
+
+lint:
+	@echo "Linting all projects with ruff..."
+	uvx ruff check $(PROJECTS)
 
 tools-format:
 	#echo "Use black to format python files"

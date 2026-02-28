@@ -1,5 +1,7 @@
 # Agent Traces
 
+> **Status:** `DRAFT` — Code written but not yet operational. No maintenance required.
+
 Tempo specialist agent that analyzes distributed traces via the Grafana MCP server.
 
 ## 📊 Features
