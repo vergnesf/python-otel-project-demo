@@ -2,34 +2,28 @@
 
 > **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
 
-Flask-based REST API that manages customer orders.
+Flask REST API that manages customer orders in a PostgreSQL database.
+
+## Why I built this
+
+To learn the Flask app factory pattern, SQLAlchemy ORM integration, auto-generated
+Swagger docs with Flasgger, and OTEL instrumentation of synchronous REST APIs.
 
 ## 📋 Overview
 
-- **Type**: REST API (Flask)
+- **Type**: REST API (Flask + SQLAlchemy)
 - **Port**: 5000
 - **Database**: PostgreSQL
-- **Dependencies**: common-models, Flask, SQLAlchemy
-- **OpenTelemetry**: Auto-instrumented for observability
+- **Framework**: Flask (intentional — synchronous, SQLAlchemy-compatible, no migration to FastAPI planned)
 
 ## 🚀 Running the Service
 
-### With Docker
-
 ```bash
+# With Docker (recommended)
 docker-compose up order
-```
 
-### Local Development
-
-```bash
-# Navigate to service directory
-cd order/
-
-# Install dependencies
-uv sync
-
-# Run with OpenTelemetry instrumentation
+# Local development
+cd order/ && uv sync
 uv run opentelemetry-instrument \
     --traces_exporter otlp \
     --metrics_exporter otlp \
@@ -40,148 +34,48 @@ uv run opentelemetry-instrument \
 
 ## 🔧 Configuration
 
-Environment variables:
-
 ```bash
-# Database configuration
 DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
-
-# Service configuration
 HOST=0.0.0.0
 PORT=5000
 LOG_LEVEL=INFO
-
-# OpenTelemetry
 OTEL_SERVICE_NAME=order
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
 ## 📊 API Endpoints
 
-### POST /orders
-Create a new order
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/orders` | Create order |
+| GET | `/orders` | List all orders |
+| GET | `/orders/<id>` | Get one order |
+| PUT | `/orders/<id>` | Update order status |
+| GET | `/orders/status/registered` | Filter registered orders |
+| GET | `/health` | Health check |
 
-**Request:**
-```json
-{
-  "customer_id": "cust_123",
-  "wood_type": "oak",
-  "quantity": 5,
-  "status": "registered"
-}
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "customer_id": "cust_123",
-  "wood_type": "oak",
-  "quantity": 5,
-  "status": "registered",
-  "created_at": "2025-11-08T10:30:00Z"
-}
-```
-
-### GET /orders
-List all orders
-
-**Response:**
-```json
-[
-  {
-    "id": 1,
-    "customer_id": "cust_123",
-    "wood_type": "oak",
-    "quantity": 5,
-    "status": "registered"
-  }
-]
-```
-
-### GET /orders/{order_id}
-Get specific order
-
-### PUT /orders/{order_id}
-Update order status
-
-### GET /orders/status/registered
-Get orders with specific status
+Swagger UI: `http://localhost:5000/apidocs/`
 
 ## 📦 Dependencies
 
-- `flask`: Web framework
-- `flasgger`: API documentation
-- `sqlalchemy`: ORM for database
-- `psycopg2-binary`: PostgreSQL adapter
-- `common-models`: Shared business models
+- `flask` + `flask-sqlalchemy` — web framework + ORM
+- `flasgger` — auto-generated Swagger/OpenAPI docs
+- `psycopg2-binary` — PostgreSQL adapter
+- `common-models` — shared business models
 
 ## 🔄 Integration
 
-The order service integrates with:
+Receives from ← `ordercheck` (POST /orders)
+Serves to → `ordermanagement` (GET /orders/status/registered)
+Updated by → `ordermanagement` (PUT /orders/<id>)
 
-- **Database**: PostgreSQL for order persistence
-- **Ordercheck**: Consumes orders from Kafka and calls this API
-- **Ordermanagement**: Updates order statuses
-- **Stock**: Validates stock availability
-- **OpenTelemetry**: Auto-instrumented for observability
+## 📈 Observability
+
+Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
 
 ```bash
-# Run tests
 uv run pytest
-
-# Check test coverage
 uv run pytest --cov=order --cov-report=html
-```
-
-## 📝 Example Usage
-
-```bash
-# Create an order
-curl -X POST http://localhost:5000/orders \
-  -H "Content-Type: application/json" \
-  -d '{"customer_id": "cust_123", "wood_type": "oak", "quantity": 5, "status": "registered"}'
-
-# List all orders
-curl http://localhost:5000/orders
-```
-
-## 🏗️ Dockerfile
-
-The service uses a multi-stage Docker build:
-
-1. Build stage: Installs dependencies with UV
-2. Runtime stage: Runs the FastAPI server
-
-See `order/Dockerfile` for details.
-
-## 📈 Observability
-
-- **Logs**: Sent to Loki via OpenTelemetry
-- **Metrics**: Sent to Mimir via OpenTelemetry
-- **Traces**: Sent to Tempo via OpenTelemetry
-- **Service Name**: `order`
-
-## 🔗 Related Services
-
-- **customer**: Sends orders via Kafka
-- **ordercheck**: Validates and processes orders
-- **ordermanagement**: Updates order statuses
-- **stock**: Manages inventory for orders
-
-## 🐳 Podman Compose (rebuild a service)
-
-To force the rebuild of a service without restarting the entire stack:
-
-```bash
-podman compose up -d --build --force-recreate --no-deps <service>
-```
-
-To ensure a rebuild without cache:
-
-```bash
-podman compose build --no-cache <service>
-podman compose up -d --force-recreate --no-deps <service>
 ```
