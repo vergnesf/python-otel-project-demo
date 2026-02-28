@@ -1,5 +1,7 @@
 # Suppliercheck Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Kafka consumer that processes supplier stock updates from the `stocks` topic.
 
 ## 📋 Overview

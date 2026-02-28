@@ -1,5 +1,7 @@
 # Benchmark Suite
 
+> **Status:** `ACTIVE` — In active development. Functional and open to improvements.
+
 Comprehensive benchmark suite for AI agent APIs with multi-model performance comparison.
 
 ## Features

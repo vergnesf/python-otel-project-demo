@@ -1,5 +1,7 @@
 # Agent Metrics
 
+> **Status:** `DRAFT` — Code written but not yet operational. No maintenance required.
+
 Mimir specialist agent that analyzes performance metrics via the Grafana MCP server.
 
 ## 📊 Features

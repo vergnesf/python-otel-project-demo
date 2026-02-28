@@ -1,5 +1,7 @@
 # Supplier Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Kafka producer that simulates supplier stock updates being sent to the system.
 
 ## 📋 Overview

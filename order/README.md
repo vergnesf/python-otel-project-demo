@@ -1,6 +1,8 @@
 # Order Service
 
-FastAPI-based REST API that manages customer orders.
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
+Flask-based REST API that manages customer orders.
 
 ## 📋 Overview
 

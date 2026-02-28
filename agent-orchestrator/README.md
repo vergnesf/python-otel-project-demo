@@ -1,5 +1,7 @@
 # Agent Orchestrator
 
+> **Status:** `DRAFT` — Code written but not yet operational. No maintenance required.
+
 Main coordinator of the observability agentic network.
 
 ## 📊 Features

@@ -1,5 +1,7 @@
 # Customer Service
 
+> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+
 Kafka producer that simulates customer orders being placed in the system.
 
 ## 📋 Overview
