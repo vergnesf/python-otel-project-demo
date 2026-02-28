@@ -19,20 +19,17 @@ KEEPER business services.
 
 | File | Purpose |
 |------|---------|
-| `agent_models.py` | Pydantic models: `AgentRequest`, `AgentResponse`, `AgentType`, `OrchestratorResponse` |
+| `agent_models.py` | Pydantic models for agent requests, responses, and types |
 | `llm_config.py` | LLM initialization and config loading |
 | `mcp_client.py` | `MCPGrafanaClient` — queries Grafana via MCP protocol |
 | `llm_utils.py` | Text extraction utilities for LLM responses |
 | `ollama_utils.py` | Ollama model loading/unloading helpers |
 
-## Key exports
-
-```python
-from common_ai import AgentType, AgentRequest, AgentResponse
-from common_ai import MCPGrafanaClient, get_llm, extract_text_from_response
-```
+Check `common_ai/__init__.py` for the current public API — do not rely on
+internal module paths directly as they may change.
 
 ## What I learned building this
 
 LangChain agent patterns, MCP protocol integration with Grafana for observability
-queries, and sharing AI infrastructure across multiple agent services.
+queries, and the challenge of keeping a shared AI library stable while agent
+services evolve rapidly.

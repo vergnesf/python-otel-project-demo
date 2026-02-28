@@ -2,16 +2,16 @@
 
 ## What this service does
 
-Kafka **consumer** — reads `Order` events from the `orders` topic, validates them,
-then forwards valid orders to the `order` REST API via HTTP POST. Part of the
-order validation pipeline between the producer and the database.
+Kafka **consumer** — reads `Order` events from the `orders` topic and forwards them
+to the `order` REST API via HTTP POST. No business validation logic — it is a
+pass-through bridge between the Kafka topic and the REST API.
 
 ## Tech stack
 
 - Pure Python, no HTTP framework exposed
 - `confluent-kafka` — Kafka consumer client (group: `order-check-group`)
 - `requests` — HTTP client to call the Order API
-- `common-models` — shared `Order` Pydantic models (editable install)
+- `common-models` — declared dependency but consumer uses raw JSON dict payloads
 - `opentelemetry-distro` + `opentelemetry-exporter-otlp` — auto-instrumentation
 
 ## Entry point
@@ -35,5 +35,5 @@ Forwards to → `http://order:5000/orders` (POST)
 
 ## What I learned building this
 
-Kafka consumer group patterns, bridging Kafka and REST, and distributed trace
-propagation across async message boundaries with OTEL.
+Kafka consumer group patterns, bridging Kafka and REST as a pass-through,
+and distributed trace propagation across async message boundaries with OTEL.

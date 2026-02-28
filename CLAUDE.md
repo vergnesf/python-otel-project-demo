@@ -26,6 +26,11 @@ Two-layer model:
 | `common-ai` | Shared AI library | LangChain + MCP |
 | `config` | Infra config files | YAML |
 
+## Active Services
+
+- `benchmark` — ACTIVE: test suite for AI agent APIs (latency, throughput, multi-model comparison)
+- `agent-traduction` — ACTIVE: translation agent (FastAPI)
+
 ## Framework Convention
 
 - **Flask** for KEEPER HTTP services (`order`, `stock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
@@ -33,26 +38,33 @@ Two-layer model:
 
 ## Tools
 
-- **Python 3.14+** — see `.github/instructions/python.instructions.md` for full UV/Python conventions
-- **UV** — package manager. Always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly
+- **Python 3.14+** and **UV** — see `.github/instructions/python.instructions.md` for full conventions.
+  Critical rule: always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly.
 - **Docker Compose** — 7 split files orchestrated via `Makefile`
 - **Ruff** — linting, line-length=100, rules: E, F, W, I (configured in root `pyproject.toml`)
-- **Black** — formatting
+- **Black** — formatting (`uvx ruff check <project>` / `uv run black <project>`)
 - **Pyright** — type checking
 
 ## Key Makefile Targets
 
 ```bash
-make compose-up    # Start full stack (observability → db → kafka → ai-tools → ai → apps)
-make compose-down  # Stop all services
-make lint          # Ruff check across all projects
+make compose-up     # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
+make compose-down   # Stop all services (reverse order)
+make lint           # Ruff check across all 14 projects
+make tools-format   # Black format across all projects
+make models-init    # Pull Ollama AI models (mistral, llama, qwen, etc.)
 ```
+
+## Environment Setup
+
+Copy `.env.example` to `.env` before starting — it contains Docker image tags and
+the `GRAFANA_SERVICE_ACCOUNT_TOKEN` placeholder required for the agent layer.
 
 ## Git Workflow (mandatory)
 
 - **Always branch + PR** — never commit directly to `main`
 - **Conventional Commits** format — see `.github/instructions/commit-message.instructions.md`
-- PRs reviewed by a relevant BMAD persona before merging
+- PRs reviewed by a BMAD persona before merging (BMAD is the AI-assisted workflow framework used in this project — see `_bmad/`)
 
 ## OpenTelemetry Pattern
 
@@ -62,8 +74,9 @@ Telemetry flows: logs → Loki, metrics → Mimir, traces → Tempo, UI → Graf
 
 ## Error Injection
 
-`ERROR_RATE` env var (0.0–1.0, default 0.1) injects random failures in producers, consumers, and workers.
-This is intentional — generates interesting telemetry for learning OTEL.
+`ERROR_RATE` env var (0.0–1.0, default 0.1) injects random failures in Kafka producers, consumers,
+and the ordermanagement worker. The Flask REST APIs (`order`, `stock`) do not use `ERROR_RATE`.
+This is intentional — generates realistic, noisy telemetry for learning OTEL.
 
 ## Shared Libraries
 
@@ -72,8 +85,11 @@ This is intentional — generates interesting telemetry for learning OTEL.
 
 ## Infrastructure Access (local dev)
 
+All services are behind **Traefik** (port 8081). Direct access:
 - Grafana: `http://localhost:3000`
-- Kafka UI (AKHQ): `http://localhost:8081/akhq/`
 - Order API: `http://localhost:5000`
 - Stock API: `http://localhost:5001`
-- Traefik: `http://localhost:8081`
+
+Via Traefik (`http://localhost:8081`):
+- Kafka UI (AKHQ): `http://localhost:8081/akhq/`
+- Traefik dashboard: `http://localhost:8082`

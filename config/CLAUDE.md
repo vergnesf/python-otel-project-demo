@@ -24,7 +24,7 @@ config/
 │   └── tempo.yml             — Tempo distributed tracing config
 └── traefik/
     ├── traefik.yml            — Traefik static config
-    └── dynamic_conf.yml       — Traefik dynamic routing rules
+    └── dynamic_conf.yml       — Traefik dynamic routing rules (service URLs, path prefixes)
 ```
 
 ## Usage
@@ -39,5 +39,7 @@ Receives traces/metrics/logs via OTLP (gRPC port 4317) and exports to:
 
 ## What I learned building this
 
-Grafana observability stack configuration, OTEL Collector pipeline design,
-and Traefik reverse proxy routing for local multi-service development.
+Each backend (Loki, Mimir, Tempo) has a different data model and config syntax.
+Wiring them all through the OTEL Collector as a single ingestion point was the
+key insight — services only need to know one endpoint (`otel-collector:4317`),
+not four separate backends.

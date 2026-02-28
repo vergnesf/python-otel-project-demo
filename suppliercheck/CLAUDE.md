@@ -12,7 +12,9 @@ in the supplier pipeline.
 - `confluent-kafka` — Kafka consumer client (group: `stock-check-group`)
 - `requests` — HTTP client to call the Stock API
 - `opentelemetry-distro` + `opentelemetry-exporter-otlp` — auto-instrumentation
-- Note: does not depend on `common-models` (uses raw dict payloads)
+- Does not declare `common-models` as a dependency (unlike `ordercheck`) — both services
+  use raw JSON dict payloads from Kafka; the `common-models` dep in `ordercheck` is unused
+  in the consumer path and should be considered technical debt.
 
 ## Entry point
 
@@ -35,5 +37,5 @@ Forwards to → `http://stock:5001/stocks` (POST)
 
 ## What I learned building this
 
-Comparing Kafka consumer patterns with and without a shared model library,
-and how symmetric service pairs appear in distributed traces.
+How two symmetric Kafka consumer services can diverge in dependency management
+over time, and why keeping symmetric services truly symmetric avoids confusion.
