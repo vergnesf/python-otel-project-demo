@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from flasgger import Swagger
 from flask import Flask, jsonify

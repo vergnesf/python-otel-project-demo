@@ -2,7 +2,6 @@
 
 import logging
 import statistics
-from datetime import datetime
 from typing import Any
 
 import psutil
@@ -186,7 +185,7 @@ class MetricsCollector:
                 print(
                     f"    Error Rate: {summary.error_rate * 100:.2f}%"
                 )
-                print(f"    Latency (ms):")
+                print("    Latency (ms):")
                 print(f"      p50: {summary.latency_ms_p50:.2f}")
                 print(f"      p95: {summary.latency_ms_p95:.2f}")
                 print(f"      p99: {summary.latency_ms_p99:.2f}")

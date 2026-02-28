@@ -2,9 +2,8 @@
 This module contains the schemas for the order service.
 """
 
-from pydantic import BaseModel
-
 from common_models.models import WoodType
+from pydantic import BaseModel
 
 
 class OrderBase(BaseModel):

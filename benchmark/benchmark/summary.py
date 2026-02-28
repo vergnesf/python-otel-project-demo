@@ -33,7 +33,7 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
                     success_count = 0
                     total_count = 0
                     has_failures = True
-                
+
                 row = {
                     "model": model,
                     "agent": agent_name,
@@ -75,13 +75,13 @@ def render_summary(all_results: dict, benchmark_models: list[str]) -> None:
         # Build status: format is "X/Y" with color based on failures/valid status
         valid_icon = "✓" if row["is_valid"] else "✗"
         status_text = f"{row['success_rate']} {valid_icon}"
-        
+
         # Color red if failures exist or validation failed
         if row["has_failures"] or not row["is_valid"]:
             status_display = f"[red]{status_text}[/red]"
         else:
             status_display = f"[green]{status_text}[/green]"
-        
+
         table.add_row(
             str(model_display),
             str(row["agent"]),

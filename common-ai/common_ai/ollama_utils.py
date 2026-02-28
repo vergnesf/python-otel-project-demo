@@ -3,8 +3,9 @@ Utilities for managing Ollama models and resources.
 """
 
 import asyncio
-import httpx
 import os
+
+import httpx
 
 
 class Colors:
@@ -59,7 +60,7 @@ async def unload_ollama_model(model_name: str | None = None) -> bool:
             else:
                 return False
 
-    except Exception as e:
+    except Exception:
         return False
 
 
@@ -84,9 +85,9 @@ async def load_ollama_model(model_name: str) -> bool:
         # Remove /v1 suffix if present to get base API URL
         if ollama_base.endswith("/v1"):
             ollama_base = ollama_base[:-3]
-        
+
         url = f"{ollama_base}/api/generate"
-        
+
         # Make a minimal request to load the model (only 1 token)
         payload = {
             "model": model_name,
@@ -96,12 +97,12 @@ async def load_ollama_model(model_name: str) -> bool:
                 "num_predict": 1,  # Only generate 1 token for fast warm-up
             }
         }
-        
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=payload)
             response.raise_for_status()
-        
+
         return True
-        
-    except Exception as e:
+
+    except Exception:
         return False

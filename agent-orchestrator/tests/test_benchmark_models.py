@@ -4,25 +4,25 @@ Benchmark tests for different AI models.
 """
 
 import asyncio
-from pathlib import Path
 import statistics
 import time
+from pathlib import Path
 
 import psutil
 import pytest
 import yaml
+from common_ai import get_model_params, unload_ollama_model
 
 from tests.test_orchestrator_integration import (
-    run_agent_routing,
-    run_response_validation,
-    run_complete_workflow,
-    check_orchestrator_available,
-    list_available_models,
-    Colors,
     BASE_URL,
     TIMEOUT,
+    Colors,
+    check_orchestrator_available,
+    list_available_models,
+    run_agent_routing,
+    run_complete_workflow,
+    run_response_validation,
 )
-from common_ai import get_model_params, unload_ollama_model
 
 MODELS = [
     "mistral:7b",

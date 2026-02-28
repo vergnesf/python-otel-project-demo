@@ -3,11 +3,11 @@ MCP (Model Context Protocol) client for Grafana
 Provides unified interface to query Loki, Mimir, and Tempo via the Grafana MCP server
 """
 
-import logging
 import asyncio
-from typing import Any
-from datetime import datetime, timedelta
+import logging
 from contextlib import AsyncExitStack
+from datetime import datetime, timedelta
+from typing import Any
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -176,7 +176,7 @@ class MCPGrafanaClient:
         Returns:
             Tuple of (start, end) in RFC3339 format (UTC) for MCP compatibility
         """
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc)
 

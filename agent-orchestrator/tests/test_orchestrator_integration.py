@@ -11,11 +11,12 @@ REQUIREMENTS:
 - All tests require a working LLM for routing and validation
 """
 
-import httpx
 import asyncio
 import os
-import pytest
 from datetime import datetime
+
+import httpx
+import pytest
 
 
 class ExecutionResult:

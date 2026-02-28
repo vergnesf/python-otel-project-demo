@@ -1,7 +1,6 @@
 # pyright: reportMissingImports=false
-from sqlalchemy.orm import Session
-
 from common_models.models import WoodType
+from sqlalchemy.orm import Session
 
 from . import models, schemas
 

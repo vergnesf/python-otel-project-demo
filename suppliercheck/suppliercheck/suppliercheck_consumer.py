@@ -1,7 +1,7 @@
-import random
 import json
 import logging
 import os
+import random
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException

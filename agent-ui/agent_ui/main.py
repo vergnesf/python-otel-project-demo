@@ -2,15 +2,16 @@
 Main FastAPI application for the Agents UI - Professional dark theme
 """
 
-import os
-from typing import List, Optional
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-import httpx
 import logging
+import os
+from typing import List
+
+import httpx
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 # Setup logging
 logger = logging.getLogger("agent_ui")
@@ -23,11 +24,11 @@ class QA(BaseModel):
 
 class ChatState:
     """The app state."""
-    
+
     def __init__(self):
         self.chats: List[QA] = []
         self.processing: bool = False
-    
+
     def get_messages(self) -> List[dict]:
         """Get messages in the format expected by the UI.
         
@@ -40,7 +41,7 @@ class ChatState:
             if qa.answer:
                 result.append({"role": "assistant", "content": qa.answer})
         return result
-    
+
     def is_loading(self) -> bool:
         """Check if we are currently processing.
         
@@ -61,6 +62,7 @@ templates = Jinja2Templates(directory="agent_ui/templates")
 
 # Mount static files (if directory exists)
 import os
+
 if os.path.exists("agent_ui/static"):
     app.mount("/static", StaticFiles(directory="agent_ui/static"), name="static")
 
@@ -89,7 +91,7 @@ async def send_message(
         question: The question from the user
     """
     logger.info(f"Received question: {question[:50]}...")
-    
+
     # Check if the question is empty
     if not question.strip():
         logger.warning("Empty question received")

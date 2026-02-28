@@ -2,9 +2,8 @@
 This module provides CRUD operations for orders.
 """
 
-from sqlalchemy.orm import Session
-
 from common_models.models import OrderStatus
+from sqlalchemy.orm import Session
 
 from . import models, schemas
 

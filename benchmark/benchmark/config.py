@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+
 import yaml
 
 
@@ -28,7 +29,7 @@ def load_model_configs():
             }
 
         return model_configs
-    except Exception as e:
+    except Exception:
         return {}
 
 

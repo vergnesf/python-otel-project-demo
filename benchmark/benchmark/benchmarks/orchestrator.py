@@ -2,8 +2,13 @@
 
 import logging
 import statistics
-from benchmark.agents.orchestrator import OrchestratorBenchmark
+
 import benchmark.config
+from benchmark.agents.orchestrator import OrchestratorBenchmark
+from benchmark.benchmarks.base import (
+    check_service_available,
+    extract_query,
+)
 from benchmark.resources import start_resource_tracker
 from benchmark.ui import (
     console,
@@ -17,10 +22,10 @@ from benchmark.ui import (
     print_summary,
     print_validation,
 )
-from benchmark.validation import validate_orchestrator_response, validate_routing, validate_model_in_response
-from benchmark.benchmarks.base import (
-    check_service_available,
-    extract_query,
+from benchmark.validation import (
+    validate_model_in_response,
+    validate_orchestrator_response,
+    validate_routing,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,14 +42,14 @@ async def benchmark_orchestrator() -> dict:
 
     results_by_model = {}
     benchmark_agent = OrchestratorBenchmark(benchmark.config.ORCHESTRATOR_URL, timeout=benchmark.config.BENCHMARK_TIMEOUT)
-    
+
     try:
         for model in benchmark.config.BENCHMARK_MODELS:
             model_config = benchmark.config.MODEL_CONFIGS.get(model, {})
             temperature = model_config.get("temperature", 0.7)
-            
+
             print_model_header(model)
-            
+
             # Test routing to different agents
             queries = [
                 # LOGS routing - specific error queries
@@ -56,14 +61,14 @@ async def benchmark_orchestrator() -> dict:
                 # COMBINED - requires multiple agents
                 "Analyze system performance, errors, and request latencies",
             ]
-            
+
             tracker = start_resource_tracker()
             timings = []
             all_results = []
             validation_failed = False
             valid_tests = 0
             total_expected = len(queries) * benchmark.config.NUM_TEST_REQUESTS
-            
+
             try:
                 # Test: Execute each query benchmark.config.NUM_TEST_REQUESTS times for consistency
                 results = []
@@ -76,7 +81,7 @@ async def benchmark_orchestrator() -> dict:
                             num_requests=benchmark.config.NUM_TEST_REQUESTS,
                         )
                     )
-                
+
                 # Display request/response details
                 print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {benchmark.config.NUM_TEST_REQUESTS} iterations = {total_expected} total")
                 for i, result in enumerate(results, 1):
@@ -103,7 +108,7 @@ async def benchmark_orchestrator() -> dict:
                             routing_valid = True
                             if is_valid and result.get("request"):
                                 routing_valid, routing_msg = validate_routing(
-                                    result["response"], 
+                                    result["response"],
                                     extract_query(result["request"])
                                 )
                                 print_validation(routing_valid, f"routing: {routing_msg}")
@@ -120,7 +125,7 @@ async def benchmark_orchestrator() -> dict:
                             query = extract_query(result["request"])
                             print_query(query)
                     tracker.sample()
-                
+
                 if not all_results:
                     console.print(f"[red]✗ {model}: All requests failed[/red]")
                     # Store failed result for summary table
@@ -135,7 +140,7 @@ async def benchmark_orchestrator() -> dict:
                         "is_valid": False,
                     }
                     continue
-                    
+
             except Exception as e:
                 console.print(f"[red]✗ {model}: {e}[/red]")
                 # Store failed result for summary table
@@ -149,14 +154,14 @@ async def benchmark_orchestrator() -> dict:
                     "success_rate": f"0/{total_expected}",
                 }
                 continue
-            
+
             # Calculate statistics
             total_time = sum(timings)
             avg_time = statistics.mean(timings)
-            
+
             # Stop continuous sampling
             tracker.stop_continuous_sampling()
-            
+
             print_summary(
                 total_time,
                 avg_time,
@@ -166,7 +171,7 @@ async def benchmark_orchestrator() -> dict:
                 tracker.gpu_util_max,
                 tracker.vram_max_mb,
             )
-            
+
             results_by_model[model] = {
                 "total_time_ms": total_time,
                 "avg_time_ms": avg_time,
@@ -178,8 +183,8 @@ async def benchmark_orchestrator() -> dict:
                 "success_rate": f"{valid_tests}/{total_expected}",
                 "is_valid": not validation_failed,
             }
-            
+
     finally:
         await benchmark_agent.close()
-    
+
     return results_by_model
