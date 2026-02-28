@@ -11,7 +11,7 @@ and how distributed traces propagate across async message boundaries with OTEL.
 
 ## 📋 Overview
 
-- **Type**: Kafka Consumer (pass-through — no business validation logic)
+- **Type**: Kafka Consumer (pass-through — no schema validation; error simulation via `ERROR_RATE`)
 - **Topic**: `orders`
 - **Consumer Group**: `order-check-group`
 - **Error Simulation**: Configurable error rate (default: 10%)
@@ -58,6 +58,8 @@ Forwards to → `http://order:5000/orders` (POST)
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
+
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
 uv run pytest

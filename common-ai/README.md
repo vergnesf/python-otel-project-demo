@@ -34,5 +34,6 @@ See `common_ai/__init__.py` for the current public API.
 ```bash
 cd common-ai/ && uv sync
 uv run ruff check .
-uv run pytest
 ```
+
+> No tests exist yet in this library — tracked in issue #17.

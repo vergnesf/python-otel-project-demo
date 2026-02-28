@@ -23,7 +23,7 @@ pass-through bridge between the Kafka topic and the REST API.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `KAFKA_BOOTSTRAP_SERVERS` | required | Kafka broker address |
-| `ORDER_SERVICE_URL` | `http://order:5000` | Target Order API |
+| `API_URL` | `http://order:5000` | Target Order API base URL (appends `/orders`) |
 | `ERROR_RATE` | `0.1` | Fraction of messages that fail (0.0–1.0) |
 | `OTEL_SERVICE_NAME` | `ordercheck` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |

@@ -54,7 +54,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 | GET | `/orders/status/registered` | Filter registered orders |
 | GET | `/health` | Health check |
 
-Swagger UI: `http://localhost:5000/apidocs/`
+Swagger UI: `http://localhost:5000/apidocs/` _(requires full stack running with PostgreSQL)_
 
 ## 📦 Dependencies
 
@@ -74,6 +74,8 @@ Updated by → `ordermanagement` (PUT /orders/<id>)
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
+
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
 uv run pytest

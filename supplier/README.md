@@ -54,6 +54,8 @@ Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mim
 
 ## 🧪 Testing
 
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
+
 ```bash
 uv run pytest
 uv run pytest --cov=supplier --cov-report=html

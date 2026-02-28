@@ -25,7 +25,7 @@ in the supplier pipeline.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `KAFKA_BOOTSTRAP_SERVERS` | required | Kafka broker address |
-| `STOCK_SERVICE_URL` | `http://stock:5001` | Target Stock API |
+| `API_URL` | `http://stock:5001` | Target Stock API base URL (appends `/stocks`) |
 | `ERROR_RATE` | `0.1` | Fraction of messages that fail (0.0–1.0) |
 | `OTEL_SERVICE_NAME` | `suppliercheck` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |

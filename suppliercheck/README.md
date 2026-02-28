@@ -11,15 +11,11 @@ over time, and why keeping symmetric services truly symmetric avoids confusion.
 
 ## 📋 Overview
 
-- **Type**: Kafka Consumer (pass-through — no business validation logic)
+- **Type**: Kafka Consumer (pass-through — no schema validation; error simulation via `ERROR_RATE`)
 - **Topic**: `stocks`
 - **Consumer Group**: `stock-check-group`
 - **Error Simulation**: Configurable error rate (default: 10%)
 - **Dependencies**: Kafka broker, Stock Service API
-
-> Note: does not declare `common-models` as a dependency (unlike `ordercheck`). Both services
-> consume raw JSON dict payloads — the `common-models` dep in `ordercheck` is unused in its
-> consumer path and is considered technical debt.
 
 ## 🚀 Running the Service
 
@@ -60,6 +56,8 @@ Forwards to → `http://stock:5001/stocks` (POST)
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
+
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
 uv run pytest

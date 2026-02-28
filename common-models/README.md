@@ -31,10 +31,13 @@ dependencies = ["common-models"]
 common-models = { path = "../common-models", editable = true }
 ```
 
+Then run `uv sync` to activate the editable install.
+
 ## Development
 
 ```bash
 cd common-models/ && uv sync
 uv run ruff check .
-uv run pytest
 ```
+
+> No tests exist yet — smoke tests tracked in issue #17.

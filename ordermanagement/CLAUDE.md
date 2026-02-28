@@ -25,8 +25,8 @@ Runs in an infinite loop with a configurable interval.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `ORDER_SERVICE_URL` | `http://order:5000` | Order API base URL |
-| `STOCK_SERVICE_URL` | `http://stock:5001` | Stock API base URL |
+| `API_URL_ORDERS` | `http://order:5000` | Order API base URL |
+| `API_URL_STOCKS` | `http://stock:5001` | Stock API base URL |
 | `INTERVAL_SECONDS` | `5` | Loop interval |
 | `ERROR_RATE` | `0.1` | Fraction of cycles that fail (0.0–1.0) |
 | `OTEL_SERVICE_NAME` | `ordermanagement` | Telemetry service name |

@@ -13,7 +13,7 @@ processes, and how structured error injection generates meaningful traces and lo
 
 - **Type**: Kafka Producer
 - **Topic**: `orders`
-- **Frequency**: Configurable interval (default: 60 seconds)
+- **Frequency**: Configurable interval (60s in code, 5s in docker-compose)
 - **Error Simulation**: Configurable error rate (default: 10%)
 - **Dependencies**: Kafka broker, common-models
 
@@ -32,7 +32,7 @@ uv run python -m customer.customer_producer
 
 ```bash
 KAFKA_BOOTSTRAP_SERVERS=broker:29092
-INTERVAL_SECONDS=60     # How often to send orders (seconds)
+INTERVAL_SECONDS=60     # How often to send orders (seconds) — docker-compose overrides to 5s
 ERROR_RATE=0.1          # Fraction of orders that will fail (0.0–1.0)
 LOG_LEVEL=INFO
 OTEL_SERVICE_NAME=customer
@@ -53,6 +53,8 @@ Publishes to → `orders` Kafka topic → consumed by `ordercheck`
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
+
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
 uv run pytest

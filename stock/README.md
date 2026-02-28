@@ -53,7 +53,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 | PUT | `/stocks/<wood_type>` | Update quantity |
 | POST | `/stocks/decrease` | Decrease stock (called by ordermanagement) |
 
-Swagger UI: `http://localhost:5001/apidocs/`
+Swagger UI: `http://localhost:5001/apidocs/` _(requires full stack running with PostgreSQL)_
 
 ## 📦 Dependencies
 
@@ -72,6 +72,8 @@ Stock decreased by → `ordermanagement` (POST /stocks/decrease)
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
 ## 🧪 Testing
+
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
 uv run pytest
