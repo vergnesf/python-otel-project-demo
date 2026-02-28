@@ -2,139 +2,67 @@
 
 > **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
 
-Background worker that processes registered orders by decreasing stock.
+Background worker that orchestrates the business loop: fetches registered orders,
+decreases stock, and updates order statuses on each cycle.
+
+## Why I built this
+
+To learn polling worker patterns with OTEL instrumentation, chaining multiple HTTP calls
+into a single distributed trace, and simulating realistic business process failures.
 
 ## 📋 Overview
 
-- **Type**: Background Worker
+- **Type**: Background Worker (infinite loop)
 - **Frequency**: Configurable interval (default: 5 seconds)
 - **Error Simulation**: Configurable error rate (default: 10%)
 - **Dependencies**: Order Service API, Stock Service API, common-models
 
 ## 🚀 Running the Service
 
-### With Docker
-
 ```bash
+# With Docker (recommended)
 docker-compose up ordermanagement
-```
 
-### Local Development
-
-```bash
-# Navigate to service directory
-cd ordermanagement/
-
-# Install dependencies
-uv sync
-
-# Run the worker
+# Local development
+cd ordermanagement/ && uv sync
 uv run python -m ordermanagement.ordermanagement
 ```
 
 ## 🔧 Configuration
 
-Environment variables:
-
 ```bash
-# API endpoints
 API_URL_ORDERS=http://order:5000
 API_URL_STOCKS=http://stock:5001
-
-# Service behavior
-INTERVAL_SECONDS=5           # How often to check for orders (seconds)
-ERROR_RATE=0.1               # Percentage of operations that will fail (0.0 to 1.0)
-LOG_LEVEL=INFO               # Logging level (DEBUG, INFO, WARNING, ERROR)
-
-# OpenTelemetry
+INTERVAL_SECONDS=5    # How often to check for orders (seconds)
+ERROR_RATE=0.1        # Fraction of cycles that fail (0.0–1.0)
+LOG_LEVEL=INFO
 OTEL_SERVICE_NAME=ordermanagement
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-## 📊 Order Processing Flow
+## 📊 Processing flow
 
-1. **Fetch**: Retrieves registered orders from Order Service
-2. **Process**: For each order:
-   - Decreases stock in Stock Service
-   - Updates order status to "processed" or "failed"
-3. **Simulate Errors**: Randomly fails based on `ERROR_RATE`
-4. **Log**: Records processing results for observability
-5. **Wait**: Sleeps for configured interval before next cycle
-
-## 🎯 Error Simulation
-
-The service simulates processing errors based on `ERROR_RATE`:
-
-- Randomly fails stock decrease operations
-- Randomly fails order status updates
-- Logs detailed error information
-- Helps test error handling and recovery
-
-## 📦 Dependencies
-
-- `requests`: HTTP client for API calls
-- `common-models`: Shared business models (Order, Stock, OrderStatus)
+1. **Fetch**: GET registered orders from Order Service
+2. **Decrease stock**: POST `/stocks/decrease` for each order's wood type and quantity
+3. **Update status**: PUT order status to `SHIPPED`, `BLOCKED`, or `CLOSED`
+4. **Simulate errors**: Randomly fail steps based on `ERROR_RATE`
+5. **Wait**: Sleep for `INTERVAL_SECONDS` before next cycle
 
 ## 🔄 Integration
 
-The ordermanagement service integrates with:
-
-- **Order Service**: Fetches orders and updates statuses
-- **Stock Service**: Decreases stock when orders are processed
-- **Ordercheck**: Receives orders that need processing
-- **OpenTelemetry**: Auto-instrumented for observability
-
-## 🧪 Testing
-
-```bash
-# Run tests
-uv run pytest
-
-# Check test coverage
-uv run pytest --cov=ordermanagement --cov-report=html
-```
-
-## 📝 Example Usage
-
-```bash
-# Start with custom interval and error rate
-API_URL_ORDERS=http://localhost:5000 API_URL_STOCKS=http://localhost:5001 INTERVAL_SECONDS=10 ERROR_RATE=0.05 uv run python -m ordermanagement.ordermanagement
-```
-
-## 🏗️ Dockerfile
-
-The service uses a multi-stage Docker build:
-
-1. Build stage: Installs dependencies with UV
-2. Runtime stage: Runs the worker
-
-See `ordermanagement/Dockerfile` for details.
+Reads from → `http://order:5000/orders/status/registered`
+Writes to → `http://stock:5001/stocks/decrease`
+Writes to → `http://order:5000/orders/<id>` (status update)
 
 ## 📈 Observability
 
-- **Logs**: Sent to Loki via OpenTelemetry
-- **Metrics**: Sent to Mimir via OpenTelemetry
-- **Traces**: Sent to Tempo via OpenTelemetry
-- **Service Name**: `ordermanagement`
+Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
-## 🔗 Related Services
+## 🧪 Testing
 
-- **order**: Provides order data and status updates
-- **stock**: Manages inventory that gets decreased
-- **ordercheck**: Validates orders before they reach this service
-- **customer**: Creates orders that eventually get processed
-
-## 🐳 Podman Compose (rebuild d'un service)
-
-Pour forcer la reconstruction d'un service sans relancer toute la stack :
+> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
 
 ```bash
-podman compose up -d --build --force-recreate --no-deps <service>
-```
-
-To ensure a rebuild without cache:
-
-```bash
-podman compose build --no-cache <service>
-podman compose up -d --force-recreate --no-deps <service>
+uv run pytest
+uv run pytest --cov=ordermanagement --cov-report=html
 ```

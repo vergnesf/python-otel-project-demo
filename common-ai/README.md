@@ -1,33 +1,39 @@
 # Common AI
 
-> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+> **Status:** `KEEPER` — Stable library. Expected to stay functional and tested.
 
-Shared AI utilities and MCP client for AI agents.
+Shared AI utilities and MCP client for all agent services. Not used by KEEPER business services.
+
+## Why I built this
+
+To learn LangChain agent patterns, MCP protocol integration with Grafana for observability
+queries, and how to share AI infrastructure across multiple agent services without duplication.
 
 ## Contents
 
-- **Agent models**: AgentRequest, AgentResponse, AgentType, OrchestratorResponse
-- **MCP Client**: MCPGrafanaClient for interacting with Grafana MCP server
-- **LLM Config**: get_llm() helper for Langchain LLM initialization
+| File | Purpose |
+|------|---------|
+| `agent_models.py` | Pydantic models: `AgentRequest`, `AgentResponse`, `AgentType`, `OrchestratorResponse` |
+| `llm_config.py` | LLM initialization and YAML config loading |
+| `mcp_client.py` | `MCPGrafanaClient` — queries Grafana via MCP protocol |
+| `llm_utils.py` | Text extraction utilities for LLM responses |
+| `ollama_utils.py` | Ollama model loading/unloading helpers |
+
+See `common_ai/__init__.py` for the current public API.
 
 ## Dependencies
 
-- pydantic>=2.9.2
-- httpx>=0.27.0
-- langchain>=0.3.0
-- langchain-openai>=0.2.0
+- `langchain` + `langchain-openai` — LLM abstraction layer
+- `mcp` — Model Context Protocol client
+- `pydantic` — agent request/response models
+- `httpx` — async HTTP client
+- `pyyaml` — config loading
 
-## 🐳 Podman Compose (rebuild a service)
-
-To force the rebuild of a service without restarting the entire stack:
-
-```bash
-podman compose up -d --build --force-recreate --no-deps <service>
-```
-
-To ensure a rebuild without cache:
+## Development
 
 ```bash
-podman compose build --no-cache <service>
-podman compose up -d --force-recreate --no-deps <service>
+cd common-ai/ && uv sync
+uv run ruff check .
 ```
+
+> No tests exist yet in this library — tracked in issue #17.

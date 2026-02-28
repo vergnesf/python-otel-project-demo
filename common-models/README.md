@@ -1,32 +1,43 @@
 # Common Models
 
-> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+> **Status:** `KEEPER` — Stable library. Expected to stay functional and tested.
 
-Shared business models used by all microservices.
+Shared Pydantic v2 business models used across all KEEPER services.
+
+## Why I built this
+
+To learn shared library patterns with UV editable installs, Pydantic v2 model design,
+and how to avoid duplicating data contracts across Python microservices.
 
 ## Contents
 
-- `WoodType`: Enum for wood types (OAK, MAPLE, BIRCH, ELM, PINE)
-- `OrderStatus`: Enum for order statuses
-- `Stock`: Stock model with wood_type and quantity
-- `Order`: Order model
-- `OrderTracking`: Order tracking model
+| Model | Type | Fields |
+|-------|------|--------|
+| `WoodType` | Enum | OAK, MAPLE, BIRCH, ELM, PINE |
+| `OrderStatus` | Enum | READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED |
+| `Stock` | Pydantic model | `wood_type: WoodType`, `quantity: int` |
+| `Order` | Pydantic model | `wood_type: WoodType`, `quantity: int` |
+| `OrderTracking` | Pydantic model | `id`, `order_status`, `wood_type`, `quantity`, `date` |
 
-## Dependencies
+All models include a `to_json()` method for Kafka serialization.
 
-- pydantic>=2.9.2
+## Installation in other services
 
-## 🐳 Podman Compose (rebuild a service)
+```toml
+# pyproject.toml
+dependencies = ["common-models"]
 
-To force the rebuild of a service without restarting the entire stack:
-
-```bash
-podman compose up -d --build --force-recreate --no-deps <service>
+[tool.uv.sources]
+common-models = { path = "../common-models", editable = true }
 ```
 
-To ensure a rebuild without cache:
+Then run `uv sync` to activate the editable install.
+
+## Development
 
 ```bash
-podman compose build --no-cache <service>
-podman compose up -d --force-recreate --no-deps <service>
+cd common-models/ && uv sync
+uv run ruff check .
 ```
+
+> No tests exist yet — smoke tests tracked in issue #17.
