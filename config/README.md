@@ -1,6 +1,6 @@
 # Config
 
-> **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
+> **Status:** `KEEPER` — Stable configuration. Expected to stay functional and up to date.
 
 Infrastructure configuration files for the observability stack.
 
