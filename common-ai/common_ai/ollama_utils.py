@@ -67,13 +67,13 @@ async def unload_ollama_model(model_name: str | None = None) -> bool:
 async def load_ollama_model(model_name: str) -> bool:
     """
     Load/warm up an Ollama model by making a minimal request.
-    
+
     This ensures the model is loaded into memory before benchmarking,
     so that the first test doesn't include model loading time.
-    
+
     Args:
         model_name: Name of the model to load (e.g., "qwen3:0.6b")
-    
+
     Returns:
         bool: True if load was successful, False otherwise.
     """

@@ -95,7 +95,6 @@ def validate_routing(response: dict, query: str) -> tuple[bool, str]:
         return False, "invalid response format"
 
     routed_agents = response.get("routing", {}).get("agents", [])
-    agent_responses = response.get("agent_responses", {})
 
     query_lower = query.lower()
 

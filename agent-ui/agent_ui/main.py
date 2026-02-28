@@ -31,7 +31,7 @@ class ChatState:
 
     def get_messages(self) -> List[dict]:
         """Get messages in the format expected by the UI.
-        
+
         Returns:
             List of messages with role and content
         """
@@ -44,7 +44,7 @@ class ChatState:
 
     def is_loading(self) -> bool:
         """Check if we are currently processing.
-        
+
         Returns:
             True if processing
         """
@@ -61,8 +61,6 @@ app = FastAPI(title="Observability Assistant", root_path=root_path)
 templates = Jinja2Templates(directory="agent_ui/templates")
 
 # Mount static files (if directory exists)
-import os
-
 if os.path.exists("agent_ui/static"):
     app.mount("/static", StaticFiles(directory="agent_ui/static"), name="static")
 
@@ -86,7 +84,7 @@ async def send_message(
     question: str = Form(...)
 ):
     """Process a new message.
-    
+
     Args:
         question: The question from the user
     """

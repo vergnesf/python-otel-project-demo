@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def validate_response_consistency(responses: list[dict]) -> tuple[bool, str]:
     """Validate that responses are consistent across multiple requests.
-    
+
     Returns:
         Tuple of (is_consistent, message)
     """
