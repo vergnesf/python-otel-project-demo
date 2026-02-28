@@ -69,3 +69,6 @@ htmlcov/
 results/
 benchmarks/output/
 benchmark_results.html
+
+# Claude Code personal config
+.claude/
