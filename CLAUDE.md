@@ -41,7 +41,7 @@ Two-layer model:
 - **Python 3.14+** and **UV** — see `.github/instructions/python.instructions.md` for full conventions.
   Critical rule: always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly.
 - **Docker Compose** — 7 split files orchestrated via `Makefile`
-- **Ruff** — linting, line-length=100, rules: E, F, W, I (configured in root `pyproject.toml`)
+- **Ruff** — linting, line-length=200, rules: E, F, W, I (configured in root `pyproject.toml`)
 - **Black** — formatting (`uvx ruff check <project>` / `uv run black <project>`)
 - **Pyright** — type checking
 

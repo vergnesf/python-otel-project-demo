@@ -30,15 +30,9 @@ async def lifespan(app: FastAPI):
     global orchestrator
     # Startup
     logger.info("Orchestrator Agent starting up...")
-    logger.info(
-        f"Logs Agent URL: {os.getenv('AGENT_LOGS_URL', 'http://agent-logs:8002')}"
-    )
-    logger.info(
-        f"Metrics Agent URL: {os.getenv('AGENT_METRICS_URL', 'http://agent-metrics:8003')}"
-    )
-    logger.info(
-        f"Traces Agent URL: {os.getenv('AGENT_TRACES_URL', 'http://agent-traces:8004')}"
-    )
+    logger.info(f"Logs Agent URL: {os.getenv('AGENT_LOGS_URL', 'http://agent-logs:8002')}")
+    logger.info(f"Metrics Agent URL: {os.getenv('AGENT_METRICS_URL', 'http://agent-metrics:8003')}")
+    logger.info(f"Traces Agent URL: {os.getenv('AGENT_TRACES_URL', 'http://agent-traces:8004')}")
     logger.info(
         "Translation Agent URL: %s",
         os.getenv("AGENT_TRANSLATION_URL", "http://agent-traduction:8002"),
@@ -64,9 +58,7 @@ class AnalyzeRequest(BaseModel):
     query: str
     time_range: str = "1h"
     model: str | None = None
-    model_params: dict | None = (
-        None  # Optional LLM parameters (temperature, top_k, max_tokens)
-    )
+    model_params: dict | None = None  # Optional LLM parameters (temperature, top_k, max_tokens)
 
 
 class HealthResponse(BaseModel):

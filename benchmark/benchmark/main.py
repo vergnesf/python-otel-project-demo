@@ -61,9 +61,9 @@ async def main() -> None:
 
     # Loop through models first, then run all agents for each model
     for model in original_models:
-        console.print(f"\n[bold cyan]{'='*80}[/bold cyan]")
+        console.print(f"\n[bold cyan]{'=' * 80}[/bold cyan]")
         console.print(f"[bold cyan]Testing Model: {model}[/bold cyan]")
-        console.print(f"[bold cyan]{'='*80}[/bold cyan]\n")
+        console.print(f"[bold cyan]{'=' * 80}[/bold cyan]\n")
 
         # Warm up the model before benchmarking to exclude loading time
         console.print(f"[dim yellow]🔥 Warming up {model}...[/dim yellow]", end=" ")
@@ -80,6 +80,7 @@ async def main() -> None:
 
         # Temporarily set BENCHMARK_MODELS to single model
         import benchmark.config as config
+
         config.BENCHMARK_MODELS = [model]
 
         # Run all agent tests for this model
@@ -109,6 +110,7 @@ async def main() -> None:
 
     # Restore original BENCHMARK_MODELS
     import benchmark.config as config
+
     config.BENCHMARK_MODELS = original_models
 
     total_duration = time.perf_counter() - benchmark_start_time

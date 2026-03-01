@@ -95,7 +95,7 @@ async def load_ollama_model(model_name: str) -> bool:
             "stream": False,
             "options": {
                 "num_predict": 1,  # Only generate 1 token for fast warm-up
-            }
+            },
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:

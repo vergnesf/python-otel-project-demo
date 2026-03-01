@@ -30,17 +30,11 @@ MSG_ERROR_NOT_FOUND = "Order not found"
 @orders_bp.after_request
 def log_response(response):
     if response.status_code >= 500:
-        current_app.logger.error(
-            f"HTTP {response.status_code} error for {request.method} {request.path}"
-        )
+        current_app.logger.error(f"HTTP {response.status_code} error for {request.method} {request.path}")
     elif response.status_code >= 400:
-        current_app.logger.warning(
-            f"HTTP {response.status_code} client error for {request.method} {request.path}"
-        )
+        current_app.logger.warning(f"HTTP {response.status_code} client error for {request.method} {request.path}")
     elif 200 <= response.status_code < 300:
-        current_app.logger.info(
-            f"HTTP {response.status_code} success for {request.method} {request.path}"
-        )
+        current_app.logger.info(f"HTTP {response.status_code} success for {request.method} {request.path}")
     return response
 
 
@@ -209,9 +203,7 @@ def read_orders_by_status_route(status):
 
     db = SessionLocal()
     try:
-        orders = get_orders_by_status(
-            db=db, order_status=OrderStatus(status), skip=skip, limit=limit
-        )
+        orders = get_orders_by_status(db=db, order_status=OrderStatus(status), skip=skip, limit=limit)
         return jsonify([order.to_dict() for order in orders])
     except Exception:
         current_app.logger.exception("Unexpected error during order list by status")
@@ -334,9 +326,7 @@ def update_order_status_route(order_id):
         if order is None:
             return jsonify({"error": "Order not found"}), 404
 
-        updated_order = update_order_status(
-            db, order_id=order_id, order_status=order_status
-        )
+        updated_order = update_order_status(db, order_id=order_id, order_status=order_status)
 
         if updated_order is None:
             return jsonify({"error": "Order not found"}), 404

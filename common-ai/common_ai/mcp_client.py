@@ -62,14 +62,10 @@ class MCPGrafanaClient:
 
             # Connect to MCP server via SSE
             logger.info(f"Connecting to MCP server at {self.base_url}/sse")
-            read_stream, write_stream = await self._exit_stack.enter_async_context(
-                sse_client(f"{self.base_url}/sse")
-            )
+            read_stream, write_stream = await self._exit_stack.enter_async_context(sse_client(f"{self.base_url}/sse"))
 
             # Create MCP session
-            self._session = await self._exit_stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
+            self._session = await self._exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
 
             # Initialize the session
             await self._session.initialize()
@@ -145,19 +141,13 @@ class MCPGrafanaClient:
 
                             if ds_type == "loki" and not self.loki_uid:
                                 self.loki_uid = ds_uid
-                                logger.info(
-                                    f"Found Loki datasource: {ds_name} (uid: {ds_uid})"
-                                )
+                                logger.info(f"Found Loki datasource: {ds_name} (uid: {ds_uid})")
                             elif ds_type == "prometheus" and not self.prometheus_uid:
                                 self.prometheus_uid = ds_uid
-                                logger.info(
-                                    f"Found Prometheus/Mimir datasource: {ds_name} (uid: {ds_uid})"
-                                )
+                                logger.info(f"Found Prometheus/Mimir datasource: {ds_name} (uid: {ds_uid})")
                             elif ds_type == "tempo" and not self.tempo_uid:
                                 self.tempo_uid = ds_uid
-                                logger.info(
-                                    f"Found Tempo datasource: {ds_name} (uid: {ds_uid})"
-                                )
+                                logger.info(f"Found Tempo datasource: {ds_name} (uid: {ds_uid})")
 
         except Exception as e:
             logger.warning(f"Failed to fetch datasource UIDs: {e}")
@@ -409,13 +399,8 @@ class MCPGrafanaClient:
         except Exception as e:
             error_msg = str(e)
             # If tool not found, it means proxied tools are disabled
-            if (
-                "tempo_traceql-search" in error_msg.lower()
-                or "unknown tool" in error_msg.lower()
-            ):
-                logger.warning(
-                    "Tempo proxied tools not available. Enable with MCP server flag."
-                )
+            if "tempo_traceql-search" in error_msg.lower() or "unknown tool" in error_msg.lower():
+                logger.warning("Tempo proxied tools not available. Enable with MCP server flag.")
                 return {
                     "error": "Tempo tools not available - proxied tools may be disabled in MCP server",
                     "traces": [],
@@ -607,9 +592,7 @@ class MCPGrafanaClient:
             logger.error(f"Failed to list Prometheus metric names: {e}")
             return []
 
-    async def list_prometheus_metric_metadata(
-        self, metric: str | None = None
-    ) -> dict[str, Any]:
+    async def list_prometheus_metric_metadata(self, metric: str | None = None) -> dict[str, Any]:
         """
         Get metadata for Prometheus metrics (type, help, unit)
 
@@ -630,9 +613,7 @@ class MCPGrafanaClient:
             if metric:
                 arguments["metric"] = metric
 
-            result = await session.call_tool(
-                "list_prometheus_metric_metadata", arguments=arguments
-            )
+            result = await session.call_tool("list_prometheus_metric_metadata", arguments=arguments)
 
             return self._parse_mcp_result(result)
 
@@ -670,9 +651,7 @@ class MCPGrafanaClient:
             logger.error(f"Failed to list Prometheus label names: {e}")
             return []
 
-    async def list_prometheus_label_values(
-        self, label_name: str, metric: str | None = None
-    ) -> list[str]:
+    async def list_prometheus_label_values(self, label_name: str, metric: str | None = None) -> list[str]:
         """
         List all values for a specific Prometheus label
 
@@ -697,9 +676,7 @@ class MCPGrafanaClient:
             if metric:
                 arguments["metric"] = metric
 
-            result = await session.call_tool(
-                "list_prometheus_label_values", arguments=arguments
-            )
+            result = await session.call_tool("list_prometheus_label_values", arguments=arguments)
 
             data = self._parse_mcp_result(result)
             if isinstance(data, list):
@@ -709,9 +686,7 @@ class MCPGrafanaClient:
             return []
 
         except Exception as e:
-            logger.error(
-                f"Failed to list Prometheus label values for '{label_name}': {e}"
-            )
+            logger.error(f"Failed to list Prometheus label values for '{label_name}': {e}")
             return []
 
     async def list_alert_rules(self) -> list[dict[str, Any]]:
@@ -750,9 +725,7 @@ class MCPGrafanaClient:
         try:
             session = await self._ensure_session()
 
-            result = await session.call_tool(
-                "get_alert_rule_by_uid", arguments={"uid": uid}
-            )
+            result = await session.call_tool("get_alert_rule_by_uid", arguments={"uid": uid})
 
             return self._parse_mcp_result(result)
 
@@ -789,14 +762,8 @@ class MCPGrafanaClient:
             # Convert RFC3339 to milliseconds timestamp
             from datetime import datetime
 
-            start_ms = int(
-                datetime.fromisoformat(start_rfc.replace("Z", "+00:00")).timestamp()
-                * 1000
-            )
-            end_ms = int(
-                datetime.fromisoformat(end_rfc.replace("Z", "+00:00")).timestamp()
-                * 1000
-            )
+            start_ms = int(datetime.fromisoformat(start_rfc.replace("Z", "+00:00")).timestamp() * 1000)
+            end_ms = int(datetime.fromisoformat(end_rfc.replace("Z", "+00:00")).timestamp() * 1000)
 
             arguments = {
                 "from": start_ms,

@@ -72,7 +72,7 @@ async def benchmark_metrics_agent() -> dict:
                 print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {benchmark.config.NUM_TEST_REQUESTS} runs = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
-                        print_request_result(i, result['latency_ms'], True)
+                        print_request_result(i, result["latency_ms"], True)
                         # Show request (query only)
                         if result.get("request"):
                             query = extract_query(result["request"])
@@ -81,18 +81,16 @@ async def benchmark_metrics_agent() -> dict:
                         # Show response
                         if result.get("response"):
                             print_response(result["response"])
-                            is_valid, validation_msg = validate_agent_response(
-                                "metrics", result["response"]
-                            )
+                            is_valid, validation_msg = validate_agent_response("metrics", result["response"])
                             print_validation(is_valid, validation_msg)
                             if is_valid:
                                 valid_tests += 1
                             else:
                                 validation_failed = True
-                        timings.append(result['latency_ms'])
+                        timings.append(result["latency_ms"])
                         all_results.append(result)
                     else:
-                        print_request_result(i, 0, False, result.get('error', 'Unknown'))
+                        print_request_result(i, 0, False, result.get("error", "Unknown"))
                         if result.get("request"):
                             query = extract_query(result["request"])
                             print_query(query)

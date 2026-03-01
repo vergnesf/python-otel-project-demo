@@ -22,15 +22,9 @@ class AgentRequest(BaseModel):
     """Request sent to a specialized agent"""
 
     query: str = Field(..., description="User query to analyze")
-    time_range: str = Field(
-        default="1h", description="Time range for analysis (e.g., '1h', '24h', '7d')"
-    )
-    context: dict[str, Any] = Field(
-        default_factory=dict, description="Additional context for the agent"
-    )
-    timestamp: datetime = Field(
-        default_factory=datetime.now, description="Request timestamp"
-    )
+    time_range: str = Field(default="1h", description="Time range for analysis (e.g., '1h', '24h', '7d')")
+    context: dict[str, Any] = Field(default_factory=dict, description="Additional context for the agent")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Request timestamp")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -46,25 +40,13 @@ class AgentRequest(BaseModel):
 class AgentResponse(BaseModel):
     """Response from a specialized agent"""
 
-    agent_name: AgentType = Field(
-        ..., description="Name of the agent that produced this response"
-    )
+    agent_name: AgentType = Field(..., description="Name of the agent that produced this response")
     analysis: str = Field(..., description="Natural language analysis of the findings")
-    data: dict[str, Any] = Field(
-        default_factory=dict, description="Structured data supporting the analysis"
-    )
-    confidence: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="Confidence score (0-1)"
-    )
-    grafana_links: list[str] = Field(
-        default_factory=list, description="Links to Grafana dashboards/queries"
-    )
-    timestamp: datetime = Field(
-        default_factory=datetime.now, description="Response timestamp"
-    )
-    error: Optional[str] = Field(
-        default=None, description="Error message if analysis failed"
-    )
+    data: dict[str, Any] = Field(default_factory=dict, description="Structured data supporting the analysis")
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence score (0-1)")
+    grafana_links: list[str] = Field(default_factory=list, description="Links to Grafana dashboards/queries")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
+    error: Optional[str] = Field(default=None, description="Error message if analysis failed")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -91,15 +73,9 @@ class OrchestratorResponse(BaseModel):
 
     query: str = Field(..., description="Original user query")
     summary: str = Field(..., description="Synthesized summary of all agent analyses")
-    agent_responses: dict[str, AgentResponse] = Field(
-        ..., description="Individual responses from each agent"
-    )
-    recommendations: list[str] = Field(
-        default_factory=list, description="Actionable recommendations"
-    )
-    timestamp: datetime = Field(
-        default_factory=datetime.now, description="Response timestamp"
-    )
+    agent_responses: dict[str, AgentResponse] = Field(..., description="Individual responses from each agent")
+    recommendations: list[str] = Field(default_factory=list, description="Actionable recommendations")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
 
     model_config = ConfigDict(
         json_schema_extra={

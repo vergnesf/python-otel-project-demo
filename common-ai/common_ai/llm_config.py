@@ -31,10 +31,7 @@ def load_model_params_config() -> dict:
 
     # Try multiple paths (development, docker, installed package)
     possible_paths = [
-        Path(__file__).parent.parent.parent
-        / "config"
-        / "ai"
-        / "model-params.yml",  # From common-ai in workspace
+        Path(__file__).parent.parent.parent / "config" / "ai" / "model-params.yml",  # From common-ai in workspace
         Path("/app/config/ai/model-params.yml"),  # Docker container
         Path.cwd() / "config" / "ai" / "model-params.yml",  # Current directory
     ]
@@ -84,12 +81,8 @@ def get_model_params(model_name: str) -> dict:
             return models_config[config_key]
 
     # Fallback to default
-    default_params = config.get(
-        "default", {"temperature": 0.1, "top_k": None, "max_tokens": 2000}
-    )
-    logger.warning(
-        f"No specific config found for model '{model_name}', using default: {default_params}"
-    )
+    default_params = config.get("default", {"temperature": 0.1, "top_k": None, "max_tokens": 2000})
+    logger.warning(f"No specific config found for model '{model_name}', using default: {default_params}")
     return default_params
 
 
@@ -115,9 +108,7 @@ class SafeChatOpenAI(ChatOpenAI):
             return super().invoke(input, *args, **kwargs)
         except AttributeError as e:
             if "'LegacyAPIResponse' object has no attribute 'model'" in str(e):
-                logger.warning(
-                    f"OpenTelemetry instrumentation error (response was generated): {e}"
-                )
+                logger.warning(f"OpenTelemetry instrumentation error (response was generated): {e}")
                 # Response was actually generated; error only in instrumentation
                 raise
             else:
@@ -193,12 +184,8 @@ def get_llm(
     if top_k is None:
         top_k = model_config.get("top_k")
 
-    logger.info(
-        f"Creating LLM instance: model={model_name}, base_url={base_url}, temp={temperature}, top_k={top_k}, max_tokens={max_tokens}"
-    )
-    logger.debug(
-        f"get_llm() called with model parameter={model}, final model_name={model_name}"
-    )
+    logger.info(f"Creating LLM instance: model={model_name}, base_url={base_url}, temp={temperature}, top_k={top_k}, max_tokens={max_tokens}")
+    logger.debug(f"get_llm() called with model parameter={model}, final model_name={model_name}")
 
     # Build model_kwargs for Ollama-specific parameters
     model_kwargs: dict[str, Any] = {}
