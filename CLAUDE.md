@@ -41,19 +41,27 @@ Two-layer model:
 - **Python 3.14+** and **UV** — see `.github/instructions/python.instructions.md` for full conventions.
   Critical rule: always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly.
 - **Docker Compose** — 7 split files orchestrated via `Makefile`
-- **Ruff** — linting, line-length=200, rules: E, F, W, I (configured in root `pyproject.toml`)
-- **Black** — formatting (`uvx ruff check <project>` / `uv run black <project>`)
+- **Ruff** — linting and formatting, line-length=200, rules: E, F, W, I (configured in root `pyproject.toml`)
 - **Pyright** — type checking
 
 ## Key Makefile Targets
 
 ```bash
-make compose-up     # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
-make compose-down   # Stop all services (reverse order)
-make lint           # Ruff check across all 14 projects
-make tools-format   # Black format across all projects
-make models-init    # Pull Ollama AI models (mistral, llama, qwen, etc.)
+make compose-up       # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
+make compose-down     # Stop all services (reverse order)
+make lint             # Ruff check across all projects (PROJECTS var — includes agents)
+make tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
+make models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
+make test             # test-lint + test-unit + test-integration (stops on first failure; use make -k to run all)
+make test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of make lint)
+make test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
+make test-integration # Container health checks (order, stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
 ```
+
+> **Makefile variable scopes:** `PROJECTS` = all services (see Makefile for the full list), used by `make lint`.
+> `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `make test-lint` and `make test-unit`.
+> `HEALTHCHECK_SERVICES` (2 dirs) = `order` and `stock` — only Flask services with container healthchecks, used by the `test-integration` health loop.
+> Agent services (`agent-*`) and shared libs (`common-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
 ## Environment Setup
 

@@ -1,9 +1,21 @@
-.PHONY: models-init tools-format lint compose-up compose-down
+.PHONY: models-init tools-format lint compose-up compose-down test test-lint test-unit test-integration
 
 # Models to pull
 MODELS := mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
 
+# All service directories — used by lint (ruff) and tools-format (ruff format).
+# Includes agent/benchmark services that have no smoke tests.
 PROJECTS := agent-logs agent-metrics agent-orchestrator agent-traces agent-ui agent-traduction benchmark common-ai common-models customer order ordercheck ordermanagement stock supplier suppliercheck
+# Business services with runnable Python processes and a tests/ directory.
+# Shared libraries (common-models, common-ai) are excluded — they have no executable entry point.
+# Scope: make test-lint and make test-unit. For full lint use PROJECTS (all 16 dirs).
+KEEPER_SERVICES := customer order ordercheck ordermanagement stock supplier suppliercheck
+# Subset of KEEPER_SERVICES with a container healthcheck defined in docker-compose-apps.yml.
+# Only Flask REST APIs (order, stock) have healthchecks — Kafka producers/consumers and workers do not.
+# WARNING: only add a service here if docker-compose-apps.yml defines a HEALTHCHECK for it;
+# otherwise the integration check will always report "unknown" and fail.
+# Scope: make test-integration health loop only.
+HEALTHCHECK_SERVICES := order stock
 
 # Detect container runtime (docker or podman)
 DOCKER_AVAILABLE := $(shell command -v docker >/dev/null 2>&1 && echo true || echo false)
@@ -42,16 +54,75 @@ models-init:
 	done; \
 	echo "models-init: done"
 
+# Scoped lint on KEEPER services, then smoke tests, then integration.
+# Use 'make lint' for full project lint. Use 'make -k test' to run all phases on failure.
+test: test-lint test-unit test-integration
+
+test-lint:
+	@echo "Linting KEEPER services..."
+	@uvx ruff check $(KEEPER_SERVICES)
+
+test-unit:
+	@echo "Running smoke tests for KEEPER services..."
+	@failed=0; total_tests=0; \
+	for svc in $(KEEPER_SERVICES); do \
+		printf "  %-20s" "$$svc"; \
+		output=$$(cd $$svc 2>&1 && timeout 60 uv run pytest tests/ -q --tb=short 2>&1); \
+		exitcode=$$?; \
+		if [ $$exitcode -eq 0 ]; then \
+			tcount=$$(echo "$$output" | sed -n 's/^\([0-9]\+\) passed.*/\1/p' | head -1); \
+			total_tests=$$((total_tests + $${tcount:-0})); \
+			echo "✓ ($${tcount:-?} passed)"; \
+		elif [ $$exitcode -eq 124 ]; then \
+			echo "✗ (timeout >60s)"; \
+			printf "  === %s ===\n" "$$svc"; \
+			echo "$$output" | sed 's/^/  /'; \
+			failed=$$((failed+1)); \
+		elif [ $$exitcode -eq 5 ]; then \
+			echo "✗ (no tests found — add tests to tests/)"; \
+			printf "  === %s ===\n" "$$svc"; \
+			echo "$$output" | sed 's/^/  /'; \
+			failed=$$((failed+1)); \
+		else \
+			echo "✗"; \
+			printf "  === %s ===\n" "$$svc"; \
+			echo "$$output" | sed 's/^/  /'; \
+			failed=$$((failed+1)); \
+		fi; \
+	done; \
+	if [ $$failed -eq 0 ]; then echo "All smoke tests passed ($$total_tests tests)"; else echo "$$failed service(s) failed; $$total_tests tests passed in services that passed"; exit 1; fi
+
+test-integration:
+	@echo "Checking container health for $(HEALTHCHECK_SERVICES) (requires running stack)..."
+	@# Only HEALTHCHECK_SERVICES (order, stock) have container healthchecks; Kafka services and workers do not.
+	@# grep searches STATUS column values: Up/running/healthy/unhealthy/starting; service names don't contain these words.
+	@# Health check JSON parsing assumes Docker/Compose --format json output; format varies by version.
+	@if [ "$(DOCKER_AVAILABLE)" = "false" ] && [ "$(PODMAN_AVAILABLE)" = "false" ]; then \
+		echo "  No container runtime found (docker/podman) — skipping integration checks"; \
+		exit 0; \
+	fi; \
+	if ! $(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml ps $(HEALTHCHECK_SERVICES) 2>/dev/null | grep -qE "\b(Up|running|healthy|unhealthy|starting)\b"; then \
+		echo "  Services $(HEALTHCHECK_SERVICES) not running — skipping integration checks (run make compose-up first)"; \
+		exit 0; \
+	fi; \
+	failed=0; \
+	for svc in $(HEALTHCHECK_SERVICES); do \
+		printf "  %-20s" "$$svc"; \
+		status=$$($(COMPOSE_CMD) -f docker-compose/docker-compose-apps.yml ps $$svc --format json 2>/dev/null | tr -d '\n' | sed -n 's/.*"Health":"\([^"]*\)".*/\1/p'); \
+		status=$${status:-unknown}; \
+		if [ "$$status" = "healthy" ]; then echo "✓ healthy"; \
+		elif [ "$$status" = "unknown" ]; then echo "✗ unknown (no HEALTHCHECK instruction in docker-compose-apps.yml for $$svc — run: docker inspect $$svc | grep -A5 Health)"; failed=$$((failed+1)); \
+		else echo "✗ $$status"; failed=$$((failed+1)); fi; \
+	done; \
+	if [ $$failed -eq 0 ]; then echo "All services healthy"; else echo "$$failed service(s) unhealthy"; exit 1; fi
+
 lint:
 	@echo "Linting all projects with ruff..."
-	uvx ruff check $(PROJECTS)
+	@uvx ruff check $(PROJECTS)
 
 tools-format:
-	#echo "Use black to format python files"
-	for project in $(PROJECTS); do \
-		echo "Formatting project $$project..."; \
-		cd $$project && uv run black . && cd ..; \
-	done
+	@echo "Formatting all projects with ruff format..."
+	@uvx ruff format $(PROJECTS)
 
 compose-up:
 	@echo "Bringing up observability, db, kafka, ai-tools, ai, then apps (in that order)..."
