@@ -12,9 +12,7 @@ class BenchmarkResult(BaseModel):
     model: str
     agent: str
     latency_ms: float = Field(..., description="Request latency in milliseconds")
-    memory_delta_mb: float = Field(
-        default=0.0, description="Memory usage delta in MB"
-    )
+    memory_delta_mb: float = Field(default=0.0, description="Memory usage delta in MB")
     success: bool = Field(default=True, description="Whether request succeeded")
     error: str | None = Field(default=None, description="Error message if failed")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -47,9 +45,7 @@ class OrchestratorRequest(BaseModel):
     query: str
     time_range: str = Field(default="1h")
     model: str | None = Field(default="mistral:7b", description="LLM model to use")
-    model_params: dict | None = Field(
-        default=None, description="Optional LLM parameters (temperature, top_k, max_tokens)"
-    )
+    model_params: dict | None = Field(default=None, description="Optional LLM parameters (temperature, top_k, max_tokens)")
 
 
 class LogsAnalysisRequest(BaseModel):

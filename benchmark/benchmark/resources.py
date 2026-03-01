@@ -78,13 +78,9 @@ class ResourceTracker:
             util = gpu_metrics.get("gpu_util")
             vram_mb = gpu_metrics.get("vram_used_mb")
             if util is not None:
-                self.gpu_util_max = util if self.gpu_util_max is None else max(
-                    self.gpu_util_max, util
-                )
+                self.gpu_util_max = util if self.gpu_util_max is None else max(self.gpu_util_max, util)
             if vram_mb is not None:
-                self.vram_max_mb = vram_mb if self.vram_max_mb is None else max(
-                    self.vram_max_mb, vram_mb
-                )
+                self.vram_max_mb = vram_mb if self.vram_max_mb is None else max(self.vram_max_mb, vram_mb)
 
     def start_continuous_sampling(self, interval: float = 0.1) -> None:
         """Start a background thread that samples resources continuously."""

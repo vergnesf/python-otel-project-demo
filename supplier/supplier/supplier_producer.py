@@ -26,15 +26,11 @@ def delivery_report(err, msg):
 
 
 # Initialize the Kafka producer
-producer = Producer(
-    {"bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")}
-)
+producer = Producer({"bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")})
 
 
 def send_stock(stock: Stock):
-    producer.produce(
-        "stocks", value=json.dumps(stock.model_dump()), callback=delivery_report
-    )
+    producer.produce("stocks", value=json.dumps(stock.model_dump()), callback=delivery_report)
     producer.poll(0)
 
 

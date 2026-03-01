@@ -30,9 +30,7 @@ async def lifespan(app: FastAPI):
     global analyzer
     # Startup
     logger.info("Traces Agent starting up...")
-    logger.info(
-        f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}"
-    )
+    logger.info(f"MCP Grafana URL: {os.getenv('MCP_GRAFANA_URL', 'http://grafana-mcp:8000')}")
     analyzer = TracesAnalyzer()
     yield
     # Shutdown

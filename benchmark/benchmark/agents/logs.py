@@ -54,10 +54,7 @@ class LogsBenchmark:
         Returns:
             List of benchmark results
         """
-        logger.info(
-            f"Benchmarking logs /analyze endpoint "
-            f"({num_requests} requests with {model})"
-        )
+        logger.info(f"Benchmarking logs /analyze endpoint ({num_requests} requests with {model})")
 
         results = []
 
@@ -86,19 +83,18 @@ class LogsBenchmark:
                     success=True,
                     metadata={"request_num": i + 1, "response_length": len(str(data))},
                 )
-                results.append({
-                    "request_num": i + 1,
-                    "latency_ms": latency_ms,
-                    "success": True,
-                    "request": request.model_dump(),
-                    "response": data,
-                    "response_preview": str(data)[:100],
-                })
-
-                logger.debug(
-                    f"Request {i + 1}/{num_requests}: "
-                    f"{latency_ms:.2f}ms"
+                results.append(
+                    {
+                        "request_num": i + 1,
+                        "latency_ms": latency_ms,
+                        "success": True,
+                        "request": request.model_dump(),
+                        "response": data,
+                        "response_preview": str(data)[:100],
+                    }
                 )
+
+                logger.debug(f"Request {i + 1}/{num_requests}: {latency_ms:.2f}ms")
 
             except Exception as e:
                 logger.error(f"Request {i + 1}/{num_requests} failed: {e}")
@@ -109,12 +105,14 @@ class LogsBenchmark:
                     success=False,
                     error=str(e),
                 )
-                results.append({
-                    "request_num": i + 1,
-                    "success": False,
-                    "error": str(e),
-                    "request": request.model_dump() if 'request' in locals() else None,
-                })
+                results.append(
+                    {
+                        "request_num": i + 1,
+                        "success": False,
+                        "error": str(e),
+                        "request": request.model_dump() if "request" in locals() else None,
+                    }
+                )
 
             if i < num_requests - 1:
                 await asyncio.sleep(0.1)

@@ -87,9 +87,7 @@ class MetricsAnalyzer:
 
         # Analyze metrics data with LLM if available
         if self.llm and metrics_data:
-            analysis = await self._analyze_metrics_with_llm(
-                metrics_data, query, context, time_range
-            )
+            analysis = await self._analyze_metrics_with_llm(metrics_data, query, context, time_range)
         else:
             analysis = self._analyze_metrics(metrics_data, query, context)
 
@@ -98,9 +96,7 @@ class MetricsAnalyzer:
             "analysis": analysis["summary"],
             "data": analysis["data"],
             "confidence": analysis["confidence"],
-            "grafana_links": self._generate_grafana_links(
-                promql_queries[0] if promql_queries else "", time_range
-            ),
+            "grafana_links": self._generate_grafana_links(promql_queries[0] if promql_queries else "", time_range),
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -127,19 +123,11 @@ class MetricsAnalyzer:
 
         # Error rate query
         if "error" in query_lower or "fail" in query_lower:
-            queries.append(
-                f'rate(http_requests_total{{status=~"5..", {service_filter}}}[5m])'
-            )
+            queries.append(f'rate(http_requests_total{{status=~"5..", {service_filter}}}[5m])')
 
         # Latency query
-        if (
-            "slow" in query_lower
-            or "latency" in query_lower
-            or "performance" in query_lower
-        ):
-            queries.append(
-                f"histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{{{service_filter}}}[5m]))"
-            )
+        if "slow" in query_lower or "latency" in query_lower or "performance" in query_lower:
+            queries.append(f"histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{{{service_filter}}}[5m]))")
 
         # Request rate query
         if "request" in query_lower or "traffic" in query_lower:
@@ -147,15 +135,11 @@ class MetricsAnalyzer:
 
         # CPU usage query
         if "cpu" in query_lower or "resource" in query_lower:
-            queries.append(
-                f"avg(rate(process_cpu_seconds_total{{{service_filter}}}[5m])) * 100"
-            )
+            queries.append(f"avg(rate(process_cpu_seconds_total{{{service_filter}}}[5m])) * 100")
 
         # Memory usage query
         if "memory" in query_lower or "resource" in query_lower:
-            queries.append(
-                f"process_resident_memory_bytes{{{service_filter}}} / 1024 / 1024"
-            )
+            queries.append(f"process_resident_memory_bytes{{{service_filter}}} / 1024 / 1024")
 
         # Default: error rate and request rate
         if not queries:
@@ -168,9 +152,7 @@ class MetricsAnalyzer:
 
         return queries
 
-    async def _query_mimir(
-        self, promql_queries: list[str], time_range: str
-    ) -> dict[str, Any]:
+    async def _query_mimir(self, promql_queries: list[str], time_range: str) -> dict[str, Any]:
         """
         Query Mimir via MCP Grafana
 
@@ -186,9 +168,7 @@ class MetricsAnalyzer:
         # Query each PromQL expression via MCP client
         results = {}
         for i, promql in enumerate(promql_queries):
-            result = await self.mcp_client.query_metrics(
-                query=promql, time_range=time_range
-            )
+            result = await self.mcp_client.query_metrics(query=promql, time_range=time_range)
 
             if "error" not in result:
                 # Map results to expected keys based on query type
@@ -278,24 +258,16 @@ class MetricsAnalyzer:
         service_name = services[0] if services else "services"
 
         if error_rate > 0:
-            summary_parts.append(
-                f"{service_name} shows {error_rate*100:.1f}% HTTP 500 error rate "
-                f"(expected: <1%). This indicates reliability issues."
-            )
+            summary_parts.append(f"{service_name} shows {error_rate * 100:.1f}% HTTP 500 error rate (expected: <1%). This indicates reliability issues.")
 
         if latency_p95 > 0:
-            summary_parts.append(
-                f"Request latency p95: {latency_p95}ms "
-                f"({'above' if latency_p95 > 200 else 'within'} baseline of 200ms)."
-            )
+            summary_parts.append(f"Request latency p95: {latency_p95}ms ({'above' if latency_p95 > 200 else 'within'} baseline of 200ms).")
 
         if request_rate > 0:
             summary_parts.append(f"Current request rate: {request_rate:.1f} req/s.")
 
         if anomalies:
-            summary_parts.append(
-                f"Detected {len(anomalies)} anomal{'ies' if len(anomalies) > 1 else 'y'} requiring attention."
-            )
+            summary_parts.append(f"Detected {len(anomalies)} anomal{'ies' if len(anomalies) > 1 else 'y'} requiring attention.")
         else:
             summary_parts.append("No significant anomalies detected.")
 
@@ -344,13 +316,9 @@ class MetricsAnalyzer:
         # Prepare anomalies text (simple formatting, no logic)
         anomalies_text = []
         if error_rate > 0.05:
-            anomalies_text.append(
-                f"- Error rate: {error_rate*100:.1f}% (threshold: <5%)"
-            )
+            anomalies_text.append(f"- Error rate: {error_rate * 100:.1f}% (threshold: <5%)")
         if latency_p95 > 200:
-            anomalies_text.append(
-                f"- Latency P95: {latency_p95:.0f}ms (threshold: <200ms)"
-            )
+            anomalies_text.append(f"- Latency P95: {latency_p95:.0f}ms (threshold: <200ms)")
         if cpu_usage > 80:
             anomalies_text.append(f"- CPU usage: {cpu_usage:.1f}% (threshold: <80%)")
 
@@ -361,14 +329,12 @@ class MetricsAnalyzer:
             return self._analyze_metrics(metrics_data, query, context)
 
         # Prepare variables for the template
-        anomalies_str = (
-            "\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
-        )
+        anomalies_str = "\n".join(anomalies_text) if anomalies_text else "No anomalies detected"
         vars = {
             "query": query,
             "service_name": service_name,
             "time_range": time_range,
-            "error_rate": f"{error_rate*100:.1f}%",
+            "error_rate": f"{error_rate * 100:.1f}%",
             "request_rate": f"{request_rate:.1f}",
             "latency_p95": f"{latency_p95:.0f}",
             "cpu_usage": f"{cpu_usage:.1f}",
@@ -416,14 +382,10 @@ class MetricsAnalyzer:
                         "confidence": 0.95 if parsed.get("anomalies") else 0.8,
                     }
                 except Exception:
-                    logger.warning(
-                        "Failed to parse JSON from LLM response, falling back to local analysis"
-                    )
+                    logger.warning("Failed to parse JSON from LLM response, falling back to local analysis")
 
             # If metrics_data is empty and user asked for last 5 minutes, return structured fallback
-            if not metrics_data and (
-                "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
-            ):
+            if not metrics_data and ("5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()):
                 return {
                     "summary": f"No metrics available for the last {time_range}.",
                     "data": {
@@ -457,9 +419,7 @@ class MetricsAnalyzer:
         base_url = "http://grafana:3000/explore"
         return [f"{base_url}?query={promql}&range={time_range}"]
 
-    async def _build_promql_queries_with_llm(
-        self, query: str, context: dict[str, Any]
-    ) -> list[str]:
+    async def _build_promql_queries_with_llm(self, query: str, context: dict[str, Any]) -> list[str]:
         """
         Use LLM to build optimized PromQL queries from prompt template
 
@@ -471,11 +431,7 @@ class MetricsAnalyzer:
             List of PromQL query strings
         """
         services = context.get("services", [])
-        services_context = (
-            f"Available services: {', '.join(services)}"
-            if services
-            else "No specific services mentioned"
-        )
+        services_context = f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("build_promql.md")
@@ -485,9 +441,7 @@ class MetricsAnalyzer:
 
         # Replace variables in template
         try:
-            prompt = prompt_template.format(
-                query=query, services_context=services_context
-            )
+            prompt = prompt_template.format(query=query, services_context=services_context)
         except KeyError as e:
             logger.error(f"Missing variable in build_promql.md template: {e}")
             return self._build_promql_queries(query, context)

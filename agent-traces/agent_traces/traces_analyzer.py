@@ -87,9 +87,7 @@ class TracesAnalyzer:
 
         # Analyze trace data with LLM if available
         if self.llm and traces_data.get("traces"):
-            analysis = await self._analyze_traces_with_llm(
-                traces_data, query, context, time_range
-            )
+            analysis = await self._analyze_traces_with_llm(traces_data, query, context, time_range)
         else:
             analysis = self._analyze_traces(traces_data, query, context)
 
@@ -152,9 +150,7 @@ class TracesAnalyzer:
         logger.info(f"Querying Tempo with: {traceql}")
 
         # Query via MCP client
-        result = await self.mcp_client.query_traces(
-            query=traceql, time_range=time_range, limit=50
-        )
+        result = await self.mcp_client.query_traces(query=traceql, time_range=time_range, limit=50)
 
         # Return in expected format
         if "error" in result:
@@ -217,11 +213,7 @@ class TracesAnalyzer:
         # Calculate average durations for bottlenecks
         bottleneck_list = []
         for key, data in bottlenecks.items():
-            avg_dur = (
-                sum(data["durations"]) / len(data["durations"])
-                if data["durations"]
-                else 0
-            )
+            avg_dur = sum(data["durations"]) / len(data["durations"]) if data["durations"] else 0
             if avg_dur > 100:  # Only include slow operations
                 bottleneck_list.append(
                     {
@@ -236,14 +228,10 @@ class TracesAnalyzer:
 
         # Build summary
         time_range_checked = context.get("time_range", "1h")
-        summary_parts = [
-            f"Analyzed {total_count} traces over the last {time_range_checked}."
-        ]
+        summary_parts = [f"Analyzed {total_count} traces over the last {time_range_checked}."]
 
         if failed_count > 0 and total_count > 0:
-            summary_parts.append(
-                f"Found {failed_count} failed traces ({failed_count/total_count*100:.1f}% failure rate)."
-            )
+            summary_parts.append(f"Found {failed_count} failed traces ({failed_count / total_count * 100:.1f}% failure rate).")
 
         summary_parts.append(f"Average trace duration: {int(avg_duration)}ms.")
 
@@ -252,14 +240,9 @@ class TracesAnalyzer:
 
         if bottleneck_list:
             top_bottleneck = bottleneck_list[0]
-            summary_parts.append(
-                f"Primary bottleneck: {top_bottleneck['service']}.{top_bottleneck['operation']} "
-                f"({top_bottleneck['avg_duration_ms']}ms average)."
-            )
+            summary_parts.append(f"Primary bottleneck: {top_bottleneck['service']}.{top_bottleneck['operation']} ({top_bottleneck['avg_duration_ms']}ms average).")
 
-        summary_parts.append(
-            f"Service dependency chain: {' → '.join(sorted(all_services))}."
-        )
+        summary_parts.append(f"Service dependency chain: {' → '.join(sorted(all_services))}.")
 
         return {
             "summary": " ".join(summary_parts),
@@ -315,11 +298,7 @@ class TracesAnalyzer:
         # Simple statistics (no complex calculations!)
         slow_count = sum(1 for t in traces if t.get("duration_ms", 0) > 500)
         failed_count = sum(1 for t in traces if t.get("error", False))
-        avg_duration = (
-            sum(t.get("duration_ms", 0) for t in traces) / total_traces
-            if total_traces > 0
-            else 0
-        )
+        avg_duration = sum(t.get("duration_ms", 0) for t in traces) / total_traces if total_traces > 0 else 0
 
         # Extract unique services (simple set operation)
         services = set()
@@ -334,9 +313,7 @@ class TracesAnalyzer:
             duration = trace.get("duration_ms", 0)
             spans = len(trace.get("spans", []))
             error = trace.get("error", False)
-            trace_samples_text.append(
-                f"- {trace_id}: {duration}ms, {spans} spans, error={error}"
-            )
+            trace_samples_text.append(f"- {trace_id}: {duration}ms, {spans} spans, error={error}")
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("analyze_traces.md")
@@ -345,9 +322,7 @@ class TracesAnalyzer:
             return self._analyze_traces(traces_data, query, context)
 
         # Prepare variables for the template
-        trace_samples_str = (
-            "\n".join(trace_samples_text) if trace_samples_text else "No traces found"
-        )
+        trace_samples_str = "\n".join(trace_samples_text) if trace_samples_text else "No traces found"
         vars = {
             "query": query,
             "time_range": time_range,
@@ -394,19 +369,13 @@ class TracesAnalyzer:
                     return {
                         "summary": parsed.get("summary", ""),
                         "data": parsed,
-                        "confidence": (
-                            0.95 if parsed.get("total_traces", 0) > 0 else 0.5
-                        ),
+                        "confidence": (0.95 if parsed.get("total_traces", 0) > 0 else 0.5),
                     }
                 except Exception:
-                    logger.warning(
-                        "Failed to parse JSON from LLM response, falling back"
-                    )
+                    logger.warning("Failed to parse JSON from LLM response, falling back")
 
             # If no traces and user asked for last 5 minutes, return structured fallback
-            if total_traces == 0 and (
-                "5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()
-            ):
+            if total_traces == 0 and ("5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()):
                 return {
                     "summary": f"Found 0 traces in the last {time_range}.",
                     "data": {
@@ -429,9 +398,7 @@ class TracesAnalyzer:
             logger.warning(f"LLM analysis failed: {e}, using fallback")
             return self._analyze_traces(traces_data, query, context)
 
-    async def _build_traceql_query_with_llm(
-        self, query: str, context: dict[str, Any]
-    ) -> str:
+    async def _build_traceql_query_with_llm(self, query: str, context: dict[str, Any]) -> str:
         """
         Use LLM to build an optimized TraceQL query from prompt template
 
@@ -443,11 +410,7 @@ class TracesAnalyzer:
             TraceQL query string
         """
         services = context.get("services", [])
-        services_context = (
-            f"Available services: {', '.join(services)}"
-            if services
-            else "No specific services mentioned"
-        )
+        services_context = f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("build_traceql.md")
@@ -457,9 +420,7 @@ class TracesAnalyzer:
 
         # Replace variables in template
         try:
-            prompt = prompt_template.format(
-                query=query, services_context=services_context
-            )
+            prompt = prompt_template.format(query=query, services_context=services_context)
         except KeyError as e:
             logger.error(f"Missing variable in build_traceql.md template: {e}")
             return self._build_traceql_query(query, context)

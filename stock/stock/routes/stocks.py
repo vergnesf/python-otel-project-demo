@@ -30,17 +30,11 @@ MSG_ERROR_NOT_FOUND = "Stock not found"
 @stocks_bp.after_request
 def log_response(response):
     if response.status_code >= 500:
-        current_app.logger.error(
-            f"HTTP {response.status_code} error for {request.method} {request.path}"
-        )
+        current_app.logger.error(f"HTTP {response.status_code} error for {request.method} {request.path}")
     elif response.status_code >= 400:
-        current_app.logger.warning(
-            f"HTTP {response.status_code} client error for {request.method} {request.path}"
-        )
+        current_app.logger.warning(f"HTTP {response.status_code} client error for {request.method} {request.path}")
     elif 200 <= response.status_code < 300:
-        current_app.logger.info(
-            f"HTTP {response.status_code} success for {request.method} {request.path}"
-        )
+        current_app.logger.info(f"HTTP {response.status_code} success for {request.method} {request.path}")
     return response
 
 
@@ -249,9 +243,7 @@ def decrease_stock_route():
         return jsonify({"error": "Insufficient stock"}), 400
 
     try:
-        decrease_stock_quantity(
-            db, wood_type=stock_data.wood_type, quantity=stock_data.quantity
-        )
+        decrease_stock_quantity(db, wood_type=stock_data.wood_type, quantity=stock_data.quantity)
         db.commit()
         db.refresh(db_stock)
     except Exception:

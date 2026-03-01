@@ -18,6 +18,4 @@ class Stock(StockBase):
 
 class StockDecrease(BaseModel):
     wood_type: str
-    quantity: int = Field(
-        gt=0, description="Quantity to decrease, must be greater than zero"
-    )
+    quantity: int = Field(gt=0, description="Quantity to decrease, must be greater than zero")

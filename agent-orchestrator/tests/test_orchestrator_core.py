@@ -29,9 +29,7 @@ class TestAgentRouting:
     async def test_route_to_logs_agent(self, orchestrator):
         """Test routing to logs agent for error queries"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"agents": ["logs"], "reason": "Error query"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"agents": ["logs"], "reason": "Error query"}')
 
             result = await orchestrator._route_to_agents("Show me recent errors")
 
@@ -42,9 +40,7 @@ class TestAgentRouting:
     async def test_route_to_metrics_agent(self, orchestrator):
         """Test routing to metrics agent for performance queries"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"agents": ["metrics"], "reason": "CPU query"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"agents": ["metrics"], "reason": "CPU query"}')
 
             result = await orchestrator._route_to_agents("What is the CPU usage?")
 
@@ -54,9 +50,7 @@ class TestAgentRouting:
     async def test_route_to_traces_agent(self, orchestrator):
         """Test routing to traces agent for slow request queries"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"agents": ["traces"], "reason": "Slow query"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"agents": ["traces"], "reason": "Slow query"}')
 
             result = await orchestrator._route_to_agents("Which services are slow?")
 
@@ -66,9 +60,7 @@ class TestAgentRouting:
     async def test_route_to_multiple_agents(self, orchestrator):
         """Test routing to multiple agents for complex queries"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"agents": ["logs", "metrics"], "reason": "Complex query"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"agents": ["logs", "metrics"], "reason": "Complex query"}')
 
             result = await orchestrator._route_to_agents("Show errors and CPU usage")
 
@@ -132,17 +124,11 @@ class TestResponseValidation:
     async def test_validate_valid_response(self, orchestrator):
         """Test validation of a good response"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"valid": true, "issues": [], "suggestion": "Good response"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"valid": true, "issues": [], "suggestion": "Good response"}')
 
-            agent_responses = {
-                "logs": {"analysis": "Found 5 errors in the customer service"}
-            }
+            agent_responses = {"logs": {"analysis": "Found 5 errors in the customer service"}}
 
-            result = await orchestrator._validate_responses(
-                "Show me errors", agent_responses
-            )
+            result = await orchestrator._validate_responses("Show me errors", agent_responses)
 
             assert result["validated"]
             assert result["issues"] == []
@@ -151,15 +137,11 @@ class TestResponseValidation:
     async def test_validate_invalid_response(self, orchestrator):
         """Test validation of an incomplete response"""
         with patch.object(orchestrator, "llm") as mock_llm:
-            mock_llm.invoke.return_value = Mock(
-                content='{"valid": false, "issues": ["Missing concrete data"], "suggestion": "Add specific examples"}'
-            )
+            mock_llm.invoke.return_value = Mock(content='{"valid": false, "issues": ["Missing concrete data"], "suggestion": "Add specific examples"}')
 
             agent_responses = {"logs": {"analysis": "There might be some issues"}}
 
-            result = await orchestrator._validate_responses(
-                "Show me errors", agent_responses
-            )
+            result = await orchestrator._validate_responses("Show me errors", agent_responses)
 
             assert not result["validated"]
             assert len(result["issues"]) > 0
@@ -213,12 +195,8 @@ class TestEndToEndFlow:
         # Mock LLM responses for routing and validation
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(
-                    content='{"agents": ["logs"], "reason": "Error query"}'
-                ),  # Routing
-                Mock(
-                    content='{"valid": true, "issues": [], "suggestion": "Good"}'
-                ),  # Validation
+                Mock(content='{"agents": ["logs"], "reason": "Error query"}'),  # Routing
+                Mock(content='{"valid": true, "issues": [], "suggestion": "Good"}'),  # Validation
             ]
 
             def build_response(payload: dict):
@@ -269,12 +247,8 @@ class TestEndToEndFlow:
         """Test complete flow with English query"""
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(
-                    content='{"agents": ["metrics"], "reason": "CPU query"}'
-                ),  # Routing
-                Mock(
-                    content='{"valid": true, "issues": [], "suggestion": "Good"}'
-                ),  # Validation
+                Mock(content='{"agents": ["metrics"], "reason": "CPU query"}'),  # Routing
+                Mock(content='{"valid": true, "issues": [], "suggestion": "Good"}'),  # Validation
             ]
 
             def build_response(payload: dict):
@@ -322,12 +296,8 @@ class TestEndToEndFlow:
         """Test flow with multiple agents"""
         with patch.object(orchestrator, "llm") as mock_llm:
             mock_llm.invoke.side_effect = [
-                Mock(
-                    content='{"agents": ["logs", "metrics"], "reason": "Complex"}'
-                ),  # Routing
-                Mock(
-                    content='{"valid": true, "issues": [], "suggestion": "Good"}'
-                ),  # Validation
+                Mock(content='{"agents": ["logs", "metrics"], "reason": "Complex"}'),  # Routing
+                Mock(content='{"valid": true, "issues": [], "suggestion": "Good"}'),  # Validation
             ]
 
             def build_response(payload: dict):

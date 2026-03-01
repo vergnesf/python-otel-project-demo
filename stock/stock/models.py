@@ -8,9 +8,7 @@ from .database import db
 class Stock(db.Model):
     __tablename__ = "stocks"
 
-    wood_type = Column(
-        Enum(WoodType), nullable=False, primary_key=True, index=True, unique=True
-    )
+    wood_type = Column(Enum(WoodType), nullable=False, primary_key=True, index=True, unique=True)
     quantity = Column(Integer, nullable=False)
 
     def to_dict(self):

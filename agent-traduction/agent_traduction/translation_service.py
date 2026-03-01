@@ -30,9 +30,7 @@ class TranslationService:
     """Handle language detection and translation using an LLM."""
 
     def __init__(self) -> None:
-        self.llm_ephemeral = (
-            os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
-        )
+        self.llm_ephemeral = os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
         try:
             self.llm = None if self.llm_ephemeral else get_llm()
             if self.llm:
@@ -70,9 +68,7 @@ class TranslationService:
         try:
             language = self._detect_language(query, model, model_params)
             if language == "non-english":
-                translated_query = self._translate_to_english(
-                    query, model, model_params
-                )
+                translated_query = self._translate_to_english(query, model, model_params)
             else:
                 translated_query = query
 
@@ -102,9 +98,7 @@ class TranslationService:
         if not prompt:
             return "unknown"
 
-        response_text = self._invoke_llm_prompt(
-            prompt.format(query=query), model, model_params
-        )
+        response_text = self._invoke_llm_prompt(prompt.format(query=query), model, model_params)
         if not response_text:
             return "unknown"
 
@@ -127,9 +121,7 @@ class TranslationService:
         if not prompt:
             return query
 
-        response_text = self._invoke_llm_prompt(
-            prompt.format(query=query), model, model_params
-        )
+        response_text = self._invoke_llm_prompt(prompt.format(query=query), model, model_params)
         if not response_text:
             return query
 
@@ -145,9 +137,7 @@ class TranslationService:
             return get_llm(**params)
         return self.llm
 
-    def _invoke_llm_prompt(
-        self, prompt: str, model: str | None, model_params: dict | None
-    ) -> str | None:
+    def _invoke_llm_prompt(self, prompt: str, model: str | None, model_params: dict | None) -> str | None:
         llm_client = self._get_llm(model, model_params)
         if llm_client:
             try:
@@ -164,9 +154,7 @@ class TranslationService:
             logger.warning("Ollama fallback failed: %s", exc)
             return None
 
-    def _ollama_generate(
-        self, prompt: str, model: str | None, model_params: dict | None
-    ) -> str | None:
+    def _ollama_generate(self, prompt: str, model: str | None, model_params: dict | None) -> str | None:
         base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
         if base_url.endswith("/v1"):
             base_url = base_url[:-3]

@@ -43,9 +43,7 @@ class LogsAnalyzer:
             self.llm = get_llm()
             logger.info("LLM initialized for logs analysis")
         except Exception as e:
-            logger.warning(
-                f"LLM not available, using basic analysis: {e}", exc_info=True
-            )
+            logger.warning(f"LLM not available, using basic analysis: {e}", exc_info=True)
             self.llm = None
 
     async def close(self):
@@ -76,9 +74,7 @@ class LogsAnalyzer:
         logger.info(f"Analyzing logs for query: {query}")
 
         if not self.llm:
-            raise RuntimeError(
-                "LLM unavailable; cannot analyze logs without LLM per configuration"
-            )
+            raise RuntimeError("LLM unavailable; cannot analyze logs without LLM per configuration")
 
         # Use LLM to build better LogQL query if available
         logql_query = await self._build_logql_query_with_llm(query, context)
@@ -109,9 +105,7 @@ class LogsAnalyzer:
         #     }
 
         # Always analyze with LLM (no hardcoded responses)
-        analysis = await self._analyze_logs_with_llm(
-            logs_data, query, context, time_range
-        )
+        analysis = await self._analyze_logs_with_llm(logs_data, query, context, time_range)
 
         return {
             "agent_name": "logs",
@@ -122,7 +116,6 @@ class LogsAnalyzer:
             "grafana_links": self._generate_grafana_links(logql_query, time_range),
             "timestamp": datetime.now().isoformat(),
         }
-
 
     def _build_logql_query(self, query: str, context: dict[str, Any]) -> str:
         """
@@ -171,9 +164,7 @@ class LogsAnalyzer:
         logger.info(f"Querying Loki with: {logql}")
 
         # Query via MCP client
-        result = await self.mcp_client.query_logs(
-            query=logql, time_range=time_range, limit=100
-        )
+        result = await self.mcp_client.query_logs(query=logql, time_range=time_range, limit=100)
 
         # Return in expected format
         if "error" in result:
@@ -210,17 +201,9 @@ class LogsAnalyzer:
         for log in logs:
             # Extract from labels (MCP Grafana format) or fallback to direct fields
             labels = log.get("labels", {})
-            message = (
-                log.get("line", "") or
-                log.get("message", "") or
-                log.get("msg", "")
-            )
+            message = log.get("line", "") or log.get("message", "") or log.get("msg", "")
             service = labels.get("service_name", log.get("service_name", "unknown"))
-            level = (
-                labels.get("severity_text", "") or
-                log.get("level", "") or
-                log.get("severity", "")
-            ).upper()
+            level = (labels.get("severity_text", "") or log.get("level", "") or log.get("severity", "")).upper()
 
             is_error = False
             if level in ("ERROR", "CRITICAL"):
@@ -234,37 +217,21 @@ class LogsAnalyzer:
                 affected_services.add(service)
 
         # Build error types list sorted by count
-        error_types_list = [
-            {"type": error_type, "count": count}
-            for error_type, count in sorted(
-                error_types.items(), key=lambda x: x[1], reverse=True
-            )
-        ]
+        error_types_list = [{"type": error_type, "count": count} for error_type, count in sorted(error_types.items(), key=lambda x: x[1], reverse=True)]
 
         time_range_checked = context.get("time_range", "1h")
-        summary_parts = [
-            f"Found {error_count} error logs in the last {time_range_checked}."
-        ]
+        summary_parts = [f"Found {error_count} error logs in the last {time_range_checked}."]
 
         if error_types_list:
             primary_error = error_types_list[0]
-            summary_parts.append(
-                f"Primary error: '{primary_error['type']}' ({primary_error['count']} occurrences)."
-            )
+            summary_parts.append(f"Primary error: '{primary_error['type']}' ({primary_error['count']} occurrences).")
 
         simulated_markers = ("simulated", "error_rate")
-        has_simulated_errors = any(
-            any(marker in error_type.lower() for marker in simulated_markers)
-            for error_type in error_types
-        )
+        has_simulated_errors = any(any(marker in error_type.lower() for marker in simulated_markers) for error_type in error_types)
         if has_simulated_errors:
-            summary_parts.append(
-                "Note: Some errors appear to be simulated (ERROR_RATE environment variable)."
-            )
+            summary_parts.append("Note: Some errors appear to be simulated (ERROR_RATE environment variable).")
 
-        summary_parts.append(
-            f"Affected services: {', '.join(sorted(affected_services))}."
-        )
+        summary_parts.append(f"Affected services: {', '.join(sorted(affected_services))}.")
 
         # Generate simple recommendations based on error count
         recommendations = []
@@ -304,9 +271,7 @@ class LogsAnalyzer:
         base_url = "http://grafana:3000/explore"
         return [f"{base_url}?query={logql}&range={time_range}"]
 
-    async def _build_logql_query_with_llm(
-        self, query: str, context: dict[str, Any]
-    ) -> str:
+    async def _build_logql_query_with_llm(self, query: str, context: dict[str, Any]) -> str:
         """
         Use LLM to build an optimized LogQL query from prompt template
 
@@ -318,11 +283,7 @@ class LogsAnalyzer:
             LogQL query string
         """
         services = context.get("services", [])
-        services_context = (
-            f"Available services: {', '.join(services)}"
-            if services
-            else "No specific services mentioned"
-        )
+        services_context = f"Available services: {', '.join(services)}" if services else "No specific services mentioned"
 
         # Load prompt template from markdown file
         prompt_template = load_prompt("build_logql.md")
@@ -331,9 +292,7 @@ class LogsAnalyzer:
 
         # Replace variables in template
         try:
-            prompt = prompt_template.format(
-                query=query, services_context=services_context
-            )
+            prompt = prompt_template.format(query=query, services_context=services_context)
         except KeyError as e:
             logger.error(f"Missing variable in build_logql.md template: {e}")
             raise RuntimeError("Invalid build_logql.md prompt template") from e
@@ -413,11 +372,7 @@ class LogsAnalyzer:
             service = labels.get("service_name", log.get("service_name", "unknown"))
 
             # Try to get message from various possible fields
-            message = (
-                log.get("line", "") or
-                log.get("message", "") or
-                log.get("msg", "")
-            )
+            message = log.get("line", "") or log.get("message", "") or log.get("msg", "")
 
             if isinstance(message, str):
                 message = message[:200].strip()
@@ -445,9 +400,7 @@ class LogsAnalyzer:
                 time_range=time_range,
                 services=services_str,
                 total_logs=total_logs,
-                log_samples=(
-                    "\n".join(log_samples_text) if log_samples_text else "No logs found"
-                ),
+                log_samples=("\n".join(log_samples_text) if log_samples_text else "No logs found"),
             )
         except KeyError as e:
             logger.error(f"Missing variable in analyze_logs.md template: {e}")
@@ -514,16 +467,10 @@ class LogsAnalyzer:
                         "confidence": 0.95 if error_count > 0 else 0.3,
                     }
                 except Exception:
-                    logger.warning(
-                        "Failed to parse JSON from LLM response, falling back"
-                    )
+                    logger.warning("Failed to parse JSON from LLM response, falling back")
 
             # If logs empty and user asked for short window, return structured fallback
-            if total_logs == 0 and (
-                "5m" in time_range
-                or "5" in time_range
-                or "5 minutes" in prompt.lower()
-            ):
+            if total_logs == 0 and ("5m" in time_range or "5" in time_range or "5 minutes" in prompt.lower()):
                 return {
                     "summary": f"No logs available for the last {time_range}.",
                     "data": {

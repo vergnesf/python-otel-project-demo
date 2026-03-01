@@ -86,7 +86,7 @@ async def benchmark_orchestrator() -> dict:
                 print_endpoint_header("Analyze endpoint", f"{len(queries)} tests × {benchmark.config.NUM_TEST_REQUESTS} iterations = {total_expected} total")
                 for i, result in enumerate(results, 1):
                     if result.get("success", False):
-                        print_request_result(i, result['latency_ms'], True)
+                        print_request_result(i, result["latency_ms"], True)
                         # Show request (query only)
                         if result.get("request"):
                             query = extract_query(result["request"])
@@ -95,32 +95,25 @@ async def benchmark_orchestrator() -> dict:
                         # Show response
                         if result.get("response"):
                             print_response(result["response"])
-                            is_valid, validation_msg = validate_orchestrator_response(
-                                result["response"]
-                            )
+                            is_valid, validation_msg = validate_orchestrator_response(result["response"])
                             print_validation(is_valid, validation_msg)
                             # Also check model
-                            model_valid, model_msg = validate_model_in_response(
-                                result["response"], model
-                            )
+                            model_valid, model_msg = validate_model_in_response(result["response"], model)
                             print_validation(model_valid, f"model: {model_msg}")
                             # Also validate routing
                             routing_valid = True
                             if is_valid and result.get("request"):
-                                routing_valid, routing_msg = validate_routing(
-                                    result["response"],
-                                    extract_query(result["request"])
-                                )
+                                routing_valid, routing_msg = validate_routing(result["response"], extract_query(result["request"]))
                                 print_validation(routing_valid, f"routing: {routing_msg}")
                             # Count as valid only if both structure and routing are valid
                             if is_valid and routing_valid:
                                 valid_tests += 1
                             else:
                                 validation_failed = True
-                        timings.append(result['latency_ms'])
+                        timings.append(result["latency_ms"])
                         all_results.append(result)
                     else:
-                        print_request_result(i, 0, False, result.get('error', 'Unknown'))
+                        print_request_result(i, 0, False, result.get("error", "Unknown"))
                         if result.get("request"):
                             query = extract_query(result["request"])
                             print_query(query)

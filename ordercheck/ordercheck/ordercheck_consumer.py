@@ -18,9 +18,7 @@ logger.setLevel(getattr(logging, log_level, logging.INFO))
 # Initialize the Kafka consumer
 consumer = Consumer(
     {
-        "bootstrap.servers": os.environ.get(
-            "KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"
-        ),
+        "bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
         "group.id": "order-check-group",
         "auto.offset.reset": "earliest",
     }

@@ -30,18 +30,12 @@ def print_endpoint_header(endpoint: str, num_requests: int) -> None:
     console.print(f"\n[bold blue]📊 {endpoint} ({num_requests} requests):[/bold blue]")
 
 
-def print_request_result(
-    request_num: int, latency_ms: float, success: bool, error: str | None = None
-) -> None:
+def print_request_result(request_num: int, latency_ms: float, success: bool, error: str | None = None) -> None:
     """Print request result with status indicator."""
     if success:
-        console.print(
-            f"  [dim]Request {request_num}:[/dim] {latency_ms:.2f}ms [green]✓[/green]"
-        )
+        console.print(f"  [dim]Request {request_num}:[/dim] {latency_ms:.2f}ms [green]✓[/green]")
     else:
-        console.print(
-            f"  [dim]Request {request_num}:[/dim] [red]✗ FAILED[/red] - {error or 'Unknown'}"
-        )
+        console.print(f"  [dim]Request {request_num}:[/dim] [red]✗ FAILED[/red] - {error or 'Unknown'}")
 
 
 def print_query(query: str) -> None:

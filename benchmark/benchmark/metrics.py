@@ -61,15 +61,10 @@ class MetricsCollector:
         )
 
         self.results.append(result)
-        logger.debug(
-            f"Recorded: {agent} ({model}) - {latency_ms:.2f}ms, "
-            f"success={success}, memory_delta={memory_delta:.2f}MB"
-        )
+        logger.debug(f"Recorded: {agent} ({model}) - {latency_ms:.2f}ms, success={success}, memory_delta={memory_delta:.2f}MB")
         return result
 
-    def get_summary(
-        self, model: str, agent: str
-    ) -> BenchmarkSummary | None:
+    def get_summary(self, model: str, agent: str) -> BenchmarkSummary | None:
         """
         Get summary statistics for a model/agent combination.
 
@@ -80,11 +75,7 @@ class MetricsCollector:
         Returns:
             BenchmarkSummary or None if no results
         """
-        results = [
-            r
-            for r in self.results
-            if r.model == model and r.agent == agent
-        ]
+        results = [r for r in self.results if r.model == model and r.agent == agent]
 
         if not results:
             return None
@@ -104,14 +95,9 @@ class MetricsCollector:
             return latencies_sorted[min(idx, n - 1)]
 
         memory_deltas = [r.memory_delta_mb for r in successful]
-        memory_mean = (
-            statistics.mean(memory_deltas) if memory_deltas else 0.0
-        )
+        memory_mean = statistics.mean(memory_deltas) if memory_deltas else 0.0
 
-        total_time_s = (
-            max(r.timestamp for r in results).timestamp()
-            - min(r.timestamp for r in results).timestamp()
-        )
+        total_time_s = max(r.timestamp for r in results).timestamp() - min(r.timestamp for r in results).timestamp()
         rps = len(results) / max(total_time_s, 1.0)
 
         return BenchmarkSummary(
@@ -124,11 +110,7 @@ class MetricsCollector:
             latency_ms_p95=percentile(95),
             latency_ms_p99=percentile(99),
             latency_ms_mean=statistics.mean(latencies),
-            latency_ms_std=(
-                statistics.stdev(latencies)
-                if len(latencies) > 1
-                else 0.0
-            ),
+            latency_ms_std=(statistics.stdev(latencies) if len(latencies) > 1 else 0.0),
             memory_delta_mb_mean=memory_mean,
             error_rate=len(failed) / len(results) if results else 0.0,
             requests_per_second=rps,
@@ -177,27 +159,14 @@ class MetricsCollector:
 
             for agent_name, summary in agents.items():
                 print(f"\n  Agent: {agent_name}")
-                print(
-                    f"    Requests: {summary.total_requests} "
-                    f"(✓ {summary.successful_requests}, "
-                    f"✗ {summary.failed_requests})"
-                )
-                print(
-                    f"    Error Rate: {summary.error_rate * 100:.2f}%"
-                )
+                print(f"    Requests: {summary.total_requests} (✓ {summary.successful_requests}, ✗ {summary.failed_requests})")
+                print(f"    Error Rate: {summary.error_rate * 100:.2f}%")
                 print("    Latency (ms):")
                 print(f"      p50: {summary.latency_ms_p50:.2f}")
                 print(f"      p95: {summary.latency_ms_p95:.2f}")
                 print(f"      p99: {summary.latency_ms_p99:.2f}")
-                print(
-                    f"      mean: {summary.latency_ms_mean:.2f} "
-                    f"(σ={summary.latency_ms_std:.2f})"
-                )
-                print(
-                    f"    Memory Delta: {summary.memory_delta_mb_mean:.2f} MB"
-                )
-                print(
-                    f"    Throughput: {summary.requests_per_second:.2f} req/s"
-                )
+                print(f"      mean: {summary.latency_ms_mean:.2f} (σ={summary.latency_ms_std:.2f})")
+                print(f"    Memory Delta: {summary.memory_delta_mb_mean:.2f} MB")
+                print(f"    Throughput: {summary.requests_per_second:.2f} req/s")
 
         print("\n" + "=" * 80)

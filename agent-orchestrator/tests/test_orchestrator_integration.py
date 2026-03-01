@@ -120,9 +120,7 @@ async def check_orchestrator_available():
             response = await client.get(f"{BASE_URL}/health")
             if response.status_code != 200:
                 print(f"Orchestrator returned status {response.status_code}")
-                pytest.skip(
-                    f"Orchestrator not healthy at {BASE_URL} (status: {response.status_code})"
-                )
+                pytest.skip(f"Orchestrator not healthy at {BASE_URL} (status: {response.status_code})")
             print("Orchestrator is available.")
     except Exception as e:
         print(f"Failed to connect to orchestrator: {e}")
@@ -197,17 +195,11 @@ async def run_agent_routing(
             print(f"  Reason: {Colors.YELLOW}{reason}{Colors.END}")
 
             # Verify that at least one expected agent was called
-            has_expected = any(
-                agent in agents_called for agent in test_case["expected_agents"]
-            )
+            has_expected = any(agent in agents_called for agent in test_case["expected_agents"])
             if strict:
-                assert (
-                    has_expected
-                ), f"Expected one of {test_case['expected_agents']}, got {agents_called}"
+                assert has_expected, f"Expected one of {test_case['expected_agents']}, got {agents_called}"
             elif not has_expected:
-                print(
-                    f"  {Colors.YELLOW}⚠️  Expected one of {test_case['expected_agents']}, got {agents_called}{Colors.END}"
-                )
+                print(f"  {Colors.YELLOW}⚠️  Expected one of {test_case['expected_agents']}, got {agents_called}{Colors.END}")
 
             print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
             await asyncio.sleep(1)
@@ -263,9 +255,7 @@ async def run_response_validation(
             data = response.json()
             validation = data.get("validation", {})
 
-            print(
-                f"  Validation present: {Colors.YELLOW}{'validation' in data}{Colors.END}"
-            )
+            print(f"  Validation present: {Colors.YELLOW}{'validation' in data}{Colors.END}")
 
             if validation:
                 validated = validation.get("validated", False)
@@ -278,9 +268,7 @@ async def run_response_validation(
 
                 # Validation should have been attempted
                 if strict:
-                    assert (
-                        "validated" in validation or "reason" in validation
-                    ), "Validation result should be present"
+                    assert "validated" in validation or "reason" in validation, "Validation result should be present"
 
             print(f"  {Colors.GREEN}✓ Test {i} passed{Colors.END}\n")
             await asyncio.sleep(1)
@@ -314,9 +302,7 @@ async def run_complete_workflow(
     await check_orchestrator_available()
 
     print(f"\n{Colors.BOLD}{'=' * 80}{Colors.END}")
-    print(
-        f"{Colors.BOLD}TEST 3: COMPLETE WORKFLOW (Routing → Validation) (Model: {model}){Colors.END}"
-    )
+    print(f"{Colors.BOLD}TEST 3: COMPLETE WORKFLOW (Routing → Validation) (Model: {model}){Colors.END}")
     print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
     query = "Show me recent errors for the customer service"
@@ -355,9 +341,7 @@ async def run_complete_workflow(
         for agent_name, agent_resp in agent_responses.items():
             if agent_resp and isinstance(agent_resp, dict):
                 if "error" in agent_resp:
-                    print(
-                        f"  {Colors.RED}❌ {agent_name}: {agent_resp['error']}{Colors.END}"
-                    )
+                    print(f"  {Colors.RED}❌ {agent_name}: {agent_resp['error']}{Colors.END}")
                 else:
                     analysis = agent_resp.get("analysis", "")[:100]
                     print(f"  {Colors.GREEN}✓ {agent_name}: {analysis}...{Colors.END}")
@@ -413,9 +397,7 @@ async def main():
     start_time = datetime.now()
 
     print(f"\n{Colors.BOLD}╔{'=' * 78}╗{Colors.END}")
-    print(
-        f"{Colors.BOLD}║{' ' * 15}INTEGRATION TESTS - SIMPLIFIED ORCHESTRATOR{' ' * 20}║{Colors.END}"
-    )
+    print(f"{Colors.BOLD}║{' ' * 15}INTEGRATION TESTS - SIMPLIFIED ORCHESTRATOR{' ' * 20}║{Colors.END}")
     print(f"{Colors.BOLD}╚{'=' * 78}╝{Colors.END}")
 
     try:
@@ -437,9 +419,7 @@ async def main():
         print(f"{Colors.BOLD}{'=' * 80}{Colors.END}\n")
 
         print(f"{Colors.BOLD}📊 VERIFIED FUNCTIONALITIES:{Colors.END}")
-        print(
-            f"   {Colors.GREEN}✓ Intelligent routing to correct agents (logs/metrics/traces){Colors.END}"
-        )
+        print(f"   {Colors.GREEN}✓ Intelligent routing to correct agents (logs/metrics/traces){Colors.END}")
         print(f"   {Colors.GREEN}✓ AI-powered response validation{Colors.END}")
         print(f"   {Colors.GREEN}✓ Complete end-to-end workflow{Colors.END}\n")
 

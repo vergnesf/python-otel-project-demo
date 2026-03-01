@@ -4,7 +4,6 @@ Main FastAPI application for the Agents UI - Professional dark theme
 
 import logging
 import os
-from typing import List
 
 import httpx
 from fastapi import FastAPI, Form, Request
@@ -16,20 +15,23 @@ from pydantic import BaseModel
 # Setup logging
 logger = logging.getLogger("agent_ui")
 
+
 # Models
 class QA(BaseModel):
     """A question and answer pair."""
+
     question: str
     answer: str = ""
+
 
 class ChatState:
     """The app state."""
 
     def __init__(self):
-        self.chats: List[QA] = []
+        self.chats: list[QA] = []
         self.processing: bool = False
 
-    def get_messages(self) -> List[dict]:
+    def get_messages(self) -> list[dict]:
         """Get messages in the format expected by the UI.
 
         Returns:
@@ -50,6 +52,7 @@ class ChatState:
         """
         return self.processing
 
+
 # Global state
 chat_state = ChatState()
 
@@ -64,25 +67,16 @@ templates = Jinja2Templates(directory="agent_ui/templates")
 if os.path.exists("agent_ui/static"):
     app.mount("/static", StaticFiles(directory="agent_ui/static"), name="static")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     """Render the main chat interface."""
     logger.info("Rendering main page")
-    return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
-            "chats": chat_state.chats,
-            "processing": chat_state.processing,
-            "root_path": root_path
-        }
-    )
+    return templates.TemplateResponse("index.html", {"request": request, "chats": chat_state.chats, "processing": chat_state.processing, "root_path": root_path})
+
 
 @app.post("/send_message")
-async def send_message(
-    request: Request,
-    question: str = Form(...)
-):
+async def send_message(request: Request, question: str = Form(...)):
     """Process a new message.
 
     Args:
@@ -102,16 +96,12 @@ async def send_message(
     logger.info("Processing question...")
 
     # Call orchestrator API
-    orchestrator_url = os.getenv(
-        "ORCHESTRATOR_URL", "http://agent-orchestrator:8001"
-    )
+    orchestrator_url = os.getenv("ORCHESTRATOR_URL", "http://agent-orchestrator:8001")
 
     # Detect time range in question (e.g., "last 5 minutes")
     time_range = "1h"
     q_lower = question.lower()
-    if "5" in q_lower and (
-        "minute" in q_lower or "minutes" in q_lower or "5m" in q_lower
-    ):
+    if "5" in q_lower and ("minute" in q_lower or "minutes" in q_lower or "5m" in q_lower):
         time_range = "5m"
 
     try:
@@ -149,12 +139,15 @@ async def send_message(
 
     return {"status": "success", "answer": answer}
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "service": "agent-ui"}
 
+
 if __name__ == "__main__":
     import uvicorn
+
     logger.info("Starting Agent UI server...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

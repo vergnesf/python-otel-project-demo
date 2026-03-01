@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,24 +42,16 @@ class Orchestrator:
     def __init__(self):
         """Initialize orchestrator with agent endpoints"""
         self.logs_agent_url = os.getenv("AGENT_LOGS_URL", "http://agent-logs:8002")
-        self.metrics_agent_url = os.getenv(
-            "AGENT_METRICS_URL", "http://agent-metrics:8003"
-        )
-        self.traces_agent_url = os.getenv(
-            "AGENT_TRACES_URL", "http://agent-traces:8004"
-        )
-        self.translation_agent_url = os.getenv(
-            "AGENT_TRANSLATION_URL", "http://agent-traduction:8002"
-        )
+        self.metrics_agent_url = os.getenv("AGENT_METRICS_URL", "http://agent-metrics:8003")
+        self.traces_agent_url = os.getenv("AGENT_TRACES_URL", "http://agent-traces:8004")
+        self.translation_agent_url = os.getenv("AGENT_TRANSLATION_URL", "http://agent-traduction:8002")
 
         # Use configured timeout (600s by default to allow model loading)
         self.agent_call_timeout = int(os.getenv("AGENT_CALL_TIMEOUT", "600"))
         self.client = httpx.AsyncClient(timeout=self.agent_call_timeout)
 
         # Initialize LLM
-        self.llm_ephemeral = (
-            os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
-        )
+        self.llm_ephemeral = os.getenv("LLM_EPHEMERAL_PER_CALL", "false").lower() == "true"
         try:
             self.llm = None if self.llm_ephemeral else get_llm()
             if self.llm:
@@ -96,27 +89,16 @@ class Orchestrator:
         Returns:
             Analysis result with validation
         """
-        logger.info(
-            f"Analyzing query: {query} (model: {model}, params: {model_params})"
-        )
-        from datetime import datetime
+        logger.info(f"Analyzing query: {query} (model: {model}, params: {model_params})")
 
         # Step 1: Detect language and translate
-        language_info = await self._detect_and_translate(
-            query, model=model, model_params=model_params
-        )
+        language_info = await self._detect_and_translate(query, model=model, model_params=model_params)
         translated_query = language_info["translated_query"]
-        logger.info(
-            f"Language: {language_info['language']}, Translated: {translated_query}"
-        )
+        logger.info(f"Language: {language_info['language']}, Translated: {translated_query}")
 
-        intent = await self._classify_intent(
-            translated_query, model=model, model_params=model_params
-        )
+        intent = await self._classify_intent(translated_query, model=model, model_params=model_params)
         if intent == "chat":
-            chat_response = await self._generate_chat_response(
-                translated_query, model=model, model_params=model_params
-            )
+            chat_response = await self._generate_chat_response(translated_query, model=model, model_params=model_params)
             return {
                 "query": query,
                 "translated_query": translated_query,
@@ -146,9 +128,7 @@ class Orchestrator:
         agent_responses = await self._call_agents(routing["agents"], agent_request)
 
         # Step 4: Validate responses
-        validation = await self._validate_responses(
-            translated_query, agent_responses, model=model
-        )
+        validation = await self._validate_responses(translated_query, agent_responses, model=model)
 
         # Build final response
         summary_parts = []
@@ -157,15 +137,11 @@ class Orchestrator:
         for agent_name, response in agent_responses.items():
             if response and not isinstance(response.get("error"), str):
                 if "analysis" in response:
-                    summary_parts.append(
-                        f"**{agent_name.upper()}**: {response['analysis']}"
-                    )
+                    summary_parts.append(f"**{agent_name.upper()}**: {response['analysis']}")
                 if "recommendations" in response:
                     recommendations.extend(response["recommendations"])
 
-        summary = (
-            "\n\n".join(summary_parts) if summary_parts else "No analysis available"
-        )
+        summary = "\n\n".join(summary_parts) if summary_parts else "No analysis available"
 
         return {
             "query": query,
@@ -179,9 +155,7 @@ class Orchestrator:
             "timestamp": datetime.now(),
         }
 
-    async def _detect_and_translate(
-        self, query: str, model: str | None = None, model_params: dict | None = None
-    ) -> dict[str, Any]:
+    async def _detect_and_translate(self, query: str, model: str | None = None, model_params: dict | None = None) -> dict[str, Any]:
         """
         Functionality 1: Detect language and translate to English
 
@@ -228,9 +202,7 @@ class Orchestrator:
 
         return {"language": language, "translated_query": translated_query}
 
-    async def _route_to_agents(
-        self, query: str, model: str | None = None, model_params: dict | None = None
-    ) -> dict[str, Any]:
+    async def _route_to_agents(self, query: str, model: str | None = None, model_params: dict | None = None) -> dict[str, Any]:
         """
         Functionality 2: Decide which agents to call based on query
 
@@ -249,11 +221,7 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = (
-                    get_llm(model=model, **model_params)
-                    if model_params
-                    else get_llm(model=model)
-                )
+                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
             elif self.llm_ephemeral:
                 llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
@@ -269,9 +237,7 @@ class Orchestrator:
                 return self._keyword_based_routing(query)
 
             route_prompt = route_prompt.format(query=query)
-            response_text = await self._invoke_llm_prompt(
-                route_prompt, model=model, model_params=model_params
-            )
+            response_text = await self._invoke_llm_prompt(route_prompt, model=model, model_params=model_params)
             if not response_text:
                 return self._keyword_based_routing(query)
 
@@ -360,9 +326,7 @@ class Orchestrator:
             payload["options"] = options
 
         logger.debug(f"Ollama payload: {payload}")
-        response = await self.client.post(
-            url, json=payload, timeout=self.agent_call_timeout
-        )
+        response = await self.client.post(url, json=payload, timeout=self.agent_call_timeout)
         response.raise_for_status()
         data = response.json()
         text = data.get("response", "") if isinstance(data, dict) else ""
@@ -383,16 +347,11 @@ class Orchestrator:
         agents = []
 
         # Check for logs keywords
-        if any(
-            word in query_lower for word in ["log", "error", "exception", "message"]
-        ):
+        if any(word in query_lower for word in ["log", "error", "exception", "message"]):
             agents.append("logs")
 
         # Check for metrics keywords
-        if any(
-            word in query_lower
-            for word in ["cpu", "memory", "latency", "rate", "throughput"]
-        ):
+        if any(word in query_lower for word in ["cpu", "memory", "latency", "rate", "throughput"]):
             agents.append("metrics")
 
         # Check for traces keywords
@@ -487,9 +446,7 @@ class Orchestrator:
         logger.info(f"Chat response generated: {response_text[:100]}...")
         return response_text
 
-    async def _call_agents(
-        self, agents: list[str], request: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _call_agents(self, agents: list[str], request: dict[str, Any]) -> dict[str, Any]:
         """
         Call selected agents in parallel
 
@@ -523,17 +480,11 @@ class Orchestrator:
         result = {}
         for i, agent in enumerate([a for a in agents if a in agent_urls]):
             response = responses[i] if i < len(responses) else None
-            result[agent] = (
-                response
-                if not isinstance(response, Exception)
-                else {"error": str(response)}
-            )
+            result[agent] = response if not isinstance(response, Exception) else {"error": str(response)}
 
         return result
 
-    async def _query_agent(
-        self, agent_url: str, request: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _query_agent(self, agent_url: str, request: dict[str, Any]) -> dict[str, Any]:
         """
         Query a single agent
 
@@ -584,11 +535,7 @@ class Orchestrator:
         try:
             # Always use provided model if specified, otherwise fall back to default
             if model:
-                llm_client = (
-                    get_llm(model=model, **model_params)
-                    if model_params
-                    else get_llm(model=model)
-                )
+                llm_client = get_llm(model=model, **model_params) if model_params else get_llm(model=model)
             elif self.llm_ephemeral:
                 llm_client = get_llm(**model_params) if model_params else get_llm()
             else:
@@ -622,12 +569,8 @@ class Orchestrator:
                     "reason": "Validation prompt not found",
                 }
 
-            validate_prompt = validate_prompt.format(
-                query=query, response=combined_response
-            )
-            response_text = await self._invoke_llm_prompt(
-                validate_prompt, model=model, model_params=model_params
-            )
+            validate_prompt = validate_prompt.format(query=query, response=combined_response)
+            response_text = await self._invoke_llm_prompt(validate_prompt, model=model, model_params=model_params)
             if not response_text:
                 return {
                     "validated": False,

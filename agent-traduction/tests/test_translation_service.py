@@ -24,9 +24,7 @@ def test_translate_english_query_returns_same_text():
 
 def test_translate_non_english_query_translates():
     with patch("agent_traduction.translation_service.get_llm") as mock_get_llm:
-        mock_get_llm.return_value = _mock_llm_with_side_effect(
-            ["NOT_ENGLISH", "Show me recent errors"]
-        )
+        mock_get_llm.return_value = _mock_llm_with_side_effect(["NOT_ENGLISH", "Show me recent errors"])
 
         service = TranslationService()
         result = service.translate("Montre-moi les erreurs récentes")

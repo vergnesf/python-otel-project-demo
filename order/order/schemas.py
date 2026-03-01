@@ -49,6 +49,4 @@ class Order(OrderBase):
             from_attributes (bool): Config option to load attributes from the model's attributes.
         """
 
-        from_attributes = (
-            True  # Config option to load attributes from the model's attributes
-        )
+        from_attributes = True  # Config option to load attributes from the model's attributes

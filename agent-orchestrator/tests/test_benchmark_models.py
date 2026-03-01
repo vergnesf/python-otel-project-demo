@@ -51,9 +51,7 @@ def load_model_configs():
 
         return model_configs
     except Exception as e:
-        print(
-            f"{Colors.YELLOW}⚠️  Could not load model configs from config/ai/model-params.yml: {e}{Colors.END}"
-        )
+        print(f"{Colors.YELLOW}⚠️  Could not load model configs from config/ai/model-params.yml: {e}{Colors.END}")
         return {}
 
 

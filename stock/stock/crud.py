@@ -10,9 +10,7 @@ def get_stocks(db: Session, skip: int = 0, limit: int = 10):
 
 
 def create_stock(db: Session, stock: schemas.StockCreate):
-    db_stock = (
-        db.query(models.Stock).filter(models.Stock.wood_type == stock.wood_type).first()
-    )
+    db_stock = db.query(models.Stock).filter(models.Stock.wood_type == stock.wood_type).first()
 
     if db_stock:
         # Update existing stock

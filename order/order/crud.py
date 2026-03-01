@@ -22,19 +22,11 @@ def get_orders(db: Session, skip: int = 0, limit: int = 10):
     return db.query(models.Order).offset(skip).limit(limit).all()
 
 
-def get_orders_by_status(
-    db: Session, order_status: OrderStatus, skip: int = 0, limit: int = 10
-):
+def get_orders_by_status(db: Session, order_status: OrderStatus, skip: int = 0, limit: int = 10):
     """
     Retrieve a list of orders by status with optional pagination.
     """
-    return (
-        db.query(models.Order)
-        .filter(models.Order.order_status == order_status)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    return db.query(models.Order).filter(models.Order.order_status == order_status).offset(skip).limit(limit).all()
 
 
 def update_order_status(db: Session, order_id: int, order_status: OrderStatus):
