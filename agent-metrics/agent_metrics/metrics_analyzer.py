@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from common_ai import MCPGrafanaClient, extract_text_from_response, get_llm
+from lib_ai import MCPGrafanaClient, extract_text_from_response, get_llm
 
 logger = logging.getLogger(__name__)
 

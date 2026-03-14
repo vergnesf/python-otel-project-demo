@@ -70,15 +70,15 @@ See [Architecture Documentation](docs/architecture.md) for detailed diagrams.
 ## 🗂️ Project Structure
 
 ```
-├── common-models/       # Shared business models (WoodType, Order, Stock)
-├── common-ai/           # Shared AI utilities (MCP client, LLM config, agent models)
-├── customer/            # Microservice: Customer orders (Kafka producer)
-├── order/               # Microservice: Order management API
-├── stock/               # Microservice: Stock management API
-├── supplier/            # Microservice: Supplier (Kafka producer)
-├── ordercheck/          # Microservice: Order processing (Kafka consumer)
-├── suppliercheck/       # Microservice: Stock updates (Kafka consumer)
-├── ordermanagement/     # Microservice: Order status updates
+├── lib-models/          # Shared business models (WoodType, Order, Stock)
+├── lib-ai/              # Shared AI utilities (MCP client, LLM config, agent models)
+├── ms-customer/         # Microservice: Customer orders (Kafka producer)
+├── ms-order/            # Microservice: Order management API
+├── ms-stock/            # Microservice: Stock management API
+├── ms-supplier/         # Microservice: Supplier (Kafka producer)
+├── ms-ordercheck/       # Microservice: Order processing (Kafka consumer)
+├── ms-suppliercheck/    # Microservice: Stock updates (Kafka consumer)
+├── ms-ordermanagement/  # Microservice: Order status updates
 ├── agent-orchestrator/  # AI Agent: Main coordinator
 ├── agent-logs/          # AI Agent: Loki log analysis
 ├── agent-metrics/       # AI Agent: Mimir metrics analysis

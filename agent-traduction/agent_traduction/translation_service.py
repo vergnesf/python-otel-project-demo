@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from common_ai import extract_text_from_response, get_llm
+from lib_ai import extract_text_from_response, get_llm
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from pathlib import Path
 import psutil
 import pytest
 import yaml
-from common_ai import get_model_params, unload_ollama_model
+from lib_ai import get_model_params, unload_ollama_model
 
 from tests.test_orchestrator_integration import (
     BASE_URL,

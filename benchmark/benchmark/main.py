@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Import Ollama model management utilities
-from common_ai import load_ollama_model, unload_ollama_model
+from lib_ai import load_ollama_model, unload_ollama_model
 from rich import box
 from rich.panel import Panel
 

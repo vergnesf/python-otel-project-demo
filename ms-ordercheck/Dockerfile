@@ -12,22 +12,18 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY agent-metrics/pyproject.toml /app/agent-metrics/
-COPY lib-ai /app/lib-ai/
+COPY ms-ordercheck/pyproject.toml ./ms-ordercheck/
+COPY ms-ordercheck/ordercheck /app/ms-ordercheck/ordercheck/
+COPY lib-models ./lib-models/
 
-WORKDIR /app/agent-metrics
+WORKDIR /app/ms-ordercheck
 
 RUN pip install --no-cache-dir uv && \
     uv sync --no-dev && \
-    uv pip install pip && \
     uv run --no-dev opentelemetry-bootstrap -a install
-
-COPY agent-metrics/agent_metrics /app/agent-metrics/agent_metrics/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8002
-
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "uvicorn", "agent_metrics.main:app", "--host", "0.0.0.0", "--port", "8002", "--timeout-keep-alive", "600", "--timeout-graceful-shutdown", "600"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
