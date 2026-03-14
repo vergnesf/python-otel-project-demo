@@ -105,7 +105,10 @@ tasks:
 
   test:
     desc: "Run full test pipeline: test-lint → test-unit → test-integration (sequential)"
-    deps: [test-lint, test-unit, test-integration]
+    cmds:
+      - task: test-lint
+      - task: test-unit
+      - task: test-integration
 
   test-lint:
     desc: "Lint KEEPER services only (7 business services, subset of lint)"
