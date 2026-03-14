@@ -15,15 +15,15 @@ Two-layer model:
 
 | Service | Type | Framework |
 |---------|------|-----------|
-| `customer` | Kafka producer | none |
-| `supplier` | Kafka producer | none |
-| `ordercheck` | Kafka consumer | none |
-| `suppliercheck` | Kafka consumer | none |
-| `ordermanagement` | Background worker | none |
-| `order` | REST API + DB | Flask + SQLAlchemy |
-| `stock` | REST API + DB | Flask + SQLAlchemy |
-| `common-models` | Shared library | Pydantic v2 |
-| `common-ai` | Shared AI library | LangChain + MCP |
+| `ms-customer` | Kafka producer | none |
+| `ms-supplier` | Kafka producer | none |
+| `ms-ordercheck` | Kafka consumer | none |
+| `ms-suppliercheck` | Kafka consumer | none |
+| `ms-ordermanagement` | Background worker | none |
+| `ms-order` | REST API + DB | Flask + SQLAlchemy |
+| `ms-stock` | REST API + DB | Flask + SQLAlchemy |
+| `lib-models` | Shared library | Pydantic v2 |
+| `lib-ai` | Shared AI library | LangChain + MCP |
 | `config` | Infra config files | YAML |
 
 ## Active Services
@@ -33,7 +33,7 @@ Two-layer model:
 
 ## Framework Convention
 
-- **Flask** for KEEPER HTTP services (`order`, `stock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
+- **Flask** for KEEPER HTTP services (`ms-order`, `ms-stock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
 - **FastAPI** for all agent services — async, LLM-friendly.
 
 ## Tools
@@ -56,14 +56,14 @@ task test             # test-lint → test-unit → test-integration (sequential
 task --continue test  # Run all test phases even if one fails
 task test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of lint)
 task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
-task test-integration # Container health checks (order, stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
+task test-integration # Container health checks (ms-order, ms-stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
 task --list           # Show all available tasks with descriptions
 ```
 
 > **Taskfile variable scopes:** `PROJECTS` = all services (see `Taskfile.yml` for the full list), used by `task lint`.
 > `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
-> `HEALTHCHECK_SERVICES` (2 dirs) = `order` and `stock` — only Flask services with container healthchecks, used by the `test-integration` health loop.
-> Agent services (`agent-*`) and shared libs (`common-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
+> `HEALTHCHECK_SERVICES` (2 dirs) = `ms-order` and `ms-stock` — only Flask services with container healthchecks, used by the `test-integration` health loop.
+> Agent services (`agent-*`) and shared libs (`lib-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
 ## Environment Setup
 
@@ -85,13 +85,13 @@ Telemetry flows: logs → Loki, metrics → Mimir, traces → Tempo, UI → Graf
 ## Error Injection
 
 `ERROR_RATE` env var (0.0–1.0, default 0.1) injects random failures in Kafka producers, consumers,
-and the ordermanagement worker. The Flask REST APIs (`order`, `stock`) do not use `ERROR_RATE`.
+and the ordermanagement worker. The Flask REST APIs (`ms-order`, `ms-stock`) do not use `ERROR_RATE`.
 This is intentional — generates realistic, noisy telemetry for learning OTEL.
 
 ## Shared Libraries
 
-- `common-models` — Pydantic models shared across KEEPER services (editable install)
-- `common-ai` — LLM config, MCP Grafana client, agent Pydantic models (for agent services only)
+- `lib-models` — Pydantic models shared across KEEPER services (editable install)
+- `lib-ai` — LLM config, MCP Grafana client, agent Pydantic models (for agent services only)
 
 ## Infrastructure Access (local dev)
 

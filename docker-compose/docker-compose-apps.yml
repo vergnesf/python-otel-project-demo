@@ -9,127 +9,127 @@ x-common-apps-env: &common-apps-env
   ERROR_RATE: "0.1"  
 
 services:
-  customer:
+  ms-customer:
     build:
       context: ..
-      dockerfile: customer/Dockerfile
+      dockerfile: ms-customer/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: customer
+    container_name: ms-customer
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: customer
+      OTEL_SERVICE_NAME: ms-customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
     restart: unless-stopped
     networks:
       - otel-network
 
-  supplier:
+  ms-supplier:
     build:
       context: ..
-      dockerfile: supplier/Dockerfile
+      dockerfile: ms-supplier/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: supplier
+    container_name: ms-supplier
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: supplier
+      OTEL_SERVICE_NAME: ms-supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
     restart: unless-stopped
     networks:
       - otel-network
 
-  order:
+  ms-order:
     build:
       context: ..
-      dockerfile: order/Dockerfile
+      dockerfile: ms-order/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: order
+    container_name: ms-order
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: order
+      OTEL_SERVICE_NAME: ms-order
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     restart: unless-stopped
     networks:
       - otel-network
 
-  stock:
+  ms-stock:
     build:
       context: ..
-      dockerfile: stock/Dockerfile
+      dockerfile: ms-stock/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: stock
+    container_name: ms-stock
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: stock
+      OTEL_SERVICE_NAME: ms-stock
       DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
     restart: unless-stopped
     networks:
       - otel-network
 
-  ordercheck:
+  ms-ordercheck:
     build:
       context: ..
-      dockerfile: ordercheck/Dockerfile
+      dockerfile: ms-ordercheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ordercheck
+    container_name: ms-ordercheck
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ordercheck
+      OTEL_SERVICE_NAME: ms-ordercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://order:5000
+      API_URL: http://ms-order:5000
     depends_on:
-      - order
+      - ms-order
     restart: unless-stopped
     networks:
       - otel-network
 
-  suppliercheck:
+  ms-suppliercheck:
     build:
       context: ..
-      dockerfile: suppliercheck/Dockerfile
+      dockerfile: ms-suppliercheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: suppliercheck
+    container_name: ms-suppliercheck
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: suppliercheck
+      OTEL_SERVICE_NAME: ms-suppliercheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://stock:5001
+      API_URL: http://ms-stock:5001
     depends_on:
-      - stock
+      - ms-stock
     restart: unless-stopped
     networks:
       - otel-network
 
-  ordermanagement:
+  ms-ordermanagement:
     build:
       context: ..
-      dockerfile: ordermanagement/Dockerfile
+      dockerfile: ms-ordermanagement/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ordermanagement
+    container_name: ms-ordermanagement
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ordermanagement
-      API_URL_ORDERS: http://order:5000
-      API_URL_STOCKS: http://stock:5001
+      OTEL_SERVICE_NAME: ms-ordermanagement
+      API_URL_ORDERS: http://ms-order:5000
+      API_URL_STOCKS: http://ms-stock:5001
       INTERVAL_SECONDS: 5
     depends_on:
-      - order
-      - stock
+      - ms-order
+      - ms-stock
     restart: unless-stopped
     networks:
       - otel-network

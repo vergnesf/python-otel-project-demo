@@ -13,7 +13,7 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
 COPY agent-orchestrator/pyproject.toml /app/agent-orchestrator/
-COPY common-ai /app/common-ai/
+COPY lib-ai /app/lib-ai/
 
 WORKDIR /app/agent-orchestrator
 

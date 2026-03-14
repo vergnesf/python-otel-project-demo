@@ -135,12 +135,12 @@ http:
     apps-order-service:
       loadBalancer:
         servers:
-          - url: http://order:5000
+          - url: http://ms-order:5000
 
     apps-stock-service:
       loadBalancer:
         servers:
-          - url: http://stock:5001
+          - url: http://ms-stock:5001
 
     agents-orchestrator-service:
       loadBalancer:

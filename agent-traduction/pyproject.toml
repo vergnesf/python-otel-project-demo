@@ -5,7 +5,7 @@ description = "Translation agent for detecting language and translating queries 
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "common-ai",
+    "lib-ai",
     "fastapi>=0.121.0",
     "httpx>=0.28.1",
     "langchain>=1.0.5",
@@ -26,4 +26,4 @@ dev = [
 ]
 
 [tool.uv.sources]
-common-ai = { path = "../common-ai", editable = true }
+lib-ai = { path = "../lib-ai", editable = true }

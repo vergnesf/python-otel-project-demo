@@ -8,10 +8,10 @@ This project is a **personal learning lab** built in layers, each added as a new
 ┌─────────────────────────────────────────────────────────┐
 │  BUSINESS LAYER (stable)                                │
 │                                                         │
-│  customer ──┐                  ┌── ordercheck ── order ─┤
-│             ├── Kafka ─────────┤                       ├── PostgreSQL
-│  supplier ──┘                  └── suppliercheck─ stock─┤
-│                   ordermanagement (background worker)   │
+│  ms-customer ──┐               ┌── ms-ordercheck ── ms-order ─┤
+│                ├── Kafka ──────┤                             ├── PostgreSQL
+│  ms-supplier ──┘               └── ms-suppliercheck─ ms-stock─┤
+│                  ms-ordermanagement (background worker)       │
 └─────────────────────────┬───────────────────────────────┘
                           │ OTLP
                           ▼
@@ -39,15 +39,15 @@ This project is a **personal learning lab** built in layers, each added as a new
 
 | Service | Role | Tech |
 |---------|------|------|
-| `customer` | Generates orders → Kafka | Kafka producer |
-| `supplier` | Generates stock updates → Kafka | Kafka producer |
-| `ordercheck` | Validates & forwards orders | Kafka consumer → REST |
-| `suppliercheck` | Validates & forwards stock updates | Kafka consumer → REST |
-| `order` | Order management API | Flask + PostgreSQL |
-| `stock` | Stock management API | Flask + PostgreSQL |
-| `ordermanagement` | Processes registered orders, updates stock | Background worker |
-| `common-models` | Shared business models | Pydantic |
-| `common-ai` | Shared AI utilities (LLM config, MCP client) | LangChain |
+| `ms-customer` | Generates orders → Kafka | Kafka producer |
+| `ms-supplier` | Generates stock updates → Kafka | Kafka producer |
+| `ms-ordercheck` | Validates & forwards orders | Kafka consumer → REST |
+| `ms-suppliercheck` | Validates & forwards stock updates | Kafka consumer → REST |
+| `ms-order` | Order management API | Flask + PostgreSQL |
+| `ms-stock` | Stock management API | Flask + PostgreSQL |
+| `ms-ordermanagement` | Processes registered orders, updates stock | Background worker |
+| `lib-models` | Shared business models | Pydantic |
+| `lib-ai` | Shared AI utilities (LLM config, MCP client) | LangChain |
 | `config` | Infrastructure configuration files | YAML |
 
 ### Agent Layer (DRAFT — code written, not yet operational)

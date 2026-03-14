@@ -1,0 +1,26 @@
+[project]
+name = "order"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "lib-models",
+    "flasgger>=0.9.7.1",
+    "flask>=3.0.3",
+    "flask-sqlalchemy>=3.1.1",
+    "opentelemetry-distro>=0.59b0",
+    "opentelemetry-exporter-otlp>=1.38.0",
+    "psycopg2-binary>=2.9.2",
+    "pydantic>=2.12.4",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pyright",
+    "pytest>=8",
+]
+
+[tool.uv.sources]
+lib-models = { path = "../lib-models", editable = true }

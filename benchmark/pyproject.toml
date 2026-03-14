@@ -15,7 +15,7 @@ dependencies = [
     "psutil>=6.0.0",
     "rich>=13.9.4",
     "nvidia-ml-py>=12.535.108",
-    "common-ai",
+    "lib-ai",
 ]
 
 [project.scripts]
@@ -29,7 +29,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-common-ai = { path = "../common-ai", editable = true }
+lib-ai = { path = "../lib-ai", editable = true }
 
 [tool.hatch.metadata]
 allow-direct-references = true
