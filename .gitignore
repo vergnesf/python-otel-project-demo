@@ -72,3 +72,6 @@ benchmark_results.html
 
 # Claude Code personal config
 .claude/
+
+# Taskfile cache (checksums)
+.task/

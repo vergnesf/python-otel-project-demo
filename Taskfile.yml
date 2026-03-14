@@ -1,0 +1,257 @@
+version: '3'
+
+# Prerequisites: copy .env.example to .env before running any compose task.
+# Requires go-task >= 3.28 (for {{.TASKFILE_DIR}} support). Install: mise use task@latest
+dotenv: ['.env']
+
+vars:
+  # All service directories — used by lint and tools-format (ruff). (16 dirs total)
+  # Includes agent/benchmark services that have no smoke tests.
+  # NOTE: KEEPER_SERVICES is a subset of PROJECTS — if you add a new KEEPER service,
+  # update BOTH vars below.
+  PROJECTS: >-
+    agent-logs agent-metrics agent-orchestrator agent-traces agent-ui
+    agent-traduction benchmark common-ai common-models
+    customer order ordercheck ordermanagement stock supplier suppliercheck
+
+  # Business services with runnable Python processes and a tests/ directory. (7 dirs)
+  # Shared libraries (common-models, common-ai) are excluded.
+  # Scope: test-lint and test-unit.
+  KEEPER_SERVICES: customer order ordercheck ordermanagement stock supplier suppliercheck
+
+  # Subset with a container healthcheck defined in docker-compose-apps.yml.
+  # Only Flask REST APIs (order, stock) have healthchecks.
+  # WARNING: only add a service here if docker-compose-apps.yml defines a HEALTHCHECK for it.
+  HEALTHCHECK_SERVICES: order stock
+
+  # Ollama models to pull
+  MODELS: mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
+
+  # Detect container runtime (podman preferred over docker).
+  # Returns empty string if neither runtime is installed — compose tasks will exit with an error.
+  COMPOSE_BASE:
+    sh: |
+      if command -v podman >/dev/null 2>&1; then echo "podman-compose"
+      elif command -v docker >/dev/null 2>&1; then echo "docker compose"
+      else echo ""; fi
+
+  # When running inside a devcontainer with a Podman socket, bind mount paths must be host paths.
+  # Detect the host path from the btrfs subvolume source (format: /dev/xxx[/host/path]).
+  # Falls back to TASKFILE_DIR (repo root) when not in a devcontainer. Linux-only (findmnt).
+  HOST_PWD:
+    sh: |
+      src=$(findmnt -n -o SOURCE "{{.TASKFILE_DIR}}" 2>/dev/null || true)
+      if echo "$src" | grep -q '\['; then
+        echo "$src" | sed 's|.*\[||;s|\].*||'
+      else
+        echo "{{.TASKFILE_DIR}}"
+      fi
+
+  # Full compose command — single source of truth used by compose-up, compose-down,
+  # and test-integration. References HOST_PWD and COMPOSE_BASE (evaluated lazily).
+  COMPOSE_CMD: "env PWD={{.HOST_PWD}} {{.COMPOSE_BASE}} --env-file {{.TASKFILE_DIR}}/.env"
+
+tasks:
+  default:
+    desc: "Show this help (all available tasks)"
+    silent: true
+    cmds:
+      - task --list
+
+  # ---------------------------------------------------------------------------
+  # Stack lifecycle
+  # ---------------------------------------------------------------------------
+
+  compose-up:
+    desc: "Start full stack: observability → db → kafka → ai-tools → ai → apps → traefik"
+    silent: true
+    cmds:
+      - |
+        if [ -z "{{.COMPOSE_BASE}}" ]; then
+          echo "ERROR: No container runtime found (docker or podman). Install one first."
+          exit 1
+        fi
+        if [ ! -f "{{.TASKFILE_DIR}}/.env" ]; then
+          echo "ERROR: .env not found — copy it first: cp {{.TASKFILE_DIR}}/.env.example {{.TASKFILE_DIR}}/.env"
+          exit 1
+        fi
+      - echo "Ensuring network otel-network exists..."
+      - |
+        if command -v podman >/dev/null 2>&1; then
+          podman network inspect otel-network >/dev/null 2>&1 || podman network create otel-network
+        elif command -v docker >/dev/null 2>&1; then
+          docker network inspect otel-network >/dev/null 2>&1 || docker network create otel-network
+        fi
+      - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml up -d
+      - echo "  → db" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-db.yml up -d
+      - echo "  → kafka" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-kafka.yml up -d
+      - echo "  → ai-tools" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai-tools.yml up -d
+      - echo "  → ai" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai.yml up -d --build
+      - echo "  → apps" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-apps.yml up -d --build
+      - echo "  → traefik" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-traefik.yml up -d
+      - echo "Stack up."
+
+  compose-down:
+    desc: "Stop full stack: traefik → apps → ai → ai-tools → kafka → db → observability"
+    silent: true
+    cmds:
+      - |
+        if [ -z "{{.COMPOSE_BASE}}" ]; then
+          echo "ERROR: No container runtime found (docker or podman). Install one first."
+          exit 1
+        fi
+      - echo "Tearing down (ingress first)..."
+      - echo "  → traefik" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-traefik.yml down
+      - echo "  → apps" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-apps.yml down
+      - echo "  → ai" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai.yml down
+      - echo "  → ai-tools" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai-tools.yml down
+      - echo "  → kafka" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-kafka.yml down
+      - echo "  → db" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-db.yml down
+      - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml down
+      - echo "Stack down."
+
+  # ---------------------------------------------------------------------------
+  # Code quality
+  # ---------------------------------------------------------------------------
+
+  lint:
+    desc: "Lint all projects with ruff (PROJECTS: all 16 dirs including agents)"
+    cmds:
+      - echo "Linting all projects with ruff..."
+      - uvx ruff check {{.PROJECTS}}
+
+  tools-format:
+    desc: "Format all projects with ruff format (runs from repo root, applies root pyproject.toml)"
+    cmds:
+      - echo "Formatting all projects with ruff format..."
+      - uvx ruff format {{.PROJECTS}}
+
+  # ---------------------------------------------------------------------------
+  # Test pipeline (sequential: lint → unit → integration)
+  # Tip: use 'task --continue test' to run all phases even on failure.
+  # ---------------------------------------------------------------------------
+
+  test:
+    desc: "Run full test pipeline: test-lint → test-unit → test-integration (sequential)"
+    cmds:
+      - task: test-lint
+      - task: test-unit
+      - task: test-integration
+
+  test-lint:
+    desc: "Lint KEEPER services only (7 business services, subset of lint)"
+    cmds:
+      - echo "Linting KEEPER services..."
+      - uvx ruff check {{.KEEPER_SERVICES}}
+
+  test-unit:
+    desc: "Run pytest smoke tests for all KEEPER services (no Docker required)"
+    silent: true
+    cmds:
+      - echo "Running smoke tests for KEEPER services..."
+      - |
+        failed=0; total_tests=0
+        for svc in {{.KEEPER_SERVICES}}; do
+          printf "  %-20s" "$svc"
+          if [ ! -d "{{.TASKFILE_DIR}}/$svc" ]; then
+            echo "✗ (directory not found: $svc)"
+            failed=$((failed+1))
+            continue
+          fi
+          output=$(cd "{{.TASKFILE_DIR}}/$svc" 2>&1 && timeout 60 uv run pytest tests/ -q --tb=short 2>&1)
+          exitcode=$?
+          if [ $exitcode -eq 0 ]; then
+            tcount=$(echo "$output" | sed -n 's/^\([0-9]\+\) passed.*/\1/p' | head -1)
+            total_tests=$((total_tests + ${tcount:-0}))
+            echo "✓ (${tcount:-?} passed)"
+          elif [ $exitcode -eq 124 ]; then
+            echo "✗ (timeout >60s)"
+            printf "  === %s ===\n" "$svc"
+            echo "$output" | sed 's/^/  /'
+            failed=$((failed+1))
+          elif [ $exitcode -eq 5 ]; then
+            echo "✗ (no tests found — add tests to tests/)"
+            printf "  === %s ===\n" "$svc"
+            echo "$output" | sed 's/^/  /'
+            failed=$((failed+1))
+          else
+            echo "✗"
+            printf "  === %s ===\n" "$svc"
+            echo "$output" | sed 's/^/  /'
+            failed=$((failed+1))
+          fi
+        done
+        if [ $failed -eq 0 ]; then
+          echo "All smoke tests passed ($total_tests tests)"
+        else
+          echo "$failed service(s) failed; $total_tests tests passed in services that passed"
+          exit 1
+        fi
+
+  test-integration:
+    desc: "Check container health for order and stock (requires running stack)"
+    silent: true
+    cmds:
+      - echo "Checking container health for {{.HEALTHCHECK_SERVICES}} (requires running stack)..."
+      - |
+        COMPOSE_CMD="{{.COMPOSE_CMD}}"
+        DOCKER_AVAILABLE=$(command -v docker >/dev/null 2>&1 && echo true || echo false)
+        PODMAN_AVAILABLE=$(command -v podman >/dev/null 2>&1 && echo true || echo false)
+        if [ "$DOCKER_AVAILABLE" = "false" ] && [ "$PODMAN_AVAILABLE" = "false" ]; then
+          echo "  No container runtime found (docker/podman) — skipping integration checks"
+          exit 0
+        fi
+        if ! $COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps {{.HEALTHCHECK_SERVICES}} 2>/dev/null | grep -qE "\b(Up|running|healthy|unhealthy|starting)\b"; then
+          echo "  Services {{.HEALTHCHECK_SERVICES}} not running — skipping integration checks (run task compose-up first)"
+          exit 0
+        fi
+        failed=0
+        for svc in {{.HEALTHCHECK_SERVICES}}; do
+          printf "  %-20s" "$svc"
+          status=$($COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps "$svc" --format '{{`{{.Health}}`}}' 2>/dev/null | head -1)
+          status=${status:-unknown}
+          if [ "$status" = "healthy" ]; then
+            echo "✓ healthy"
+          elif [ "$status" = "unknown" ]; then
+            echo "✗ unknown (no HEALTHCHECK instruction in docker-compose-apps.yml for $svc)"
+            failed=$((failed+1))
+          else
+            echo "✗ $status"
+            failed=$((failed+1))
+          fi
+        done
+        if [ $failed -eq 0 ]; then echo "All services healthy"; else echo "$failed service(s) unhealthy"; exit 1; fi
+
+  # ---------------------------------------------------------------------------
+  # AI models
+  # ---------------------------------------------------------------------------
+
+  models-init:
+    desc: "Pull Ollama AI models into running ollama container (docker or podman)"
+    silent: true
+    cmds:
+      - echo "Detecting runtime and looking for running container 'ollama'..."
+      - |
+        RUNTIME=""
+        if command -v podman >/dev/null 2>&1 && podman ps --format '{{`{{.Names}}`}}' | grep -xq ollama; then RUNTIME=podman; fi
+        if [ -z "$RUNTIME" ] && command -v docker >/dev/null 2>&1 && docker ps --format '{{`{{.Names}}`}}' | grep -xq ollama; then RUNTIME=docker; fi
+        if [ -z "$RUNTIME" ]; then
+          echo "No running 'ollama' container found (docker or podman). Start it first."
+          exit 1
+        fi
+        echo "Using $RUNTIME exec to run pulls"
+        pull_failed=0
+        for m in {{.MODELS}}; do
+          echo "--> Pulling $m"
+          if [ "$RUNTIME" = "docker" ]; then
+            docker exec ollama sh -c "ollama pull $m" || { echo "pull failed for $m"; pull_failed=$((pull_failed+1)); }
+          else
+            podman exec ollama sh -c "ollama pull $m" || { echo "pull failed for $m"; pull_failed=$((pull_failed+1)); }
+          fi
+        done
+        if [ $pull_failed -eq 0 ]; then
+          echo "models-init: done"
+        else
+          echo "models-init: $pull_failed pull(s) failed"
+          exit 1
+        fi

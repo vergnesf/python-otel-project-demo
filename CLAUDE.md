@@ -40,26 +40,28 @@ Two-layer model:
 
 - **Python 3.14+** and **UV** — see `.github/instructions/python.instructions.md` for full conventions.
   Critical rule: always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly.
-- **Docker Compose** — 7 split files orchestrated via `Makefile`
+- **Docker Compose** — 7 split files orchestrated via `Taskfile.yml` (go-task >= 3.28, install: `mise use task@latest` or `brew install go-task`)
 - **Ruff** — linting and formatting, line-length=200, rules: E, F, W, I (configured in root `pyproject.toml`)
 - **Pyright** — type checking
 
-## Key Makefile Targets
+## Key Task Targets
 
 ```bash
-make compose-up       # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
-make compose-down     # Stop all services (reverse order)
-make lint             # Ruff check across all projects (PROJECTS var — includes agents)
-make tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
-make models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
-make test             # test-lint + test-unit + test-integration (stops on first failure; use make -k to run all)
-make test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of make lint)
-make test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
-make test-integration # Container health checks (order, stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
+task compose-up       # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
+task compose-down     # Stop all services: traefik first (ingress), then apps → ai → ai-tools → kafka → db → observability
+task lint             # Ruff check across all projects (PROJECTS var — includes agents)
+task tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
+task models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
+task test             # test-lint → test-unit → test-integration (sequential, stops on first failure)
+task --continue test  # Run all test phases even if one fails
+task test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of lint)
+task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
+task test-integration # Container health checks (order, stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
+task --list           # Show all available tasks with descriptions
 ```
 
-> **Makefile variable scopes:** `PROJECTS` = all services (see Makefile for the full list), used by `make lint`.
-> `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `make test-lint` and `make test-unit`.
+> **Taskfile variable scopes:** `PROJECTS` = all services (see `Taskfile.yml` for the full list), used by `task lint`.
+> `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
 > `HEALTHCHECK_SERVICES` (2 dirs) = `order` and `stock` — only Flask services with container healthchecks, used by the `test-integration` health loop.
 > Agent services (`agent-*`) and shared libs (`common-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
