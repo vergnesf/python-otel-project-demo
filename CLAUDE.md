@@ -40,7 +40,7 @@ Two-layer model:
 
 - **Python 3.14+** and **UV** — see `.github/instructions/python.instructions.md` for full conventions.
   Critical rule: always `uv run <cmd>`, never call `python`/`pip`/`pytest` directly.
-- **Docker Compose** — 7 split files orchestrated via `Taskfile.yml` (go-task)
+- **Docker Compose** — 7 split files orchestrated via `Taskfile.yml` (go-task >= 3.28, install: `mise use task@latest` or `brew install go-task`)
 - **Ruff** — linting and formatting, line-length=200, rules: E, F, W, I (configured in root `pyproject.toml`)
 - **Pyright** — type checking
 
@@ -53,6 +53,7 @@ task lint             # Ruff check across all projects (PROJECTS var — include
 task tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
 task models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
 task test             # test-lint → test-unit → test-integration (sequential, stops on first failure)
+task --continue test  # Run all test phases even if one fails
 task test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of lint)
 task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
 task test-integration # Container health checks (order, stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
