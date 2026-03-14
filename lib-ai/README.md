@@ -19,7 +19,7 @@ queries, and how to share AI infrastructure across multiple agent services witho
 | `llm_utils.py` | Text extraction utilities for LLM responses |
 | `ollama_utils.py` | Ollama model loading/unloading helpers |
 
-See `common_ai/__init__.py` for the current public API.
+See `lib_ai/__init__.py` for the current public API.
 
 ## Dependencies
 
@@ -32,7 +32,7 @@ See `common_ai/__init__.py` for the current public API.
 ## Development
 
 ```bash
-cd common-ai/ && uv sync
+cd lib-ai/ && uv sync
 uv run ruff check .
 ```
 

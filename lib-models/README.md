@@ -25,10 +25,10 @@ All models include a `to_json()` method for Kafka serialization.
 
 ```toml
 # pyproject.toml
-dependencies = ["common-models"]
+dependencies = ["lib-models"]
 
 [tool.uv.sources]
-common-models = { path = "../common-models", editable = true }
+lib-models = { path = "../lib-models", editable = true }
 ```
 
 Then run `uv sync` to activate the editable install.
@@ -36,7 +36,7 @@ Then run `uv sync` to activate the editable install.
 ## Development
 
 ```bash
-cd common-models/ && uv sync
+cd lib-models/ && uv sync
 uv run ruff check .
 ```
 

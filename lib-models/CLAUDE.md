@@ -1,9 +1,9 @@
-# CLAUDE.md — common-models
+# CLAUDE.md — lib-models
 
 ## What this library does
 
 Shared **Pydantic v2 models** used across all KEEPER business services.
-Installed as an editable local package (`path = "../common-models", editable = true`)
+Installed as an editable local package (`path = "../lib-models", editable = true`)
 in every service that needs it.
 
 ## Tech stack
@@ -14,7 +14,7 @@ in every service that needs it.
 ## Models
 
 ```
-common_models/models.py
+lib_models/models.py
 ├── WoodType (Enum)     — OAK, MAPLE, BIRCH, ELM, PINE
 ├── OrderStatus (Enum)  — READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED
 ├── Stock               — wood_type: WoodType, quantity: int
@@ -26,7 +26,7 @@ All models include a `to_json()` method for Kafka serialization.
 
 ## Adding new models
 
-1. Edit `common_models/models.py`
+1. Edit `lib_models/models.py`
 2. The editable install means all dependent services pick up changes immediately
 3. Run `uv run ruff check .` before committing
 

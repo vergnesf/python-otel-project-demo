@@ -1,4 +1,4 @@
-# CLAUDE.md — common-ai
+# CLAUDE.md — lib-ai
 
 ## What this library does
 
@@ -25,7 +25,7 @@ KEEPER business services.
 | `llm_utils.py` | Text extraction utilities for LLM responses |
 | `ollama_utils.py` | Ollama model loading/unloading helpers |
 
-Check `common_ai/__init__.py` for the current public API — do not rely on
+Check `lib_ai/__init__.py` for the current public API — do not rely on
 internal module paths directly as they may change.
 
 ## What I learned building this
