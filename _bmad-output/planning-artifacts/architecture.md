@@ -32,6 +32,29 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **Routing:** LLM call (not keyword rules) to decide which signals to query (logs/metrics/traces/all)
 - **Key constraint — Portability:** system must be app-agnostic. Application topology injected via an `app-context` file (YAML/MD), not hardcoded. Goal: deploy elsewhere by swapping the context file, not the code.
 
+### Discussion notes — choices made and why
+
+**Pourquoi l'orchestrateur comme point d'entrée ?**
+Intuition de a-team : l'orchestrateur est le cerveau, il doit exister pour que tout ait du sens.
+Nuance Winston : ne pas le construire seul — le coupler dès le départ à au moins un agent feuille opérationnel pour pouvoir tester end-to-end. `agent-logs` suggéré comme premier agent feuille (Loki = plus simple, MCPGrafanaClient.query_logs déjà implémenté).
+
+**Pourquoi LLM call pour le routing et pas des règles keyword ?**
+L'utilisateur cible est une équipe support — les questions sont en langage naturel métier ("les commandes passent plus depuis ce matin"), pas des requêtes techniques. Les règles keyword ne suffisent pas pour capturer l'intent métier. Le LLM comprend le contexte et choisit les bons signaux.
+
+**Pourquoi la contrainte de portabilité ?**
+a-team veut pouvoir déployer ce système ailleurs — donner une doc applicative et que ça marche sans toucher au code. Ça interdit de hardcoder les noms de services, la topologie, les labels OTEL. Tout ça doit venir d'un fichier `app-context` externe.
+
+**Pourquoi le pattern Reflexion (évaluation + retry) ?**
+Les LLMs locaux (Ollama) peuvent retourner des réponses vides ou insuffisantes, surtout sur des requêtes DSL complexes. Plutôt que de présenter une mauvaise réponse au support, l'orchestrateur juge la qualité et reformule. Max 2-3 retries pour éviter les boucles infinies.
+
+**Pourquoi stateless ?**
+Learning lab, pas de prod. Pas de base de données agent, pas de session distribuée. Chaque requête est indépendante. Simplifie énormément le déploiement et la maintenance.
+
+**Sortie orientée action, pas données brutes**
+Le support peut déjà voir les logs bruts dans Grafana. La valeur ajoutée du système c'est la synthèse : problème identifié / impact / cause probable / recommandation. Sans ça, ce n'est qu'un wrapper Grafana.
+
+---
+
 ### Transport layer clarification
 
 Agents do NOT send DSL queries directly to Loki/Mimir/Tempo.
