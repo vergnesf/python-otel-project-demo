@@ -208,7 +208,7 @@ tasks:
         failed=0
         for svc in {{.HEALTHCHECK_SERVICES}}; do
           printf "  %-20s" "$svc"
-          status=$($COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps "$svc" --format json 2>/dev/null | tr -d '\n' | sed -n 's/.*"Health":"\([^"]*\)".*/\1/p')
+          status=$($COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps "$svc" --format '{{`{{.Health}}`}}' 2>/dev/null | head -1)
           status=${status:-unknown}
           if [ "$status" = "healthy" ]; then
             echo "✓ healthy"
