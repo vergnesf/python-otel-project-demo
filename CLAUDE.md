@@ -48,7 +48,7 @@ Two-layer model:
 
 ```bash
 task compose-up       # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik)
-task compose-down     # Stop all services (reverse order)
+task compose-down     # Stop all services: traefik first (ingress), then apps → ai → ai-tools → kafka → db → observability
 task lint             # Ruff check across all projects (PROJECTS var — includes agents)
 task tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
 task models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
