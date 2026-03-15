@@ -18,7 +18,7 @@ COPY lib-models /app/lib-models/
 WORKDIR /app/ms-customer
 
 RUN pip install --no-cache-dir uv && \
-    uv pip install pip && \
+    uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
 COPY ms-customer/customer /app/ms-customer/customer/
