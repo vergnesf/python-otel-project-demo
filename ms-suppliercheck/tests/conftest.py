@@ -13,6 +13,7 @@ from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapProp
 
 os.environ.setdefault("ERROR_RATE", "0")
 
+# Register W3C propagator so inject/extract work in tests (not set up by opentelemetry-instrument in unit tests)
 set_global_textmap(TraceContextTextMapPropagator())
 
 _exporter = InMemorySpanExporter()

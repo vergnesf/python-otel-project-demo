@@ -237,10 +237,7 @@ def run_checks() -> Report:
     check_tempo_ready(report)
     if report.results[-1].passed:
         for svc in KEEPER_SERVICES:
-            if svc in TEMPO_NO_TRACE_SERVICES:
-                print(f"  ℹ️   tempo:{svc:<30} skipped")
-            else:
-                check_tempo_traces(report, svc)
+            check_tempo_traces(report, svc)
 
     # --- Loki ---
     print("\n── Loki ──────────────────────────────────────────")
