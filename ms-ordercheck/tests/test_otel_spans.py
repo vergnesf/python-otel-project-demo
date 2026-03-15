@@ -24,6 +24,7 @@ def test_process_order_span_ok_on_success(span_exporter):
     assert spans[0].name == "process orders"
     assert spans[0].status.status_code == StatusCode.UNSET
     assert spans[0].attributes["messaging.system"] == "kafka"
+    assert spans[0].attributes["messaging.operation.name"] == "process"
     assert spans[0].attributes["messaging.destination.name"] == "orders"
     assert spans[0].attributes["messaging.consumer.group.name"] == "order-check-group"
 

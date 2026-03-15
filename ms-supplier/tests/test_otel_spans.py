@@ -16,6 +16,7 @@ def test_send_stock_span_ok_on_success(span_exporter):
     assert spans[0].name == "send stocks"
     assert spans[0].status.status_code == StatusCode.UNSET
     assert spans[0].attributes["messaging.system"] == "kafka"
+    assert spans[0].attributes["messaging.operation.name"] == "send"
     assert spans[0].attributes["messaging.destination.name"] == "stocks"
 
 

@@ -49,11 +49,13 @@ def _run_once(error_rate: float) -> None:
     with tracer.start_as_current_span("send stocks", kind=SpanKind.PRODUCER) as span:
         span.set_attribute("messaging.system", "kafka")
         span.set_attribute("messaging.operation.name", "send")
+        span.set_attribute("messaging.operation.type", "publish")
         span.set_attribute("messaging.destination.name", "stocks")
         if random.random() < error_rate:
+            exc = RuntimeError("simulated failure")
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-            span.record_exception(RuntimeError("simulated failure"))
-            span.set_attribute("error.type", "RuntimeError")
+            span.record_exception(exc)
+            span.set_attribute("error.type", type(exc).__name__)
             logger.error("failed to send stock (Kafka/network failure)")
         else:
             stock = Stock(

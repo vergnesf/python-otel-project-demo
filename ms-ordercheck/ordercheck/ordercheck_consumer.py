@@ -49,14 +49,16 @@ def _process_message(msg, error_rate: float) -> None:
     with tracer.start_as_current_span("process orders", links=links, kind=SpanKind.CONSUMER) as span:
         span.set_attribute("messaging.system", "kafka")
         span.set_attribute("messaging.operation.name", "process")
+        span.set_attribute("messaging.operation.type", "process")
         span.set_attribute("messaging.destination.name", "orders")
         span.set_attribute("messaging.consumer.group.name", "order-check-group")
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < error_rate:
+            exc = RuntimeError("simulated failure")
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-            span.record_exception(RuntimeError("simulated failure"))
-            span.set_attribute("error.type", "RuntimeError")
+            span.record_exception(exc)
+            span.set_attribute("error.type", type(exc).__name__)
             logger.error("failed to process order (API or network failure)")
             return
 
