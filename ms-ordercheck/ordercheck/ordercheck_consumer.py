@@ -92,10 +92,6 @@ def _shutdown(signum, frame):
     running = False
 
 
-signal.signal(signal.SIGTERM, _shutdown)
-signal.signal(signal.SIGINT, _shutdown)
-
-
 def consume_messages():
     consumer.subscribe(["orders"])
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
@@ -129,5 +125,7 @@ def consume_messages():
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
     logger.info("OrderCheck service starting")
     consume_messages()
