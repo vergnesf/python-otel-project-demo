@@ -21,7 +21,8 @@ services:
     volumes:
       - ollama-data:/root/.ollama:Z
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/version || exit 1"]
+      # ollama image has no curl/wget — use bash built-in TCP check
+      test: ["CMD", "bash", "-c", "(echo > /dev/tcp/localhost/11434) 2>/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
