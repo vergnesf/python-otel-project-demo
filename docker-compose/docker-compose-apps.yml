@@ -140,8 +140,10 @@ services:
       API_URL_STOCKS: http://ms-stock:5001
       INTERVAL_SECONDS: 5
     depends_on:
-      - ms-order
-      - ms-stock
+      ms-order:
+        condition: service_started
+      ms-stock:
+        condition: service_started
     restart: unless-stopped
     networks:
       - otel-network
