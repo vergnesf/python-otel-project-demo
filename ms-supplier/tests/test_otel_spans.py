@@ -13,7 +13,10 @@ def test_send_stock_span_ok_on_success(span_exporter):
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
+    assert spans[0].name == "send stocks"
     assert spans[0].status.status_code == StatusCode.UNSET
+    assert spans[0].attributes["messaging.system"] == "kafka"
+    assert spans[0].attributes["messaging.destination.name"] == "stocks"
 
 
 def test_send_stock_span_error_on_error_rate(span_exporter):
@@ -24,6 +27,7 @@ def test_send_stock_span_error_on_error_rate(span_exporter):
     assert spans[0].status.status_code == StatusCode.ERROR
     assert "simulated failure" in spans[0].status.description
     assert any(e.name == "exception" for e in spans[0].events)
+    assert spans[0].attributes["error.type"] == "RuntimeError"
 
 
 def test_send_stock_injects_traceparent_header(span_exporter):

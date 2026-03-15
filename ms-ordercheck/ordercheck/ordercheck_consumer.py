@@ -45,12 +45,18 @@ def _process_message(msg, error_rate: float) -> None:
     remote_span_ctx = trace.get_current_span(remote_ctx).get_span_context()
     links = [trace.Link(remote_span_ctx)] if remote_span_ctx.is_valid else []
 
-    with tracer.start_as_current_span("process_order", links=links, kind=SpanKind.CONSUMER) as span:
+    # Span name follows OTEL messaging semconv: "{operation} {destination}"
+    with tracer.start_as_current_span("process orders", links=links, kind=SpanKind.CONSUMER) as span:
+        span.set_attribute("messaging.system", "kafka")
+        span.set_attribute("messaging.operation.name", "process")
+        span.set_attribute("messaging.destination.name", "orders")
+        span.set_attribute("messaging.consumer.group.name", "order-check-group")
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < error_rate:
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
             span.record_exception(RuntimeError("simulated failure"))
+            span.set_attribute("error.type", "RuntimeError")
             logger.error("failed to process order (API or network failure)")
             return
 

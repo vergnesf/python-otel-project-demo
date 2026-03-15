@@ -101,6 +101,7 @@ def process_registered_order():
             except Exception as e:
                 span.set_status(StatusCode.ERROR, str(e))
                 span.record_exception(e)
+                span.set_attribute("error.type", type(e).__name__)
                 logger.error("Failed to process order %s: %s", order["id"], e)
                 # Attempt to mark the order as BLOCKED, but don't let a failed
                 # status update crash the whole worker. Log failures and continue.

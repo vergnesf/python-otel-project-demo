@@ -21,7 +21,11 @@ def test_process_order_span_ok_on_success(span_exporter):
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
+    assert spans[0].name == "process orders"
     assert spans[0].status.status_code == StatusCode.UNSET
+    assert spans[0].attributes["messaging.system"] == "kafka"
+    assert spans[0].attributes["messaging.destination.name"] == "orders"
+    assert spans[0].attributes["messaging.consumer.group.name"] == "order-check-group"
 
 
 def test_process_order_span_error_on_error_rate(span_exporter):
@@ -31,6 +35,7 @@ def test_process_order_span_error_on_error_rate(span_exporter):
     assert len(spans) == 1
     assert spans[0].status.status_code == StatusCode.ERROR
     assert any(e.name == "exception" for e in spans[0].events)
+    assert spans[0].attributes["error.type"] == "RuntimeError"
 
 
 def test_process_order_links_to_producer_trace(span_exporter):
@@ -51,7 +56,7 @@ def test_process_order_links_to_producer_trace(span_exporter):
         _process_message(msg, 0.0)
 
     spans = span_exporter.get_finished_spans()
-    process_span = next((s for s in spans if s.name == "process_order"), None)
+    process_span = next((s for s in spans if s.name == "process orders"), None)
     assert process_span is not None
     # Consumer span has its own trace_id (not the producer's)
     assert process_span.context.trace_id != trace_id

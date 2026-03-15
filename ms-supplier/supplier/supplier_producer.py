@@ -45,10 +45,15 @@ def send_stock(stock: Stock):
 def _run_once(error_rate: float) -> None:
     # Simulate random error for observability testing
     # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-    with tracer.start_as_current_span("send_stock", kind=SpanKind.PRODUCER) as span:
+    # Span name follows OTEL messaging semconv: "{operation} {destination}"
+    with tracer.start_as_current_span("send stocks", kind=SpanKind.PRODUCER) as span:
+        span.set_attribute("messaging.system", "kafka")
+        span.set_attribute("messaging.operation.name", "send")
+        span.set_attribute("messaging.destination.name", "stocks")
         if random.random() < error_rate:
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
             span.record_exception(RuntimeError("simulated failure"))
+            span.set_attribute("error.type", "RuntimeError")
             logger.error("failed to send stock (Kafka/network failure)")
         else:
             stock = Stock(
