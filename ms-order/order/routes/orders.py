@@ -136,8 +136,11 @@ def read_orders_route():
             jsonify({"error": "Simulated API error during order list"}),
             502,
         )
-    skip = int(request.args.get("skip", 0))
-    limit = int(request.args.get("limit", 10))
+    try:
+        skip = int(request.args.get("skip", 0))
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "skip and limit must be integers"}), 400
 
     db = SessionLocal()
     try:
@@ -198,12 +201,20 @@ def read_orders_by_status_route(status):
             jsonify({"error": "Simulated API error during order list by status"}),
             502,
         )
-    skip = int(request.args.get("skip", 0))
-    limit = int(request.args.get("limit", 10))
+    try:
+        skip = int(request.args.get("skip", 0))
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "skip and limit must be integers"}), 400
+
+    try:
+        order_status = OrderStatus(status)
+    except ValueError:
+        return jsonify({"error": f"Invalid status: {status}"}), 400
 
     db = SessionLocal()
     try:
-        orders = get_orders_by_status(db=db, order_status=OrderStatus(status), skip=skip, limit=limit)
+        orders = get_orders_by_status(db=db, order_status=order_status, skip=skip, limit=limit)
         return jsonify([order.to_dict() for order in orders])
     except Exception:
         current_app.logger.exception("Unexpected error during order list by status")
