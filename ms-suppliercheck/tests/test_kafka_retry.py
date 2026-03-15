@@ -6,6 +6,7 @@ sleep briefly, and continue polling instead of raising KafkaException and crashi
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from confluent_kafka import KafkaError
 from suppliercheck.suppliercheck_consumer import consume_messages
 
@@ -76,11 +77,6 @@ def test_other_kafka_error_still_raises():
     with (
         patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
         patch("suppliercheck.suppliercheck_consumer.time.sleep"),
+        pytest.raises(KafkaException),
     ):
-        try:
-            consume_messages()
-            raised = False
-        except KafkaException:
-            raised = True
-
-    assert raised, "KafkaException should be raised for non-UNKNOWN_TOPIC errors"
+        consume_messages()

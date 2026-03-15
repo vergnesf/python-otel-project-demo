@@ -70,7 +70,11 @@ def test_get_model_params_exact_match():
 
 
 def test_get_model_params_base_name_match():
-    """'qwen3:1.5b' should match 'qwen3:0.6b' key via base-name prefix."""
+    """'qwen3:1.5b' should match 'qwen3:0.6b' key via base-name prefix.
+
+    Note: the matching iterates dict keys in insertion order. _FAKE_CONFIG has
+    a single 'qwen3*' key so the result is deterministic here.
+    """
     llm_config_module._MODEL_PARAMS_CONFIG = _FAKE_CONFIG
     params = get_model_params("qwen3:1.5b")
     assert params["temperature"] == 0.0
