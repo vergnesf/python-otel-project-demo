@@ -4,7 +4,7 @@ import random
 import time
 
 import requests
-from lib_models.logging import OtelJsonFormatter
+from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import OrderStatus
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode

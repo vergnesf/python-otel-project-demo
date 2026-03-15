@@ -6,7 +6,7 @@ import signal
 import time
 
 from confluent_kafka import Producer
-from lib_models.logging import OtelJsonFormatter
+from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import Order, WoodType
 from opentelemetry import trace
 from opentelemetry.propagate import inject

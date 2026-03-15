@@ -6,7 +6,7 @@ import time
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
-from lib_models.logging import OtelJsonFormatter
+from lib_models.log_formatter import OtelJsonFormatter
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import SpanKind, StatusCode

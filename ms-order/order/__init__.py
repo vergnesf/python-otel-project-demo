@@ -3,7 +3,7 @@ import os
 
 from flasgger import Swagger
 from flask import Flask, jsonify
-from lib_models.logging import OtelJsonFormatter
+from lib_models.log_formatter import OtelJsonFormatter
 
 from .database import DATABASE_URL, db
 
