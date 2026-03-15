@@ -230,6 +230,15 @@ tasks:
   # AI models
   # ---------------------------------------------------------------------------
 
+  check-otel:
+    desc: "Verify OTEL pipeline: check traces (Tempo), logs (Loki), metrics (Mimir) for all KEEPER services"
+    cmds:
+      - uv run python {{.TASKFILE_DIR}}/scripts/check_otel_pipeline.py
+
+  # ---------------------------------------------------------------------------
+  # AI models
+  # ---------------------------------------------------------------------------
+
   models-init:
     desc: "Pull Ollama AI models into running ollama container (docker or podman)"
     silent: true
