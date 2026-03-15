@@ -8,7 +8,8 @@ import time
 from confluent_kafka import Producer
 from lib_models.models import Order, WoodType
 from opentelemetry import trace
-from opentelemetry.trace import StatusCode
+from opentelemetry.propagate import inject
+from opentelemetry.trace import SpanKind, StatusCode
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -35,14 +36,16 @@ producer = Producer({"bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVER
 
 
 def send_order(order: Order):
-    producer.produce("orders", value=json.dumps(order.model_dump()), callback=delivery_report)
+    headers: dict[str, str] = {}
+    inject(headers)  # inject W3C traceparent/tracestate from active span
+    producer.produce("orders", value=json.dumps(order.model_dump()), headers=list(headers.items()), callback=delivery_report)
     producer.poll(0)
 
 
 def _run_once(error_rate: float) -> None:
     # Simulate random error for observability testing
     # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-    with tracer.start_as_current_span("send_order") as span:
+    with tracer.start_as_current_span("send_order", kind=SpanKind.PRODUCER) as span:
         if random.random() < error_rate:
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
             span.record_exception(RuntimeError("simulated failure"))

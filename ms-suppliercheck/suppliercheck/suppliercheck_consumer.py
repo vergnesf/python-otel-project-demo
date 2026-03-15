@@ -7,7 +7,8 @@ import time
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
 from opentelemetry import trace
-from opentelemetry.trace import StatusCode
+from opentelemetry.propagate import extract
+from opentelemetry.trace import SpanKind, StatusCode
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -34,6 +35,40 @@ consumer.subscribe(["stocks"])
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000") + "/stocks"
 
 
+def _process_message(msg, error_rate: float) -> None:
+    # Extract W3C trace context from Kafka message headers and attach it as a span link.
+    # OTEL messaging spec recommends links (not parent-child) as the default for messaging:
+    # https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/
+    raw_headers = msg.headers() or []
+    carrier = {k: v.decode() if isinstance(v, bytes) else v for k, v in raw_headers}
+    remote_ctx = extract(carrier)
+    remote_span_ctx = trace.get_current_span(remote_ctx).get_span_context()
+    links = [trace.Link(remote_span_ctx)] if remote_span_ctx.is_valid else []
+
+    with tracer.start_as_current_span("process_stock", links=links, kind=SpanKind.CONSUMER) as span:
+        # Simulate random error for observability testing
+        # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+        if random.random() < error_rate:
+            span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
+            span.record_exception(RuntimeError("simulated failure"))
+            logger.error("failed to process stock (API or network failure)")
+            return
+
+        stock_data = json.loads(msg.value().decode("utf-8"))
+        logger.info("Received stock data: %s", stock_data)
+
+        try:
+            response = requests.post(API_URL, json=stock_data, timeout=5)
+            if response.status_code == 201:
+                logger.info("Stock data successfully sent to API")
+            else:
+                logger.error("Failed to send stock data to API: %s", response.text)
+        except requests.Timeout:
+            logger.error("Timeout calling API %s, skipping message", API_URL)
+        except requests.RequestException as e:
+            logger.error("HTTP error calling API: %s", e)
+
+
 def consume_messages():
     try:
         ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
@@ -57,28 +92,7 @@ def consume_messages():
                 elif msg.error():
                     raise KafkaException(msg.error())
             else:
-                with tracer.start_as_current_span("process_stock") as span:
-                    # Simulate random error for observability testing
-                    # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-                    if random.random() < ERROR_RATE:
-                        span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-                        span.record_exception(RuntimeError("simulated failure"))
-                        logger.error("failed to process stock (API or network failure)")
-                        continue
-
-                    stock_data = json.loads(msg.value().decode("utf-8"))
-                    logger.info("Received stock data: %s", stock_data)
-
-                    try:
-                        response = requests.post(API_URL, json=stock_data, timeout=5)
-                        if response.status_code == 201:
-                            logger.info("Stock data successfully sent to API")
-                        else:
-                            logger.error("Failed to send stock data to API: %s", response.text)
-                    except requests.Timeout:
-                        logger.error("Timeout calling API %s, skipping message", API_URL)
-                    except requests.RequestException as e:
-                        logger.error("HTTP error calling API: %s", e)
+                _process_message(msg, ERROR_RATE)
     except KeyboardInterrupt:
         logger.info("Consumer shutting down due to keyboard interrupt")
     finally:

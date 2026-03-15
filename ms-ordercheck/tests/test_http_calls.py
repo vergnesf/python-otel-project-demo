@@ -29,6 +29,9 @@ class _FakeMsg:
     def error(self):
         return None
 
+    def headers(self):
+        return []
+
 
 def _run_one_cycle(mock_response=None, post_side_effect=None):
     """Drive consume_messages() through exactly one message cycle then exit cleanly.
