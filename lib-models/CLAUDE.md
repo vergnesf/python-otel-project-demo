@@ -15,14 +15,16 @@ in every service that needs it.
 
 ```
 lib_models/models.py
-├── WoodType (Enum)     — OAK, MAPLE, BIRCH, ELM, PINE
-├── OrderStatus (Enum)  — READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED
-├── Stock               — wood_type: WoodType, quantity: int
-├── Order               — wood_type: WoodType, quantity: int
-└── OrderTracking       — id, order_status, wood_type, quantity, date
+├── WoodType (Enum)          — OAK, MAPLE, BIRCH, ELM, PINE
+├── OrderStatus (Enum)       — READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED
+├── Stock                    — wood_type: WoodType, quantity: int
+├── Order                    — wood_type: WoodType, quantity: int
+├── OrderTracking            — id, order_status, wood_type, quantity, date
+├── InsufficientStockError   — raised when stock is too low
+└── StockNotFoundError       — raised when stock entry does not exist
 ```
 
-All models include a `to_json()` method for Kafka serialization.
+Serialization uses Pydantic's `model_dump()` and `model_dump_json()` directly — no custom `to_json()` method.
 
 ## Adding new models
 
