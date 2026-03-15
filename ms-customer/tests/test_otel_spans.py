@@ -1,4 +1,4 @@
-"""Tests that ERROR_RATE injection marks the active span as ERROR.
+"""Tests for OTEL span status and W3C trace context propagation in ms-customer.
 
 Uses InMemorySpanExporter — no OTEL collector or Kafka broker needed.
 """
@@ -26,6 +26,23 @@ def test_send_order_span_error_on_error_rate(span_exporter):
     assert len(spans) == 1
     assert spans[0].status.status_code == StatusCode.ERROR
     assert "simulated failure" in spans[0].status.description
-    # Exception event recorded
-    events = spans[0].events
-    assert any(e.name == "exception" for e in events)
+    assert any(e.name == "exception" for e in spans[0].events)
+
+
+def test_send_order_injects_traceparent_header(span_exporter):
+    """W3C traceparent header is injected into Kafka message headers."""
+    captured_headers = None
+
+    def capture_produce(topic, value=None, headers=None, callback=None):
+        nonlocal captured_headers
+        captured_headers = headers
+
+    with patch("customer.customer_producer.producer") as mock_producer:
+        mock_producer.produce.side_effect = capture_produce
+        mock_producer.poll.return_value = None
+        with patch("customer.customer_producer.random.random", return_value=0.5):
+            _run_once(0.0)
+
+    assert captured_headers is not None
+    header_keys = [k for k, _ in captured_headers]
+    assert "traceparent" in header_keys
