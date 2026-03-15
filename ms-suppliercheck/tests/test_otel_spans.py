@@ -34,7 +34,11 @@ def test_process_stock_span_error_on_error_rate(span_exporter):
 
 
 def test_process_stock_links_to_producer_trace(span_exporter):
-    """process_stock span inherits the producer trace context via W3C headers."""
+    """process_stock span has a link to the producer span context via W3C headers.
+
+    Per OTEL messaging spec, consumers use span links (not parent-child) to
+    correlate with the producer trace.
+    """
     trace_id = 0x4BF92F3577B34DA6A3CE929D0E0E4736
     span_id = 0xA3CE929D0E0E4736
     traceparent = f"00-{trace_id:032x}-{span_id:016x}-01"
@@ -48,4 +52,8 @@ def test_process_stock_links_to_producer_trace(span_exporter):
     spans = span_exporter.get_finished_spans()
     process_span = next((s for s in spans if s.name == "process_stock"), None)
     assert process_span is not None
-    assert process_span.context.trace_id == trace_id
+    # Consumer span has its own trace_id (not the producer's)
+    assert process_span.context.trace_id != trace_id
+    # Producer trace is referenced via a link
+    assert len(process_span.links) == 1
+    assert process_span.links[0].context.trace_id == trace_id
