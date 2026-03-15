@@ -16,6 +16,7 @@ import json
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -26,7 +27,8 @@ from datetime import datetime, timezone
 
 TEMPO_URL = "http://localhost:3200"
 LOKI_URL = "http://localhost:3100"
-MIMIR_URL = "http://localhost:9009/prometheus"
+MIMIR_BASE_URL = "http://localhost:9009"
+MIMIR_URL = f"{MIMIR_BASE_URL}/prometheus"
 
 KEEPER_SERVICES = [
     "ms-customer",
@@ -80,6 +82,14 @@ def _get(url: str, timeout: int = TIMEOUT_SECONDS) -> dict:
         return json.loads(resp.read().decode())
 
 
+def _check_ready(url: str, timeout: int = TIMEOUT_SECONDS) -> None:
+    """Check that a /ready endpoint returns HTTP 200. Body is ignored (plain text)."""
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        if resp.status != 200:
+            raise RuntimeError(f"HTTP {resp.status}")
+
+
 def _now_ns() -> int:
     return int(time.time() * 1e9)
 
@@ -96,7 +106,7 @@ def _ago_ns(seconds: int) -> int:
 def check_tempo_ready(report: Report) -> None:
     """Tempo health endpoint responds."""
     try:
-        _get(f"{TEMPO_URL}/ready")
+        _check_ready(f"{TEMPO_URL}/ready")
         report.add(CheckResult("tempo:ready", True, "Tempo is ready"))
     except Exception as e:
         report.add(CheckResult("tempo:ready", False, f"Tempo not reachable: {e}"))
@@ -126,7 +136,7 @@ def check_tempo_traces(report: Report, service: str) -> None:
 def check_loki_ready(report: Report) -> None:
     """Loki ready endpoint responds."""
     try:
-        _get(f"{LOKI_URL}/ready")
+        _check_ready(f"{LOKI_URL}/ready")
         report.add(CheckResult("loki:ready", True, "Loki is ready"))
     except Exception as e:
         report.add(CheckResult("loki:ready", False, f"Loki not reachable: {e}"))
@@ -137,8 +147,6 @@ def check_loki_logs(report: Report, service: str) -> None:
     start_ns = _ago_ns(LOOKBACK_SECONDS)
     end_ns = _now_ns()
     query = f'{{service_name="{service}"}}'
-    import urllib.parse
-
     encoded_query = urllib.parse.quote(query)
     url = f"{LOKI_URL}/loki/api/v1/query_range?query={encoded_query}&start={start_ns}&end={end_ns}&limit=1"
     try:
@@ -160,7 +168,7 @@ def check_loki_logs(report: Report, service: str) -> None:
 def check_mimir_ready(report: Report) -> None:
     """Mimir /ready endpoint responds."""
     try:
-        _get("http://localhost:9009/ready")
+        _check_ready(f"{MIMIR_BASE_URL}/ready")
         report.add(CheckResult("mimir:ready", True, "Mimir is ready"))
     except Exception as e:
         report.add(CheckResult("mimir:ready", False, f"Mimir not reachable: {e}"))
@@ -170,8 +178,6 @@ def check_mimir_metrics(report: Report) -> None:
     """Active OTEL metrics exist in Mimir for KEEPER services."""
     # Query for any OTEL-generated metric with a service_name label from our services
     query = 'count by (service_name) ({__name__=~".+", service_name=~"ms-.+"})'
-    import urllib.parse
-
     encoded = urllib.parse.quote(query)
     url = f"{MIMIR_URL}/api/v1/query?query={encoded}"
     try:
@@ -195,8 +201,6 @@ def check_mimir_metrics(report: Report) -> None:
 def check_mimir_otel_collector_metrics(report: Report) -> None:
     """otelcol metrics are present — confirms collector is exporting."""
     query = 'count({__name__=~"otelcol_.+"})'
-    import urllib.parse
-
     encoded = urllib.parse.quote(query)
     url = f"{MIMIR_URL}/api/v1/query?query={encoded}"
     try:
