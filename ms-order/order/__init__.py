@@ -3,6 +3,7 @@ import os
 
 from flasgger import Swagger
 from flask import Flask, jsonify
+from lib_models.logging import OtelJsonFormatter
 
 from .database import DATABASE_URL, db
 
@@ -14,10 +15,9 @@ def create_app():
 
     # Configure logging level from environment variable
     log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(
-        level=getattr(logging, log_level, logging.INFO),
-        format="%(asctime)s %(name)s %(levelname)s [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s",
-    )
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(OtelJsonFormatter())
+    logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
     app.logger.setLevel(getattr(logging, log_level, logging.INFO))
 
     db.init_app(app)
