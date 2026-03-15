@@ -12,6 +12,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import requests
+from ordercheck.ordercheck_consumer import API_URL, consume_messages
 
 ORDER_PAYLOAD = {"wood_type": "oak", "quantity": 5}
 
@@ -51,8 +52,6 @@ def _run_one_cycle(mock_response=None, post_side_effect=None):
         patch("ordercheck.ordercheck_consumer.requests.post", mock_post),
         patch("ordercheck.ordercheck_consumer.random.random", return_value=0.5),
     ):
-        from ordercheck.ordercheck_consumer import consume_messages
-
         consume_messages()
 
     return mock_post
@@ -71,7 +70,7 @@ def test_happy_path_uses_correct_api_url():
     mock_resp.status_code = 201
     mock_post = _run_one_cycle(mock_response=mock_resp)
     called_url = mock_post.call_args.args[0]
-    assert called_url.endswith("/orders")
+    assert called_url == API_URL
 
 
 def test_non_201_response_does_not_raise():
