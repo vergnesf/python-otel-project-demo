@@ -2,7 +2,8 @@ version: '3'
 
 # Prerequisites: copy .env.example to .env before running any compose task.
 # Requires go-task >= 3.28 (for {{.TASKFILE_DIR}} support). Install: mise use task@latest
-dotenv: ['.env']
+# versions.env is committed (image tags) — loaded automatically, no copy needed.
+dotenv: ['versions.env', '.env']
 
 vars:
   # All service directories — used by lint and tools-format (ruff). (16 dirs total)

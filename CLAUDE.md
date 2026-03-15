@@ -67,8 +67,9 @@ task --list           # Show all available tasks with descriptions
 
 ## Environment Setup
 
-Copy `.env.example` to `.env` before starting — it contains Docker image tags and
-the `GRAFANA_SERVICE_ACCOUNT_TOKEN` placeholder required for the agent layer.
+Copy `.env.example` to `.env` before starting — it contains secrets and local overrides
+(`GRAFANA_SERVICE_ACCOUNT_TOKEN`, `POSTGRES_PASSWORD`).
+Docker image versions live in `versions.env` (committed — no copy needed, override in `.env` if required).
 
 ## Git Workflow (mandatory)
 
