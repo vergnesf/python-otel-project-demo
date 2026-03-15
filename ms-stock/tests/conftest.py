@@ -18,6 +18,8 @@ import pytest
 _db_fd, _db_path = tempfile.mkstemp(suffix="_stock_test.db")
 os.close(_db_fd)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_db_path}")
+# Disable the OTEL SDK during unit tests — no collector is running.
+os.environ.setdefault("OTEL_SDK_DISABLED", "true")
 os.environ.setdefault("ERROR_RATE", "0")
 
 

@@ -10,7 +10,7 @@ from lib_models.models import OrderStatus
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
     level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s %(name)s %(levelname)s [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
