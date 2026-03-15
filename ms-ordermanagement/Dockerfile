@@ -18,7 +18,7 @@ COPY lib-models /app/lib-models/
 WORKDIR /app/ms-ordermanagement
 
 RUN pip install --no-cache-dir uv && \
-    uv add pip && \
+    uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
 COPY ms-ordermanagement/ordermanagement /app/ms-ordermanagement/ordermanagement/

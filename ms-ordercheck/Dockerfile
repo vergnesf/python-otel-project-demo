@@ -12,15 +12,16 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ms-ordercheck/pyproject.toml ./ms-ordercheck/
-COPY ms-ordercheck/ordercheck /app/ms-ordercheck/ordercheck/
-COPY lib-models ./lib-models/
+COPY ms-ordercheck/pyproject.toml /app/ms-ordercheck/
+COPY lib-models /app/lib-models/
 
 WORKDIR /app/ms-ordercheck
 
 RUN pip install --no-cache-dir uv && \
-    uv sync --no-dev && \
+    uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
+
+COPY ms-ordercheck/ordercheck /app/ms-ordercheck/ordercheck/
 
 RUN chown -R appuser:appuser /app
 
