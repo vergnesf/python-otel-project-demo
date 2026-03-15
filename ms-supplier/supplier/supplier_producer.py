@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import signal
 import time
 
 from confluent_kafka import Producer
@@ -44,23 +45,34 @@ if __name__ == "__main__":
         interval_seconds,
     )
 
-    while True:
-        # Simulate random error for observability testing
-        # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-        if random.random() < ERROR_RATE:
-            logger.error("failed to send stock (Kafka/network failure)")
+    running = True
+
+    def _shutdown(signum, frame):
+        global running
+        logger.info("Received signal %s, shutting down", signum)
+        running = False
+
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
+    try:
+        while running:
+            # Simulate random error for observability testing
+            # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+            if random.random() < ERROR_RATE:
+                logger.error("failed to send stock (Kafka/network failure)")
+                time.sleep(interval_seconds)
+                continue
+
+            stock = Stock(
+                wood_type=random.choice(list(WoodType)),
+                quantity=random.randint(1, 100),
+            )
+            logger.info("Created stock: %s", stock.model_dump())
+
+            send_stock(stock)
+            logger.info("Stock sent successfully: %s", stock.model_dump())
             time.sleep(interval_seconds)
-            continue
-
-        stock = Stock(
-            wood_type=random.choice(list(WoodType)),
-            quantity=random.randint(1, 100),
-        )
-        logger.info("Created stock: %s", stock.model_dump())
-
-        send_stock(stock)
-        logger.info("Stock sent successfully: %s", stock.model_dump())
-        time.sleep(interval_seconds)
-
-    # Wait for any outstanding messages to be delivered and delivery reports to be received
-    producer.flush()
+    finally:
+        logger.info("Flushing producer before exit")
+        producer.flush()

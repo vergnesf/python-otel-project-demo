@@ -58,7 +58,7 @@ def consume_messages():
                 stock_data = json.loads(msg.value().decode("utf-8"))
                 logger.info("Received stock data: %s", stock_data)
 
-                response = requests.post(API_URL, json=stock_data)
+                response = requests.post(API_URL, json=stock_data, timeout=5)
                 if response.status_code == 201:
                     logger.info("Stock data successfully sent to API")
                 else:

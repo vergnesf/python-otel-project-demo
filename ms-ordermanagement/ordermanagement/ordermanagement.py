@@ -26,7 +26,7 @@ HEADERS_JSON = {"Content-Type": "application/json"}
 
 def fetch_registered_orders():
     try:
-        response = requests.get(API_URL_ORDERS_REGISTERED)
+        response = requests.get(API_URL_ORDERS_REGISTERED, timeout=5)
         response.raise_for_status()
         orders = response.json()
         return orders
@@ -37,7 +37,7 @@ def fetch_registered_orders():
 
 def decrease_stock(order):
     payload = {"wood_type": order["wood_type"], "quantity": order["quantity"]}
-    response = requests.post(API_URL_STOCKS_DECREASE, headers=HEADERS_JSON, json=payload)
+    response = requests.post(API_URL_STOCKS_DECREASE, headers=HEADERS_JSON, json=payload, timeout=5)
     if response.status_code == 400:
         raise Exception("Insufficient stock")
     if response.status_code == 404:
@@ -49,7 +49,7 @@ def decrease_stock(order):
 def update_order_status(order_id, status):
     payload = {"order_status": status.value if hasattr(status, "value") else status}
     try:
-        response = requests.put(f"{API_URL_ORDERS_UPDATE}/{order_id}", headers=HEADERS_JSON, json=payload)
+        response = requests.put(f"{API_URL_ORDERS_UPDATE}/{order_id}", headers=HEADERS_JSON, json=payload, timeout=5)
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:

@@ -58,7 +58,7 @@ def consume_messages():
                 order_data = json.loads(msg.value().decode("utf-8"))
                 logger.info("Received order data: %s", order_data)
 
-                response = requests.post(API_URL, json=order_data)
+                response = requests.post(API_URL, json=order_data, timeout=5)
                 if response.status_code == 201:
                     logger.info("Order data successfully sent to API")
                 else:
