@@ -91,3 +91,51 @@ def test_timeout_does_not_crash_loop():
 
 def test_request_exception_does_not_crash_loop():
     _run_one_cycle(post_side_effect=requests.RequestException("network error"))
+
+
+class _MalformedMsg:
+    """Fake Kafka message with invalid JSON payload."""
+
+    def value(self):
+        return b"not valid json {"
+
+    def error(self):
+        return None
+
+    def headers(self):
+        return []
+
+
+def test_malformed_json_does_not_crash_loop():
+    """Malformed JSON in a Kafka message must be skipped — loop continues to next message."""
+    mock_consumer = MagicMock()
+    mock_consumer.poll.side_effect = [_MalformedMsg(), KeyboardInterrupt()]
+    mock_post = MagicMock()
+
+    with (
+        patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
+        patch("suppliercheck.suppliercheck_consumer.requests.post", mock_post),
+        patch("suppliercheck.suppliercheck_consumer.random.random", return_value=0.5),
+    ):
+        consume_messages()
+
+    mock_post.assert_not_called()
+
+
+def test_malformed_json_produces_error_span(span_exporter):
+    """Malformed Kafka message must set span status ERROR and record the exception."""
+    from opentelemetry.trace import StatusCode
+
+    mock_consumer = MagicMock()
+    mock_consumer.poll.side_effect = [_MalformedMsg(), KeyboardInterrupt()]
+
+    with (
+        patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
+        patch("suppliercheck.suppliercheck_consumer.random.random", return_value=0.5),
+    ):
+        consume_messages()
+
+    spans = span_exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].status.status_code == StatusCode.ERROR
+    assert any(e.name == "exception" for e in spans[0].events)

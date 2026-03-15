@@ -7,8 +7,8 @@ from ordercheck.ordercheck_consumer import API_URL, consumer
 
 # All imports are at module level: a collection-time ImportError is more diagnostic
 # than a runtime ImportError buried inside a test function.
-# Note: importing `consumer` triggers consumer.subscribe(["orders"]) at module level.
-# confluent_kafka.Consumer.subscribe() is lazy — no Kafka connection until poll().
+# Note: consumer.subscribe(["orders"]) is called inside consume_messages(), not at import time.
+# The Consumer object is initialized at module level but does not connect until poll().
 #
 # Scope limitation: consumer group ID, bootstrap servers, topic assignment, and ERROR_RATE
 # validity cannot be verified without a running Kafka broker. These tests confirm the module
