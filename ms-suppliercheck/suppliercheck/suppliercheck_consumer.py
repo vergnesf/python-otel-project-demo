@@ -58,11 +58,16 @@ def consume_messages():
                 stock_data = json.loads(msg.value().decode("utf-8"))
                 logger.info("Received stock data: %s", stock_data)
 
-                response = requests.post(API_URL, json=stock_data, timeout=5)
-                if response.status_code == 201:
-                    logger.info("Stock data successfully sent to API")
-                else:
-                    logger.error("Failed to send stock data to API: %s", response.text)
+                try:
+                    response = requests.post(API_URL, json=stock_data, timeout=5)
+                    if response.status_code == 201:
+                        logger.info("Stock data successfully sent to API")
+                    else:
+                        logger.error("Failed to send stock data to API: %s", response.text)
+                except requests.Timeout:
+                    logger.error("Timeout calling API %s, skipping message", API_URL)
+                except requests.RequestException as e:
+                    logger.error("HTTP error calling API: %s", e)
     except KeyboardInterrupt:
         logger.info("Consumer shutting down due to keyboard interrupt")
     finally:
