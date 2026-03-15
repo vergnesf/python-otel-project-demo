@@ -44,6 +44,18 @@ http:
       stripPrefix:
         prefixes:
           - /ollama
+    strip-tempo:
+      stripPrefix:
+        prefixes:
+          - /tempo
+    strip-loki:
+      stripPrefix:
+        prefixes:
+          - /loki
+    strip-mimir:
+      stripPrefix:
+        prefixes:
+          - /mimir
 
   routers:
     traefik-dashboard-router:
@@ -121,6 +133,24 @@ http:
       service: ollama-service
       middlewares: [strip-ollama]
 
+    tempo-router:
+      rule: "PathPrefix(`/tempo`)"
+      entryPoints: [web]
+      service: tempo-service
+      middlewares: [strip-tempo]
+
+    loki-router:
+      rule: "PathPrefix(`/loki`)"
+      entryPoints: [web]
+      service: loki-service
+      middlewares: [strip-loki]
+
+    mimir-router:
+      rule: "PathPrefix(`/mimir`)"
+      entryPoints: [web]
+      service: mimir-service
+      middlewares: [strip-mimir]
+
   services:
     akhq-service:
       loadBalancer:
@@ -181,3 +211,18 @@ http:
       loadBalancer:
         servers:
           - url: http://ollama:11434
+
+    tempo-service:
+      loadBalancer:
+        servers:
+          - url: http://tempo:3200
+
+    loki-service:
+      loadBalancer:
+        servers:
+          - url: http://loki:3100
+
+    mimir-service:
+      loadBalancer:
+        servers:
+          - url: http://mimir:9009

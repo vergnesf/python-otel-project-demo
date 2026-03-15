@@ -25,9 +25,10 @@ from datetime import datetime, timezone
 # Configuration
 # ---------------------------------------------------------------------------
 
-TEMPO_URL = "http://localhost:3200"
-LOKI_URL = "http://localhost:3100"
-MIMIR_BASE_URL = "http://localhost:9009"
+TRAEFIK_URL = "http://localhost:8081"
+TEMPO_URL = f"{TRAEFIK_URL}/tempo"
+LOKI_URL = f"{TRAEFIK_URL}/loki"
+MIMIR_BASE_URL = f"{TRAEFIK_URL}/mimir"
 MIMIR_URL = f"{MIMIR_BASE_URL}/prometheus"
 
 KEEPER_SERVICES = [
@@ -114,9 +115,10 @@ def check_tempo_ready(report: Report) -> None:
 
 def check_tempo_traces(report: Report, service: str) -> None:
     """Recent traces exist in Tempo for the given KEEPER service."""
-    start_ns = _ago_ns(LOOKBACK_SECONDS)
-    end_ns = _now_ns()
-    url = f"{TEMPO_URL}/api/search?tags=service.name%3D{service}&start={start_ns}&end={end_ns}&limit=1"
+    # Tempo /api/search expects start/end as Unix seconds (not nanoseconds)
+    start_s = int(time.time() - LOOKBACK_SECONDS)
+    end_s = int(time.time())
+    url = f"{TEMPO_URL}/api/search?tags=service.name%3D{service}&start={start_s}&end={end_s}&limit=1"
     try:
         data = _get(url)
         traces = data.get("traces", [])
@@ -199,8 +201,8 @@ def check_mimir_metrics(report: Report) -> None:
 
 
 def check_mimir_otel_collector_metrics(report: Report) -> None:
-    """otelcol metrics are present — confirms collector is exporting."""
-    query = 'count({__name__=~"otelcol_.+"})'
+    """otel_sdk metrics are present — confirms SDK telemetry is flowing through the pipeline."""
+    query = 'count({__name__=~"otel_sdk_.+"})'
     encoded = urllib.parse.quote(query)
     url = f"{MIMIR_URL}/api/v1/query?query={encoded}"
     try:
@@ -208,11 +210,11 @@ def check_mimir_otel_collector_metrics(report: Report) -> None:
         results = data.get("data", {}).get("result", [])
         count = int(float(results[0]["value"][1])) if results else 0
         if count > 0:
-            report.add(CheckResult("mimir:otelcol", True, f"{count} otelcol metric series active"))
+            report.add(CheckResult("mimir:otel_sdk", True, f"{count} otel_sdk metric series active"))
         else:
-            report.add(CheckResult("mimir:otelcol", False, "No otelcol metrics found — collector may not be exporting"))
+            report.add(CheckResult("mimir:otel_sdk", False, "No otel_sdk metrics found — SDK telemetry may not be flowing"))
     except Exception as e:
-        report.add(CheckResult("mimir:otelcol", False, f"Query failed: {e}"))
+        report.add(CheckResult("mimir:otel_sdk", False, f"Query failed: {e}"))
 
 
 # ---------------------------------------------------------------------------
