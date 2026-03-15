@@ -64,6 +64,10 @@ tasks:
 
   compose-up:
     desc: "Start full stack: observability → db → kafka → ai-tools → ai → apps → traefik"
+    # --no-recreate: prevents podman-compose from stopping/removing containers already running in the
+    # shared Podman pod, which causes "container state improper" errors when layers start sequentially.
+    # Trade-off: if the stack is already running, config/image changes are NOT applied (containers kept as-is).
+    # To apply changes, always run: task compose-down && task compose-up
     silent: true
     cmds:
       - |
