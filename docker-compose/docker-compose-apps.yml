@@ -22,6 +22,9 @@ services:
       OTEL_SERVICE_NAME: ms-customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    depends_on:
+      broker:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -39,6 +42,9 @@ services:
       OTEL_SERVICE_NAME: ms-supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    depends_on:
+      broker:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -89,7 +95,10 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-order:5000
     depends_on:
-      - ms-order
+      ms-order:
+        condition: service_started
+      broker:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -108,7 +117,10 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-stock:5001
     depends_on:
-      - ms-stock
+      ms-stock:
+        condition: service_started
+      broker:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -128,8 +140,10 @@ services:
       API_URL_STOCKS: http://ms-stock:5001
       INTERVAL_SECONDS: 5
     depends_on:
-      - ms-order
-      - ms-stock
+      ms-order:
+        condition: service_started
+      ms-stock:
+        condition: service_started
     restart: unless-stopped
     networks:
       - otel-network
