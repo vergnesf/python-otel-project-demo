@@ -3,7 +3,7 @@ This module contains the schemas for the order service.
 """
 
 from lib_models.models import WoodType
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class OrderBase(BaseModel):
@@ -40,5 +40,3 @@ class Order(OrderBase):
     """
 
     id: int  # The unique identifier for the order
-
-    model_config = ConfigDict(from_attributes=True)
