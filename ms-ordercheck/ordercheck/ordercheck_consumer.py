@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import time
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
@@ -46,6 +47,9 @@ def consume_messages():
                         msg.partition(),
                         msg.offset(),
                     )
+                elif msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                    logger.warning("Topic not available yet, retrying in 5s...")
+                    time.sleep(5)
                 elif msg.error():
                     raise KafkaException(msg.error())
             else:
