@@ -5,6 +5,8 @@ import time
 
 import requests
 from lib_models.models import OrderStatus
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 # Configure logging with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -14,6 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+tracer = trace.get_tracer(__name__)
 
 API_URL_ORDERS = os.environ.get("API_URL_ORDERS", "http://127.0.0.1:8000")
 API_URL_STOCKS = os.environ.get("API_URL_STOCKS", "http://127.0.0.1:8000")
@@ -81,37 +85,40 @@ def process_registered_order():
     logger.info("Found %d registered orders to process", len(orders))
 
     for order in orders:
-        try:
-            # Simulate random error for observability testing
-            # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-            if random.random() < ERROR_RATE:
-                # Simulate an external API or DB failure
-                raise Exception("external API or DB failure during order processing")
-
-            logger.info("Processing order: %s", order)
-            decrease_stock(order)
-            logger.info("Stock decreased for order: %s", order)
-            update_order_status(order["id"], OrderStatus.READY)
-            logger.info("Order status updated to READY for order: %s", order)
-        except Exception as e:
-            logger.error("Failed to process order %s: %s", order["id"], e)
-            # Attempt to mark the order as BLOCKED, but don't let a failed
-            # status update crash the whole worker. Log failures and continue.
+        with tracer.start_as_current_span("process_order") as span:
             try:
-                update_order_status(order["id"], OrderStatus.BLOCKED)
-                logger.info("Order status updated to BLOCKED for order: %s", order)
-            except requests.RequestException as re:
-                logger.error(
-                    "Could not mark order %s as BLOCKED: %s. Continuing.",
-                    order["id"],
-                    re,
-                )
-            except Exception as re:
-                logger.error(
-                    "Unexpected error while marking order %s as BLOCKED: %s. Continuing.",
-                    order["id"],
-                    re,
-                )
+                # Simulate random error for observability testing
+                # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+                if random.random() < ERROR_RATE:
+                    # Simulate an external API or DB failure
+                    raise Exception("external API or DB failure during order processing")
+
+                logger.info("Processing order: %s", order)
+                decrease_stock(order)
+                logger.info("Stock decreased for order: %s", order)
+                update_order_status(order["id"], OrderStatus.READY)
+                logger.info("Order status updated to READY for order: %s", order)
+            except Exception as e:
+                span.set_status(StatusCode.ERROR, str(e))
+                span.record_exception(e)
+                logger.error("Failed to process order %s: %s", order["id"], e)
+                # Attempt to mark the order as BLOCKED, but don't let a failed
+                # status update crash the whole worker. Log failures and continue.
+                try:
+                    update_order_status(order["id"], OrderStatus.BLOCKED)
+                    logger.info("Order status updated to BLOCKED for order: %s", order)
+                except requests.RequestException as re:
+                    logger.error(
+                        "Could not mark order %s as BLOCKED: %s. Continuing.",
+                        order["id"],
+                        re,
+                    )
+                except Exception as re:
+                    logger.error(
+                        "Unexpected error while marking order %s as BLOCKED: %s. Continuing.",
+                        order["id"],
+                        re,
+                    )
 
 
 if __name__ == "__main__":
