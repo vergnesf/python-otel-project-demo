@@ -1,10 +1,9 @@
-"""conftest.py for ordermanagement/tests."""
-
 import os
 
 import pytest
 
 # Set up TracerProvider at module level — BEFORE any import that calls trace.get_tracer().
+# This avoids the "Overriding of current TracerProvider is not allowed" warning.
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor

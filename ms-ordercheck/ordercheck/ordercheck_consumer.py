@@ -6,6 +6,8 @@ import time
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
@@ -15,6 +17,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+tracer = trace.get_tracer(__name__)
 
 # Initialize the Kafka consumer
 consumer = Consumer(
@@ -53,25 +57,28 @@ def consume_messages():
                 elif msg.error():
                     raise KafkaException(msg.error())
             else:
-                # Simulate random error for observability testing
-                # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-                if random.random() < ERROR_RATE:
-                    logger.error("failed to process order (API or network failure)")
-                    continue
+                with tracer.start_as_current_span("process_order") as span:
+                    # Simulate random error for observability testing
+                    # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+                    if random.random() < ERROR_RATE:
+                        span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
+                        span.record_exception(RuntimeError("simulated failure"))
+                        logger.error("failed to process order (API or network failure)")
+                        continue
 
-                order_data = json.loads(msg.value().decode("utf-8"))
-                logger.info("Received order data: %s", order_data)
+                    order_data = json.loads(msg.value().decode("utf-8"))
+                    logger.info("Received order data: %s", order_data)
 
-                try:
-                    response = requests.post(API_URL, json=order_data, timeout=5)
-                    if response.status_code == 201:
-                        logger.info("Order data successfully sent to API")
-                    else:
-                        logger.error("Failed to send order data to API: %s", response.text)
-                except requests.Timeout:
-                    logger.error("Timeout calling API %s, skipping message", API_URL)
-                except requests.RequestException as e:
-                    logger.error("HTTP error calling API: %s", e)
+                    try:
+                        response = requests.post(API_URL, json=order_data, timeout=5)
+                        if response.status_code == 201:
+                            logger.info("Order data successfully sent to API")
+                        else:
+                            logger.error("Failed to send order data to API: %s", response.text)
+                    except requests.Timeout:
+                        logger.error("Timeout calling API %s, skipping message", API_URL)
+                    except requests.RequestException as e:
+                        logger.error("HTTP error calling API: %s", e)
     except KeyboardInterrupt:
         logger.info("Consumer shutting down due to keyboard interrupt")
     finally:
