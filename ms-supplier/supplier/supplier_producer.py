@@ -18,7 +18,6 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(OtelJsonFormatter())
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, log_level, logging.INFO))
 
 tracer = trace.get_tracer(__name__)
 
@@ -68,7 +67,7 @@ def _run_once(error_rate: float) -> None:
 
 
 if __name__ == "__main__":
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", 60))
+    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
 
     logger.info(

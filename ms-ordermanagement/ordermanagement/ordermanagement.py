@@ -5,7 +5,7 @@ import time
 
 import requests
 from lib_models.log_formatter import OtelJsonFormatter
-from lib_models.models import OrderStatus
+from lib_models.models import InsufficientStockError, OrderStatus, StockNotFoundError
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 

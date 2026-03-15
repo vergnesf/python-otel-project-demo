@@ -25,16 +25,10 @@ class Stock(BaseModel):
     wood_type: WoodType
     quantity: int
 
-    def to_json(self):
-        return self.model_dump_json()
-
 
 class Order(BaseModel):
     wood_type: WoodType
     quantity: int
-
-    def to_json(self):
-        return self.model_dump_json()
 
 
 class OrderTracking(BaseModel):
@@ -44,5 +38,10 @@ class OrderTracking(BaseModel):
     quantity: int
     date: datetime
 
-    def to_json(self):
-        return self.model_dump_json()
+
+class InsufficientStockError(Exception):
+    pass
+
+
+class StockNotFoundError(Exception):
+    pass
