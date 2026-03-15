@@ -41,10 +41,6 @@ KEEPER_SERVICES = [
     "ms-ordermanagement",
 ]
 
-# Services skipped for Tempo trace checks (checked for logs and metrics only).
-# All KEEPER services now emit manual spans — no exclusions needed.
-TEMPO_NO_TRACE_SERVICES: set[str] = set()
-
 # Look back window for recent data (seconds)
 LOOKBACK_SECONDS = 1800  # 30 minutes
 
