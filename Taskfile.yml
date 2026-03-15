@@ -64,6 +64,10 @@ tasks:
 
   compose-up:
     desc: "Start full stack: observability → db → kafka → ai-tools → ai → apps → traefik"
+    # --no-recreate: prevents podman-compose from stopping/removing containers already running in the
+    # shared Podman pod, which causes "container state improper" errors when layers start sequentially.
+    # Trade-off: if the stack is already running, config/image changes are NOT applied (containers kept as-is).
+    # To apply changes, always run: task compose-down && task compose-up
     silent: true
     cmds:
       - |
@@ -82,13 +86,13 @@ tasks:
         elif command -v docker >/dev/null 2>&1; then
           docker network inspect otel-network >/dev/null 2>&1 || docker network create otel-network
         fi
-      - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml up -d
-      - echo "  → db" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-db.yml up -d
-      - echo "  → kafka" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-kafka.yml up -d
-      - echo "  → ai-tools" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai-tools.yml up -d
-      - echo "  → ai" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai.yml up -d --build
-      - echo "  → apps" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-apps.yml up -d --build
-      - echo "  → traefik" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-traefik.yml up -d
+      - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml up -d --no-recreate
+      - echo "  → db" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-db.yml up -d --no-recreate
+      - echo "  → kafka" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-kafka.yml up -d --no-recreate
+      - echo "  → ai-tools" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai-tools.yml up -d --no-recreate
+      - echo "  → ai" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai.yml up -d --no-recreate --build
+      - echo "  → apps" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-apps.yml up -d --no-recreate --build
+      - echo "  → traefik" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-traefik.yml up -d --no-recreate
       - echo "Stack up."
 
   compose-down:
