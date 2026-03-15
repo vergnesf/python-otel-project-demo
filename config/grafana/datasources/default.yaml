@@ -43,7 +43,10 @@ datasources:
     url: http://loki:3100
     jsonData:
       derivedFields:
-        - name: "traceID"
-          matcherRegex: '((?<=traceid":")[A-Za-z0-9]+)'
+        - name: TraceID
+          # Matches log format: [trace_id=<32hex> span_id=...] — set by #71
+          # Note: zero-value trace IDs (all-zero) will also match but link to an empty trace in Tempo.
+          matcherRegex: 'trace_id=([a-f0-9]{32})'
           url: "$${__value.raw}"
           datasourceUid: mytempo
+          urlDisplayLabel: "View Trace in Tempo"
