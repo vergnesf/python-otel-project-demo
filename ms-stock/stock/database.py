@@ -2,8 +2,7 @@ import os
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Define the database URL here
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:yourpassword@localhost:5432/mydatabase")
