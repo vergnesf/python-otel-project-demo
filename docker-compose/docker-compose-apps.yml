@@ -54,7 +54,7 @@ services:
     environment:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-order
-      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/order_db
     restart: unless-stopped
     networks:
       - otel-network
@@ -70,7 +70,7 @@ services:
     environment:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-stock
-      DATABASE_URL: postgresql://postgres:yourpassword@postgres:5432/mydatabase
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/stock_db
     restart: unless-stopped
     networks:
       - otel-network
