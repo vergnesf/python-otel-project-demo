@@ -1,12 +1,18 @@
 x-common-apps-env: &common-apps-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_EXPORTER_OTLP_PROTOCOL: grpc
   OTEL_TRACES_EXPORTER: otlp
   OTEL_METRICS_EXPORTER: otlp
   OTEL_LOGS_EXPORTER: otlp
   OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED: "true"
   OTEL_PYTHON_LOG_CORRELATION: "true"
+  OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=local,service.version=0.1.0,service.instance.id=${HOSTNAME}"
   LOG_LEVEL: INFO
-  ERROR_RATE: "0.1"  
+  ERROR_RATE: "0.1"
+
+x-otel-collector-dep: &otel-collector-dep
+  otel-collector:
+    condition: service_started
 
 services:
   ms-customer:
@@ -22,6 +28,8 @@ services:
       OTEL_SERVICE_NAME: ms-customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    depends_on:
+      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -39,6 +47,8 @@ services:
       OTEL_SERVICE_NAME: ms-supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
+    depends_on:
+      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -55,6 +65,8 @@ services:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-order
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/order_db
+    depends_on:
+      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -71,6 +83,8 @@ services:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-stock
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/stock_db
+    depends_on:
+      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -89,6 +103,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-order:5000
     depends_on:
+      <<: *otel-collector-dep
       ms-order:
         condition: service_started
     restart: unless-stopped
@@ -109,6 +124,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-stock:5001
     depends_on:
+      <<: *otel-collector-dep
       ms-stock:
         condition: service_started
     restart: unless-stopped
@@ -130,6 +146,7 @@ services:
       API_URL_STOCKS: http://ms-stock:5001
       INTERVAL_SECONDS: 5
     depends_on:
+      <<: *otel-collector-dep
       ms-order:
         condition: service_started
       ms-stock:
