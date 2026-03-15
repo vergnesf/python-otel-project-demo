@@ -37,3 +37,11 @@ class OrderTracking(BaseModel):
     wood_type: WoodType
     quantity: int
     date: datetime
+
+
+class InsufficientStockError(Exception):
+    pass
+
+
+class StockNotFoundError(Exception):
+    pass

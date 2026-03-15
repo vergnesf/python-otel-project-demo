@@ -3,9 +3,9 @@
 Coverage:
 - WoodType enum: all 5 values, invalid value rejection
 - OrderStatus enum: all 6 values, invalid value rejection
-- Stock: instantiation, type validation, to_json() round-trip
-- Order: instantiation, type validation, to_json() round-trip
-- OrderTracking: instantiation with datetime, all fields, to_json()
+- Stock: instantiation, type validation, model_dump_json() round-trip
+- Order: instantiation, type validation, model_dump_json() round-trip
+- OrderTracking: instantiation with datetime, all fields, model_dump_json()
 """
 
 import json
@@ -96,7 +96,7 @@ def test_stock_invalid_quantity_raises():
 
 def test_stock_to_json_round_trip():
     s = Stock(wood_type=WoodType.PINE, quantity=42)
-    data = json.loads(s.to_json())
+    data = json.loads(s.model_dump_json())
     assert data["wood_type"] == "pine"
     assert data["quantity"] == 42
 
@@ -130,7 +130,7 @@ def test_order_invalid_quantity_raises():
 
 def test_order_to_json_round_trip():
     o = Order(wood_type=WoodType.ELM, quantity=7)
-    data = json.loads(o.to_json())
+    data = json.loads(o.model_dump_json())
     assert data["wood_type"] == "elm"
     assert data["quantity"] == 7
 
@@ -182,7 +182,7 @@ def test_order_tracking_to_json_round_trip():
         quantity=5,
         date=NOW,
     )
-    data = json.loads(ot.to_json())
+    data = json.loads(ot.model_dump_json())
     assert data["id"] == 42
     assert data["order_status"] == "shipped"
     assert data["wood_type"] == "maple"

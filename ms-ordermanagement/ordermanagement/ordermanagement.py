@@ -5,7 +5,7 @@ import time
 
 import requests
 from lib_models.log_formatter import OtelJsonFormatter
-from lib_models.models import OrderStatus
+from lib_models.models import InsufficientStockError, OrderStatus, StockNotFoundError
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
@@ -25,14 +25,6 @@ API_URL_ORDERS_REGISTERED = API_URL_ORDERS + "/orders/status/registered"
 API_URL_ORDERS_UPDATE = API_URL_ORDERS + "/orders"
 API_URL_STOCKS_DECREASE = API_URL_STOCKS + "/stocks/decrease"
 HEADERS_JSON = {"Content-Type": "application/json"}
-
-
-class InsufficientStockError(Exception):
-    pass
-
-
-class StockNotFoundError(Exception):
-    pass
 
 
 def fetch_registered_orders():
