@@ -4,6 +4,7 @@ Provides unified interface to query Loki, Mimir, and Tempo via the Grafana MCP s
 """
 
 import asyncio
+import json
 import logging
 from contextlib import AsyncExitStack
 from datetime import datetime, timedelta
@@ -127,8 +128,6 @@ class MCPGrafanaClient:
 
             # Parse response to extract UIDs
             if result.content:
-                import json
-
                 for content_item in result.content:
                     if hasattr(content_item, "text"):
                         datasources = json.loads(content_item.text)
@@ -234,8 +233,6 @@ class MCPGrafanaClient:
 
             # Extract logs from MCP response
             if result.content:
-                import json
-
                 for content_item in result.content:
                     if hasattr(content_item, "text"):
                         logs_data = json.loads(content_item.text)
@@ -300,8 +297,6 @@ class MCPGrafanaClient:
 
             # Extract metrics from MCP response
             if result.content:
-                import json
-
                 for content_item in result.content:
                     if hasattr(content_item, "text"):
                         metrics_data = json.loads(content_item.text)
@@ -387,8 +382,6 @@ class MCPGrafanaClient:
 
             # Extract traces from MCP response
             if result.content:
-                import json
-
                 for content_item in result.content:
                     if hasattr(content_item, "text"):
                         traces_data = json.loads(content_item.text)
@@ -435,8 +428,6 @@ class MCPGrafanaClient:
         Returns:
             Parsed JSON data or empty dict/list
         """
-        import json
-
         if result.content:
             for content_item in result.content:
                 if hasattr(content_item, "text"):

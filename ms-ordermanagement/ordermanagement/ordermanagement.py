@@ -31,7 +31,7 @@ def fetch_registered_orders():
         orders = response.json()
         return orders
     except requests.RequestException as e:
-        logger.error(f"Failed to fetch orders: {e}")
+        logger.error("Failed to fetch orders: %s", e)
         return []
 
 
@@ -94,7 +94,7 @@ def process_registered_order():
             update_order_status(order["id"], OrderStatus.READY)
             logger.info("Order status updated to READY for order: %s", order)
         except Exception as e:
-            logger.error(f"Failed to process order {order['id']}: {e}")
+            logger.error("Failed to process order %s: %s", order["id"], e)
             # Attempt to mark the order as BLOCKED, but don't let a failed
             # status update crash the whole worker. Log failures and continue.
             try:
