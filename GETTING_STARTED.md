@@ -34,20 +34,40 @@ cd python-otel-project-demo
 
 ### 2. Start All Services
 
-The compose configuration is split across several files and a `Makefile` helper is provided to start them in the correct order.
+The compose configuration is split across several files and must be started in order.
+The `Taskfile` automates this — it is the recommended approach.
 
-Order: observability → db → kafka → ai-tools → ai → apps
+**Startup order:** observability → db → kafka → ai-tools → ai → apps → traefik
 
 ```bash
 # Copy example environment and override images/tokens as needed
 cp .env.example .env
 
-# Recommended: use the Makefile which selects docker/podman and brings up all compose files
-make compose-up
+# Recommended: use the Taskfile (handles correct startup order automatically)
+task compose-up
 
 # View aggregated logs
 podman-compose logs -f || docker-compose logs -f
 ```
+
+#### Manual startup (without Taskfile)
+
+If you are not using the Taskfile, you **must** start files in this order — services in
+`docker-compose-apps.yml` depend on `otel-collector` (observability), `postgres` (db),
+and `broker` (kafka) being available:
+
+```bash
+docker-compose -f docker-compose/docker-compose-observability.yml up -d
+docker-compose -f docker-compose/docker-compose-db.yml up -d
+docker-compose -f docker-compose/docker-compose-kafka.yml up -d
+docker-compose -f docker-compose/docker-compose-ai-tools.yml up -d
+docker-compose -f docker-compose/docker-compose-ai.yml up -d
+docker-compose -f docker-compose/docker-compose-apps.yml up -d
+docker-compose -f docker-compose/docker-compose-traefik.yml up -d
+```
+
+> **Note**: Cross-file `depends_on` is not supported by podman-compose or docker-compose.
+> Ordering is enforced by starting files sequentially, not by dependency declarations.
 
 ### 3. Access the Services
 
@@ -74,11 +94,11 @@ pip install podman-compose
 
 ### 2. Start Services with Podman
 
-You can still use `podman-compose` directly, but the `Makefile` automates the correct file ordering and will detect `podman` vs `docker`.
+You can still use `podman-compose` directly, but the Taskfile automates the correct file ordering.
 
 ```bash
-# Recommended (Makefile will call podman when available)
-make compose-up
+# Recommended (Taskfile detects podman vs docker automatically)
+task compose-up
 
 # View logs
 podman-compose logs -f
@@ -212,7 +232,7 @@ sudo usermod -aG video $USER
 
 ```bash
 # Start the stack
-make compose-up
+task compose-up
 
 # Verify Ollama is using Vulkan
 podman logs ollama | grep -i -E "vulkan|gpu|compute"
@@ -312,10 +332,10 @@ docker-compose logs -f agent-logs
 
 ```bash
 # Start all services (preferred)
-make compose-up
+task compose-up
 
 # Stop all services
-make compose-down
+task compose-down
 
 # Rebuild a specific service (useful during development)
 podman-compose -f <compose-files...> up --build -d <service> || \
@@ -324,11 +344,8 @@ podman-compose -f <compose-files...> up --build -d <service> || \
 # View logs for specific service
 podman-compose logs -f order || docker-compose logs -f order
 
-# Restart a service
-make restart-service SERVICE=agent-logs  # (calls the underlying compose command)
-
 # Complete cleanup (removes all data)
-make compose-down && podman-compose down -v || docker-compose down -v
+task compose-down && podman-compose down -v || docker-compose down -v
 ```
 
 ## 🎓 Next Steps

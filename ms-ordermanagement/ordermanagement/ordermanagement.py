@@ -4,16 +4,16 @@ import random
 import time
 
 import requests
+from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import OrderStatus
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 # Configure logging with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s %(name)s %(levelname)s [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s",
-)
+_handler = logging.StreamHandler()
+_handler.setFormatter(OtelJsonFormatter())
+logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
 

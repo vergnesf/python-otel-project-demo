@@ -1,3 +1,14 @@
+# STARTUP ORDER REQUIRED: this file must be started AFTER docker-compose-observability.yml,
+# docker-compose-db.yml, and docker-compose-kafka.yml.
+#
+# Services here reference otel-collector (OTLP endpoint), postgres, and broker from those files.
+# There is no depends_on for cross-file services (podman-compose does not support it).
+# Use `task compose-up` which starts all files in the correct order, or manually:
+#   1. docker-compose -f docker-compose-observability.yml up -d
+#   2. docker-compose -f docker-compose-db.yml up -d
+#   3. docker-compose -f docker-compose-kafka.yml up -d
+#   4. docker-compose -f docker-compose-apps.yml up -d
+
 x-common-apps-env: &common-apps-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
@@ -11,10 +22,6 @@ x-common-apps-env: &common-apps-env
   OTEL_RESOURCE_ATTRIBUTES: "deployment.environment.name=local,service.version=0.1.0,service.instance.id=${HOSTNAME}"
   LOG_LEVEL: INFO
   ERROR_RATE: "0.1"
-
-x-otel-collector-dep: &otel-collector-dep
-  otel-collector:
-    condition: service_started
 
 services:
   ms-customer:
@@ -30,8 +37,6 @@ services:
       OTEL_SERVICE_NAME: ms-customer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
-    depends_on:
-      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -49,8 +54,6 @@ services:
       OTEL_SERVICE_NAME: ms-supplier
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
-    depends_on:
-      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -67,8 +70,6 @@ services:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-order
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/order_db
-    depends_on:
-      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -85,8 +86,6 @@ services:
       <<: *common-apps-env
       OTEL_SERVICE_NAME: ms-stock
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/stock_db
-    depends_on:
-      <<: *otel-collector-dep
     restart: unless-stopped
     networks:
       - otel-network
@@ -105,7 +104,6 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-order:5000
     depends_on:
-      <<: *otel-collector-dep
       ms-order:
         condition: service_started
     restart: unless-stopped
@@ -126,7 +124,6 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       API_URL: http://ms-stock:5001
     depends_on:
-      <<: *otel-collector-dep
       ms-stock:
         condition: service_started
     restart: unless-stopped
@@ -148,7 +145,6 @@ services:
       API_URL_STOCKS: http://ms-stock:5001
       INTERVAL_SECONDS: 5
     depends_on:
-      <<: *otel-collector-dep
       ms-order:
         condition: service_started
       ms-stock:

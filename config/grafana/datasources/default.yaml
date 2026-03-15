@@ -44,9 +44,10 @@ datasources:
     jsonData:
       derivedFields:
         - name: TraceID
-          # Matches log format: [trace_id=<32hex> span_id=...] — set by #71
+          # Matches JSON log body: {"trace_id": "<32hex>", ...} — set by OtelJsonFormatter in lib-models
           # Note: zero-value trace IDs (all-zero) will also match but link to an empty trace in Tempo.
-          matcherRegex: 'trace_id=([a-f0-9]{32})'
+          # \s* handles both compact and spaced JSON serializations.
+          matcherRegex: '"trace_id":\s*"([a-f0-9]{32})"'
           url: "$${__value.raw}"
           datasourceUid: mytempo
           urlDisplayLabel: "View Trace in Tempo"

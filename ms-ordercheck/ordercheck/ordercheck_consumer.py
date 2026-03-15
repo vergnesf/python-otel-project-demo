@@ -6,16 +6,16 @@ import time
 
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
+from lib_models.log_formatter import OtelJsonFormatter
 from opentelemetry import trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import SpanKind, StatusCode
 
 # Configure the logger with environment variable
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=getattr(logging, log_level, logging.INFO),
-    format="%(asctime)s %(name)s %(levelname)s [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s",
-)
+_handler = logging.StreamHandler()
+_handler.setFormatter(OtelJsonFormatter())
+logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
 logger = logging.getLogger(__name__)
 logger.setLevel(getattr(logging, log_level, logging.INFO))
 
