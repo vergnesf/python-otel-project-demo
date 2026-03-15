@@ -115,6 +115,26 @@ tasks:
       - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml down
       - echo "Stack down."
 
+  compose-reset:
+    desc: "Full reset: down (remove volumes + built images) then up — use after image changes"
+    silent: true
+    cmds:
+      - |
+        if [ -z "{{.COMPOSE_BASE}}" ]; then
+          echo "ERROR: No container runtime found (docker or podman). Install one first."
+          exit 1
+        fi
+      - echo "Tearing down with volumes and built images..."
+      - echo "  → traefik" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-traefik.yml down --volumes --rmi local
+      - echo "  → apps" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-apps.yml down --volumes --rmi local
+      - echo "  → ai" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai.yml down --volumes --rmi local
+      - echo "  → ai-tools" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-ai-tools.yml down --volumes --rmi local
+      - echo "  → kafka" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-kafka.yml down --volumes --rmi local
+      - echo "  → db" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-db.yml down --volumes --rmi local
+      - echo "  → observability" && {{.COMPOSE_CMD}} -f docker-compose/docker-compose-observability.yml down --volumes --rmi local
+      - echo "Stack reset complete. Bringing back up..."
+      - task: compose-up
+
   # ---------------------------------------------------------------------------
   # Code quality
   # ---------------------------------------------------------------------------
