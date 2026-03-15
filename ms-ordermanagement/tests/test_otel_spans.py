@@ -23,7 +23,7 @@ def test_process_order_span_ok_on_success(span_exporter):
         process_registered_order()
 
     spans = span_exporter.get_finished_spans()
-    order_spans = [s for s in spans if s.name == "process_order"]
+    order_spans = [s for s in spans if s.name == "process order"]
     assert len(order_spans) == 1
     assert order_spans[0].status.status_code == StatusCode.UNSET
 
@@ -44,7 +44,7 @@ def test_process_order_span_error_on_error_rate(span_exporter):
         process_registered_order()
 
     spans = span_exporter.get_finished_spans()
-    order_spans = [s for s in spans if s.name == "process_order"]
+    order_spans = [s for s in spans if s.name == "process order"]
     assert len(order_spans) == 1
     assert order_spans[0].status.status_code == StatusCode.ERROR
     assert any(e.name == "exception" for e in order_spans[0].events)

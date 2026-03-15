@@ -15,7 +15,6 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(OtelJsonFormatter())
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, log_level, logging.INFO))
 
 tracer = trace.get_tracer(__name__)
 
@@ -26,6 +25,14 @@ API_URL_ORDERS_REGISTERED = API_URL_ORDERS + "/orders/status/registered"
 API_URL_ORDERS_UPDATE = API_URL_ORDERS + "/orders"
 API_URL_STOCKS_DECREASE = API_URL_STOCKS + "/stocks/decrease"
 HEADERS_JSON = {"Content-Type": "application/json"}
+
+
+class InsufficientStockError(Exception):
+    pass
+
+
+class StockNotFoundError(Exception):
+    pass
 
 
 def fetch_registered_orders():
@@ -43,9 +50,9 @@ def decrease_stock(order):
     payload = {"wood_type": order["wood_type"], "quantity": order["quantity"]}
     response = requests.post(API_URL_STOCKS_DECREASE, headers=HEADERS_JSON, json=payload, timeout=5)
     if response.status_code == 400:
-        raise Exception("Insufficient stock")
+        raise InsufficientStockError("Insufficient stock")
     if response.status_code == 404:
-        raise Exception("Stock not found")
+        raise StockNotFoundError("Stock not found")
     response.raise_for_status()
     return response.json()
 
@@ -85,13 +92,13 @@ def process_registered_order():
     logger.info("Found %d registered orders to process", len(orders))
 
     for order in orders:
-        with tracer.start_as_current_span("process_order") as span:
+        with tracer.start_as_current_span("process order") as span:
             try:
                 # Simulate random error for observability testing
                 # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
                 if random.random() < ERROR_RATE:
                     # Simulate an external API or DB failure
-                    raise Exception("external API or DB failure during order processing")
+                    raise RuntimeError("external API or DB failure during order processing")
 
                 logger.info("Processing order: %s", order)
                 decrease_stock(order)
@@ -123,7 +130,7 @@ def process_registered_order():
 
 
 if __name__ == "__main__":
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", 60))
+    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
 
     logger.info("Starting order management service with %d seconds interval", interval_seconds)
 

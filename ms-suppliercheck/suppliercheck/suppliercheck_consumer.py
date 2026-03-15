@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import random
+import signal
 import time
 
 import requests
@@ -17,7 +18,6 @@ _handler = logging.StreamHandler()
 _handler.setFormatter(OtelJsonFormatter())
 logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_handler])
 logger = logging.getLogger(__name__)
-logger.setLevel(getattr(logging, log_level, logging.INFO))
 
 tracer = trace.get_tracer(__name__)
 
@@ -29,8 +29,6 @@ consumer = Consumer(
         "auto.offset.reset": "earliest",
     }
 )
-
-consumer.subscribe(["stocks"])
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000") + "/stocks"
 
@@ -62,7 +60,15 @@ def _process_message(msg, error_rate: float) -> None:
             logger.error("failed to process stock (API or network failure)")
             return
 
-        stock_data = json.loads(msg.value().decode("utf-8"))
+        try:
+            stock_data = json.loads(msg.value().decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            span.set_status(StatusCode.ERROR, "malformed message")
+            span.record_exception(e)
+            span.set_attribute("error.type", type(e).__name__)
+            logger.error("Skipping malformed Kafka message: %s", e)
+            return
+
         logger.info("Received stock data: %s", stock_data)
 
         try:
@@ -77,12 +83,26 @@ def _process_message(msg, error_rate: float) -> None:
             logger.error("HTTP error calling API: %s", e)
 
 
-def consume_messages():
-    try:
-        ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
-        logger.info("Starting message consumption loop with ERROR_RATE=%s", ERROR_RATE)
+running = True
 
-        while True:
+
+def _shutdown(signum, frame):
+    global running
+    logger.info("Received signal %s, shutting down", signum)
+    running = False
+
+
+signal.signal(signal.SIGTERM, _shutdown)
+signal.signal(signal.SIGINT, _shutdown)
+
+
+def consume_messages():
+    consumer.subscribe(["stocks"])
+    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    logger.info("Starting message consumption loop with ERROR_RATE=%s", ERROR_RATE)
+
+    try:
+        while running:
             msg = consumer.poll(timeout=1.0)
             if msg is None:
                 continue
