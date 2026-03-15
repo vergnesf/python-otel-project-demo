@@ -22,7 +22,7 @@ def extract_text_from_response(response: object) -> str:
             content = response.content
             if content is not None:
                 return str(content)
-    except AttributeError, Exception:
+    except (AttributeError, Exception):
         pass
 
     # Try text attribute (alternative)
@@ -31,7 +31,7 @@ def extract_text_from_response(response: object) -> str:
             text = response.text
             if text is not None:
                 return str(text)
-    except AttributeError, Exception:
+    except (AttributeError, Exception):
         pass
 
     # Fallback to string representation
