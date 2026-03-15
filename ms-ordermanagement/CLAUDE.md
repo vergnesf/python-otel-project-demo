@@ -25,8 +25,8 @@ Runs in an infinite loop with a configurable interval.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `API_URL_ORDERS` | `http://order:5000` | Order API base URL |
-| `API_URL_STOCKS` | `http://stock:5001` | Stock API base URL |
+| `API_URL_ORDERS` | `http://ms-order:5000` | Order API base URL |
+| `API_URL_STOCKS` | `http://ms-stock:5001` | Stock API base URL |
 | `INTERVAL_SECONDS` | `5` | Loop interval |
 | `ERROR_RATE` | `0.1` | Fraction of cycles that fail (0.0–1.0) |
 | `OTEL_SERVICE_NAME` | `ordermanagement` | Telemetry service name |
@@ -34,9 +34,9 @@ Runs in an infinite loop with a configurable interval.
 
 ## Integration
 
-Reads from → `http://order:5000/orders/status/registered`
-Writes to → `http://stock:5001/stocks/decrease`
-Writes to → `http://order:5000/orders/<id>` (status update)
+Reads from → `http://ms-order:5000/orders/status/registered`
+Writes to → `http://ms-stock:5001/stocks/decrease`
+Writes to → `http://ms-order:5000/orders/<id>` (status update)
 
 ## Design decision: polling vs event-driven
 
