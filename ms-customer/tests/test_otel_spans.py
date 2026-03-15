@@ -5,15 +5,14 @@ Uses InMemorySpanExporter — no OTEL collector or Kafka broker needed.
 
 from unittest.mock import patch
 
-from customer.customer_producer import tracer
+from customer.customer_producer import _run_once
 from opentelemetry.trace import StatusCode
 
 
 def test_send_order_span_ok_on_success(span_exporter):
-    with patch("customer.customer_producer.producer"):
+    with patch("customer.customer_producer.send_order"):
         with patch("customer.customer_producer.random.random", return_value=0.5):
-            with tracer.start_as_current_span("send_order"):
-                pass  # no error injected
+            _run_once(0.0)
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
@@ -21,9 +20,7 @@ def test_send_order_span_ok_on_success(span_exporter):
 
 
 def test_send_order_span_error_on_error_rate(span_exporter):
-    with tracer.start_as_current_span("send_order") as span:
-        span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-        span.record_exception(RuntimeError("simulated failure"))
+    _run_once(1.0)
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1

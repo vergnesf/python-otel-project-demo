@@ -39,6 +39,24 @@ def send_stock(stock: Stock):
     producer.poll(0)
 
 
+def _run_once(error_rate: float) -> None:
+    # Simulate random error for observability testing
+    # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
+    with tracer.start_as_current_span("send_stock") as span:
+        if random.random() < error_rate:
+            span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
+            span.record_exception(RuntimeError("simulated failure"))
+            logger.error("failed to send stock (Kafka/network failure)")
+        else:
+            stock = Stock(
+                wood_type=random.choice(list(WoodType)),
+                quantity=random.randint(1, 100),
+            )
+            logger.info("Created stock: %s", stock.model_dump())
+            send_stock(stock)
+            logger.info("Stock sent successfully: %s", stock.model_dump())
+
+
 if __name__ == "__main__":
     interval_seconds = int(os.getenv("INTERVAL_SECONDS", 60))
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
@@ -61,25 +79,8 @@ if __name__ == "__main__":
 
     try:
         while running:
-            # Simulate random error for observability testing
-            # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
-            with tracer.start_as_current_span("send_stock") as span:
-                if random.random() < ERROR_RATE:
-                    span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-                    span.record_exception(RuntimeError("simulated failure"))
-                    logger.error("failed to send stock (Kafka/network failure)")
-                    time.sleep(interval_seconds)
-                    continue
-
-                stock = Stock(
-                    wood_type=random.choice(list(WoodType)),
-                    quantity=random.randint(1, 100),
-                )
-                logger.info("Created stock: %s", stock.model_dump())
-
-                send_stock(stock)
-                logger.info("Stock sent successfully: %s", stock.model_dump())
-                time.sleep(interval_seconds)
+            _run_once(ERROR_RATE)
+            time.sleep(interval_seconds)
     finally:
         logger.info("Flushing producer before exit")
         producer.flush()

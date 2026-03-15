@@ -1,12 +1,15 @@
 """Tests that ERROR_RATE injection marks the active span as ERROR."""
 
+from unittest.mock import patch
+
 from opentelemetry.trace import StatusCode
-from supplier.supplier_producer import tracer
+from supplier.supplier_producer import _run_once
 
 
 def test_send_stock_span_ok_on_success(span_exporter):
-    with tracer.start_as_current_span("send_stock"):
-        pass
+    with patch("supplier.supplier_producer.send_stock"):
+        with patch("supplier.supplier_producer.random.random", return_value=0.5):
+            _run_once(0.0)
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
@@ -14,9 +17,7 @@ def test_send_stock_span_ok_on_success(span_exporter):
 
 
 def test_send_stock_span_error_on_error_rate(span_exporter):
-    with tracer.start_as_current_span("send_stock") as span:
-        span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
-        span.record_exception(RuntimeError("simulated failure"))
+    _run_once(1.0)
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
