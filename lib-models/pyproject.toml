@@ -13,4 +13,5 @@ dev = [
     "ruff",
     "black",
     "pyright",
+    "pytest>=8",
 ]
