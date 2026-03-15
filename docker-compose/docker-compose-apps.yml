@@ -1,3 +1,14 @@
+# STARTUP ORDER REQUIRED: this file must be started AFTER docker-compose-observability.yml,
+# docker-compose-db.yml, and docker-compose-kafka.yml.
+#
+# Services here reference otel-collector (OTLP endpoint), postgres, and broker from those files.
+# There is no depends_on for cross-file services (podman-compose does not support it).
+# Use `task compose-up` which starts all files in the correct order, or manually:
+#   1. docker-compose -f docker-compose-observability.yml up -d
+#   2. docker-compose -f docker-compose-db.yml up -d
+#   3. docker-compose -f docker-compose-kafka.yml up -d
+#   4. docker-compose -f docker-compose-apps.yml up -d
+
 x-common-apps-env: &common-apps-env
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
   OTEL_EXPORTER_OTLP_PROTOCOL: grpc
