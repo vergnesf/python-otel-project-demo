@@ -1,13 +1,31 @@
-"""conftest.py for order/tests — sets DATABASE_URL before any test module imports."""
+"""conftest.py for order/tests — sets DATABASE_URL before any test module imports.
+
+Uses a named temporary SQLite file so that Flask-SQLAlchemy's internal engine
+(used by db.create_all) and the raw SQLAlchemy engine (SessionLocal in routes)
+both connect to the same physical database. sqlite:///:memory: creates a separate
+DB per engine instance and is not suitable for this dual-engine setup.
+
+ERROR_RATE=0 eliminates random simulated errors during CRUD tests.
+"""
 
 import os
+import tempfile
 
-# Use SQLite in-memory so Flask smoke tests run without a PostgreSQL instance.
-# If DATABASE_URL is already set in the environment (e.g. overridden externally), that value is used instead.
-# Note: SQLite may not catch PostgreSQL-specific constraints (FK cascades, custom column types).
-# These tests verify the app starts and the /health endpoint responds — not schema migration fidelity.
-# Scope: this conftest.py applies to all files under order/tests/. Future test files in this
-# directory will inherit DATABASE_URL=sqlite:///:memory: unless they reassign os.environ["DATABASE_URL"] directly.
-# Timing: pytest loads conftest.py before importing test modules in this directory, so DATABASE_URL
-# is set before any module-level code in test files here runs — including module-level model imports.
-os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+import pytest
+
+# Create a temp SQLite file for the test session. setdefault means an externally-set
+# DATABASE_URL (e.g. real PostgreSQL in CI) takes precedence.
+_db_fd, _db_path = tempfile.mkstemp(suffix="_order_test.db")
+os.close(_db_fd)
+os.environ.setdefault("DATABASE_URL", f"sqlite:///{_db_path}")
+os.environ.setdefault("ERROR_RATE", "0")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_test_db():
+    """Remove the SQLite test file after the entire test session."""
+    yield
+    try:
+        os.unlink(_db_path)
+    except OSError:
+        pass
