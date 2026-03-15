@@ -32,12 +32,8 @@ services:
       - mimir
       - loki
       - tempo
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:13133/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+    # No healthcheck: otel/opentelemetry-collector-contrib is a distroless image
+    # with no shell, wget or curl — impossible to probe HTTP from inside the container.
     restart: unless-stopped
     networks:
       - otel-network
