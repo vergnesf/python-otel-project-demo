@@ -31,7 +31,7 @@ def load_model_params_config() -> dict:
 
     # Try multiple paths (development, docker, installed package)
     possible_paths = [
-        Path(__file__).parent.parent.parent / "config" / "ai" / "model-params.yml",  # From common-ai in workspace
+        Path(__file__).parent.parent.parent / "config" / "ai" / "model-params.yml",  # From lib-ai in workspace
         Path("/app/config/ai/model-params.yml"),  # Docker container
         Path.cwd() / "config" / "ai" / "model-params.yml",  # Current directory
     ]
@@ -113,21 +113,6 @@ class SafeChatOpenAI(ChatOpenAI):
                 raise
             else:
                 raise
-
-    def _convert_input_to_messages(self, input: Any) -> list[dict]:
-        """Convert LangChain input format to OpenAI API format."""
-        if isinstance(input, str):
-            return [{"role": "user", "content": input}]
-        elif isinstance(input, list):
-            messages = []
-            for msg in input:
-                if hasattr(msg, "type") and hasattr(msg, "content"):
-                    messages.append({"role": msg.type, "content": msg.content})
-                elif isinstance(msg, dict):
-                    messages.append(msg)
-            return messages
-        else:
-            return [{"role": "user", "content": str(input)}]
 
 
 def get_llm(

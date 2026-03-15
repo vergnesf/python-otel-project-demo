@@ -4,7 +4,7 @@ Shared Pydantic models for agent communication
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,7 +46,7 @@ class AgentResponse(BaseModel):
     confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence score (0-1)")
     grafana_links: list[str] = Field(default_factory=list, description="Links to Grafana dashboards/queries")
     timestamp: datetime = Field(default_factory=datetime.now, description="Response timestamp")
-    error: Optional[str] = Field(default=None, description="Error message if analysis failed")
+    error: str | None = Field(default=None, description="Error message if analysis failed")
 
     model_config = ConfigDict(
         json_schema_extra={
