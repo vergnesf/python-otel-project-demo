@@ -12,7 +12,7 @@ from ..crud import (
     get_stock_by_wood_type,
     get_stocks,
 )
-from ..database import get_db
+from ..database import SessionLocal
 from ..schemas import StockDecrease
 
 # Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
@@ -75,13 +75,17 @@ def create_stock_route():
     if random.random() < ERROR_RATE:
         return jsonify({"error": "Simulated DB error during stock creation"}), 500
     data = request.json
-    db = next(get_db())
-    stock_data = schemas.StockCreate(**data)
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
+    db = SessionLocal()
     try:
+        stock_data = schemas.StockCreate(**data)
         new_stock = create_stock(db=db, stock=stock_data)
+        return jsonify(new_stock.to_dict()), 201
     except Exception:
         return jsonify({"error": "Unexpected error during stock creation"}), 500
-    return jsonify(new_stock.to_dict()), 201
+    finally:
+        db.close()
 
 
 @stocks_bp.route("/", methods=["GET"])
@@ -120,14 +124,19 @@ def read_stocks_route():
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return jsonify({"error": "Simulated API error during stock list"}), 502
-    skip = int(request.args.get("skip", 0))
-    limit = int(request.args.get("limit", 10))
-    db = next(get_db())
+    try:
+        skip = int(request.args.get("skip", 0))
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "skip and limit must be integers"}), 400
+    db = SessionLocal()
     try:
         stocks = get_stocks(db, skip=skip, limit=limit)
+        return jsonify([stock.to_dict() for stock in stocks]), 200
     except Exception:
         return jsonify({"error": "Unexpected error during stock list"}), 500
-    return jsonify([stock.to_dict() for stock in stocks]), 200
+    finally:
+        db.close()
 
 
 @stocks_bp.route("/<wood_type>", methods=["GET"])
@@ -165,14 +174,16 @@ def read_stock_route(wood_type):
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return jsonify({"error": "Simulated API error during stock read"}), 502
-    db = next(get_db())
+    db = SessionLocal()
     try:
         db_stock = get_stock_by_wood_type(db, wood_type=wood_type)
+        if db_stock is None:
+            return jsonify({"error": MSG_ERROR_NOT_FOUND}), 404
+        return jsonify(db_stock.to_dict()), 200
     except Exception:
         return jsonify({"error": "Unexpected error during stock read"}), 500
-    if db_stock is None:
-        return jsonify({"error": MSG_ERROR_NOT_FOUND}), 404
-    return jsonify(db_stock.to_dict()), 200
+    finally:
+        db.close()
 
 
 @stocks_bp.route("/decrease", methods=["POST"])
@@ -226,29 +237,25 @@ def decrease_stock_route():
     if random.random() < ERROR_RATE:
         return jsonify({"error": "Simulated DB error during stock decrease"}), 500
     data = request.json
+    if not data:
+        return jsonify({"error": "Missing request body"}), 400
     try:
         stock_data = StockDecrease(**data)
     except ValidationError:
         return jsonify({"error": "Invalid input"}), 400
 
-    db = next(get_db())
+    db = SessionLocal()
     try:
         db_stock = get_stock_by_wood_type(db, wood_type=stock_data.wood_type)
-    except Exception:
-        return jsonify({"error": "Unexpected error during stock decrease (read)"}), 500
-    if db_stock is None:
-        return jsonify({"error": "Stock not found"}), 404
-
-    if db_stock.quantity is not None and db_stock.quantity < stock_data.quantity:  # type: ignore[misc]
-        return jsonify({"error": "Insufficient stock"}), 400
-
-    try:
+        if db_stock is None:
+            return jsonify({"error": "Stock not found"}), 404
+        if db_stock.quantity is not None and db_stock.quantity < stock_data.quantity:  # type: ignore[misc]
+            return jsonify({"error": "Insufficient stock"}), 400
         decrease_stock_quantity(db, wood_type=stock_data.wood_type, quantity=stock_data.quantity)
         db.commit()
         db.refresh(db_stock)
+        return jsonify(db_stock.to_dict()), 200
     except Exception:
-        return (
-            jsonify({"error": "Unexpected error during stock decrease (update)"}),
-            500,
-        )
-    return jsonify(db_stock.to_dict()), 200
+        return jsonify({"error": "Unexpected error during stock decrease"}), 500
+    finally:
+        db.close()
