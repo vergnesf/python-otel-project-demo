@@ -1,4 +1,4 @@
-"""Tests for UNKNOWN_TOPIC_OR_PART retry behaviour in ordercheck consumer.
+"""Tests for UNKNOWN_TOPIC_OR_PART retry behaviour in brewcheck consumer.
 
 When Kafka reports UNKNOWN_TOPIC_OR_PART, consume_messages() must log a warning,
 sleep briefly, and continue polling instead of raising KafkaException and crashing.
@@ -7,8 +7,8 @@ sleep briefly, and continue polling instead of raising KafkaException and crashi
 from unittest.mock import MagicMock, patch
 
 import pytest
+from brewcheck.brewcheck_consumer import consume_messages
 from confluent_kafka import KafkaError
-from ordercheck.ordercheck_consumer import consume_messages
 
 
 class _FakeKafkaError:
@@ -41,8 +41,8 @@ def test_unknown_topic_does_not_crash_loop():
     mock_consumer.poll.side_effect = [unknown_topic_msg, KeyboardInterrupt()]
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.time.sleep") as mock_sleep,
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.time.sleep") as mock_sleep,
     ):
         consume_messages()
 
@@ -56,9 +56,9 @@ def test_unknown_topic_logs_warning():
     mock_consumer.poll.side_effect = [unknown_topic_msg, KeyboardInterrupt()]
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.time.sleep"),
-        patch("ordercheck.ordercheck_consumer.logger") as mock_logger,
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.time.sleep"),
+        patch("brewcheck.brewcheck_consumer.logger") as mock_logger,
     ):
         consume_messages()
 
@@ -75,8 +75,8 @@ def test_other_kafka_error_still_raises():
     mock_consumer.poll.side_effect = [other_err_msg]
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.time.sleep"),
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.time.sleep"),
         pytest.raises(KafkaException),
     ):
         consume_messages()

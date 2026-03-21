@@ -1,4 +1,4 @@
-"""Tests for ordercheck HTTP forwarding logic with patched requests.
+"""Tests for brewcheck HTTP forwarding logic with patched requests.
 
 Drive strategy: consumer.poll() side_effect chain drives consume_messages():
   - Call 1: return a fake Kafka message (valid payload)
@@ -12,9 +12,9 @@ import json
 from unittest.mock import MagicMock, patch
 
 import requests
-from ordercheck.ordercheck_consumer import API_URL, consume_messages
+from brewcheck.brewcheck_consumer import API_URL, consume_messages
 
-ORDER_PAYLOAD = {"wood_type": "oak", "quantity": 5}
+BREW_ORDER_PAYLOAD = {"ingredient_type": "malt", "quantity": 5, "brew_style": "ipa"}
 
 
 class _FakeMsg:
@@ -40,7 +40,7 @@ def _run_one_cycle(mock_response=None, post_side_effect=None):
     KeyboardInterrupt is caught by consume_messages() and triggers clean shutdown.
     Returns the mock requests.post for assertion.
     """
-    fake_msg = _FakeMsg(ORDER_PAYLOAD)
+    fake_msg = _FakeMsg(BREW_ORDER_PAYLOAD)
     mock_consumer = MagicMock()
     mock_consumer.poll.side_effect = [fake_msg, KeyboardInterrupt()]
 
@@ -51,9 +51,9 @@ def _run_one_cycle(mock_response=None, post_side_effect=None):
         mock_post.return_value = mock_response
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.requests.post", mock_post),
-        patch("ordercheck.ordercheck_consumer.random.random", return_value=0.5),
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.requests.post", mock_post),
+        patch("brewcheck.brewcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 
@@ -65,7 +65,7 @@ def test_happy_path_calls_post_with_correct_payload():
     mock_resp.status_code = 201
     mock_post = _run_one_cycle(mock_response=mock_resp)
     mock_post.assert_called_once()
-    assert mock_post.call_args.kwargs["json"] == ORDER_PAYLOAD
+    assert mock_post.call_args.kwargs["json"] == BREW_ORDER_PAYLOAD
 
 
 def test_happy_path_uses_correct_api_url():
@@ -113,9 +113,9 @@ def test_malformed_json_does_not_crash_loop():
     mock_post = MagicMock()
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.requests.post", mock_post),
-        patch("ordercheck.ordercheck_consumer.random.random", return_value=0.5),
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.requests.post", mock_post),
+        patch("brewcheck.brewcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 
@@ -130,8 +130,8 @@ def test_malformed_json_produces_error_span(span_exporter):
     mock_consumer.poll.side_effect = [_MalformedMsg(), KeyboardInterrupt()]
 
     with (
-        patch("ordercheck.ordercheck_consumer.consumer", mock_consumer),
-        patch("ordercheck.ordercheck_consumer.random.random", return_value=0.5),
+        patch("brewcheck.brewcheck_consumer.consumer", mock_consumer),
+        patch("brewcheck.brewcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 

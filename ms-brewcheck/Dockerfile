@@ -12,19 +12,19 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ms-ordercheck/pyproject.toml /app/ms-ordercheck/
+COPY ms-brewcheck/pyproject.toml /app/ms-brewcheck/
 COPY lib-models /app/lib-models/
 
-WORKDIR /app/ms-ordercheck
+WORKDIR /app/ms-brewcheck
 
 RUN pip install --no-cache-dir uv && \
     uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ms-ordercheck/ordercheck /app/ms-ordercheck/ordercheck/
+COPY ms-brewcheck/brewcheck /app/ms-brewcheck/brewcheck/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ordercheck/ordercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "brewcheck/brewcheck_consumer.py"]
