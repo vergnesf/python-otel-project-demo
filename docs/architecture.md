@@ -8,10 +8,10 @@ This project is a **personal learning lab** built in layers, each added as a new
 ┌─────────────────────────────────────────────────────────┐
 │  BUSINESS LAYER (stable)                                │
 │                                                         │
-│  ms-customer ──┐               ┌── ms-ordercheck ── ms-order ─┤
-│                ├── Kafka ──────┤                             ├── PostgreSQL
-│  ms-supplier ──┘               └── ms-suppliercheck─ ms-stock─┤
-│                  ms-ordermanagement (background worker)       │
+│  ms-brewer  ──┐               ┌── ms-brewcheck     ── ms-brewery ─┤
+│               ├── Kafka ──────┤                               ├── PostgreSQL
+│  ms-supplier ─┘               └── ms-ingredientcheck─ ms-cellar─┤
+│                  ms-brewmaster (background worker)               │
 └─────────────────────────┬───────────────────────────────┘
                           │ OTLP
                           ▼
@@ -39,13 +39,13 @@ This project is a **personal learning lab** built in layers, each added as a new
 
 | Service | Role | Tech |
 |---------|------|------|
-| `ms-customer` | Generates orders → Kafka | Kafka producer |
-| `ms-supplier` | Generates stock updates → Kafka | Kafka producer |
-| `ms-ordercheck` | Validates & forwards orders | Kafka consumer → REST |
-| `ms-suppliercheck` | Validates & forwards stock updates | Kafka consumer → REST |
-| `ms-order` | Order management API | Flask + PostgreSQL |
-| `ms-stock` | Stock management API | Flask + PostgreSQL |
-| `ms-ordermanagement` | Processes registered orders, updates stock | Background worker |
+| `ms-brewer` | Generates brew orders → Kafka (`brew-orders`) | Kafka producer |
+| `ms-supplier` | Generates ingredient deliveries → Kafka (`ingredient-deliveries`) | Kafka producer |
+| `ms-brewcheck` | Validates & forwards brew orders to ms-brewery | Kafka consumer → REST |
+| `ms-ingredientcheck` | Validates & forwards ingredient deliveries to ms-cellar | Kafka consumer → REST |
+| `ms-brewery` | Brew management API | Flask + PostgreSQL |
+| `ms-cellar` | Ingredient stock management API | Flask + PostgreSQL |
+| `ms-brewmaster` | Fetches registered brews, consumes ingredients, updates brew status | Background worker |
 | `lib-models` | Shared business models | Pydantic |
 | `lib-ai` | Shared AI utilities (LLM config, MCP client) | LangChain |
 | `config` | Infrastructure configuration files | YAML |

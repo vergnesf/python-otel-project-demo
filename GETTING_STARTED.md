@@ -337,12 +337,15 @@ task compose-up
 # Stop all services
 task compose-down
 
+# Full reset: remove volumes + built images, then restart (use after image changes or DB schema changes)
+task compose-reset
+
 # Rebuild a specific service (useful during development)
 podman-compose -f <compose-files...> up --build -d <service> || \
    docker-compose -f <compose-files...> up --build -d <service>
 
 # View logs for specific service
-podman-compose logs -f order || docker-compose logs -f order
+podman-compose logs -f ms-brewery || docker-compose logs -f ms-brewery
 
 # Complete cleanup (removes all data)
 task compose-down && podman-compose down -v || docker-compose down -v
