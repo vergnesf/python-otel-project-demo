@@ -1,47 +1,67 @@
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel
-
-
-class WoodType(str, Enum):
-    OAK = "oak"
-    MAPLE = "maple"
-    BIRCH = "birch"
-    ELM = "elm"
-    PINE = "pine"
+from pydantic import BaseModel, Field
 
 
-class OrderStatus(str, Enum):
+class IngredientType(str, Enum):
+    MALT = "malt"
+    HOPS = "hops"
+    YEAST = "yeast"
+    WHEAT = "wheat"
+    BARLEY = "barley"
+
+
+class BrewStatus(str, Enum):
+    REGISTERED = "registered"
+    BREWING = "brewing"
     READY = "ready"
     SHIPPED = "shipped"
     BLOCKED = "blocked"
     CLOSED = "closed"
     UNKNOWN = "unknown"
-    REGISTERED = "registered"
 
 
-class Stock(BaseModel):
-    wood_type: WoodType
-    quantity: int
+class BrewStyle(str, Enum):
+    LAGER = "lager"
+    IPA = "ipa"
+    STOUT = "stout"
+    WHEAT_BEER = "wheat_beer"
 
 
-class Order(BaseModel):
-    wood_type: WoodType
-    quantity: int
+PositiveInt = Annotated[int, Field(gt=0)]
 
 
-class OrderTracking(BaseModel):
+class IngredientStock(BaseModel):
+    ingredient_type: IngredientType
+    quantity: PositiveInt
+
+
+class BrewOrder(BaseModel):
+    ingredient_type: IngredientType
+    quantity: PositiveInt
+    brew_style: BrewStyle
+
+
+class BrewTracking(BaseModel):
     id: int
-    order_status: OrderStatus
-    wood_type: WoodType
-    quantity: int
+    brew_status: BrewStatus
+    ingredient_type: IngredientType
+    quantity: PositiveInt
+    brew_style: BrewStyle
     date: datetime
 
 
-class InsufficientStockError(Exception):
-    pass
+class InsufficientIngredientError(Exception):
+    def __init__(self, ingredient_type: str, requested: int, available: int) -> None:
+        self.ingredient_type = ingredient_type
+        self.requested = requested
+        self.available = available
+        super().__init__(f"Insufficient {ingredient_type}: requested {requested}, available {available}")
 
 
-class StockNotFoundError(Exception):
-    pass
+class IngredientNotFoundError(Exception):
+    def __init__(self, ingredient_type: str) -> None:
+        self.ingredient_type = ingredient_type
+        super().__init__(f"Ingredient not found: {ingredient_type}")

@@ -13,13 +13,14 @@ and how to avoid duplicating data contracts across Python microservices.
 
 | Model | Type | Fields |
 |-------|------|--------|
-| `WoodType` | Enum | OAK, MAPLE, BIRCH, ELM, PINE |
-| `OrderStatus` | Enum | READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED |
-| `Stock` | Pydantic model | `wood_type: WoodType`, `quantity: int` |
-| `Order` | Pydantic model | `wood_type: WoodType`, `quantity: int` |
-| `OrderTracking` | Pydantic model | `id`, `order_status`, `wood_type`, `quantity`, `date` |
+| `IngredientType` | Enum | MALT, HOPS, YEAST, WHEAT, BARLEY |
+| `BrewStatus` | Enum | REGISTERED, BREWING, READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN |
+| `BrewStyle` | Enum | LAGER, IPA, STOUT, WHEAT_BEER |
+| `IngredientStock` | Pydantic model | `ingredient_type: IngredientType`, `quantity: int` |
+| `BrewOrder` | Pydantic model | `ingredient_type: IngredientType`, `quantity: int`, `brew_style: BrewStyle` |
+| `BrewTracking` | Pydantic model | `id`, `brew_status`, `ingredient_type`, `quantity`, `brew_style`, `date` |
 
-All models include a `to_json()` method for Kafka serialization.
+Serialization uses Pydantic's `model_dump()` and `model_dump_json()` directly.
 
 ## Installation in other services
 
@@ -38,6 +39,5 @@ Then run `uv sync` to activate the editable install.
 ```bash
 cd lib-models/ && uv sync
 uv run ruff check .
+uv run pytest
 ```
-
-> No tests exist yet — smoke tests tracked in issue #17.
