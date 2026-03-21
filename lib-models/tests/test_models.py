@@ -124,6 +124,16 @@ def test_ingredient_stock_invalid_quantity_raises():
         IngredientStock(ingredient_type=IngredientType.HOPS, quantity="not-a-number")
 
 
+def test_ingredient_stock_zero_quantity_raises():
+    with pytest.raises(ValidationError):
+        IngredientStock(ingredient_type=IngredientType.HOPS, quantity=0)
+
+
+def test_ingredient_stock_negative_quantity_raises():
+    with pytest.raises(ValidationError):
+        IngredientStock(ingredient_type=IngredientType.HOPS, quantity=-1)
+
+
 def test_ingredient_stock_json_round_trip():
     s = IngredientStock(ingredient_type=IngredientType.YEAST, quantity=42)
     data = json.loads(s.model_dump_json())
@@ -162,6 +172,16 @@ def test_brew_order_invalid_brew_style_raises():
 def test_brew_order_invalid_quantity_raises():
     with pytest.raises(ValidationError):
         BrewOrder(ingredient_type=IngredientType.BARLEY, quantity=None, brew_style=BrewStyle.STOUT)
+
+
+def test_brew_order_zero_quantity_raises():
+    with pytest.raises(ValidationError):
+        BrewOrder(ingredient_type=IngredientType.BARLEY, quantity=0, brew_style=BrewStyle.STOUT)
+
+
+def test_brew_order_negative_quantity_raises():
+    with pytest.raises(ValidationError):
+        BrewOrder(ingredient_type=IngredientType.BARLEY, quantity=-5, brew_style=BrewStyle.STOUT)
 
 
 def test_brew_order_json_round_trip():
@@ -262,18 +282,63 @@ def test_brew_tracking_model_dump():
 
 
 # ---------------------------------------------------------------------------
+# BrewTracking — negative quantity
+# ---------------------------------------------------------------------------
+
+
+def test_brew_tracking_negative_quantity_raises():
+    with pytest.raises(ValidationError):
+        BrewTracking(
+            id=1,
+            brew_status=BrewStatus.REGISTERED,
+            ingredient_type=IngredientType.MALT,
+            quantity=-1,
+            brew_style=BrewStyle.LAGER,
+            date=NOW,
+        )
+
+
+def test_brew_tracking_zero_quantity_raises():
+    with pytest.raises(ValidationError):
+        BrewTracking(
+            id=1,
+            brew_status=BrewStatus.REGISTERED,
+            ingredient_type=IngredientType.MALT,
+            quantity=0,
+            brew_style=BrewStyle.LAGER,
+            date=NOW,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Exceptions
 # ---------------------------------------------------------------------------
 
 
 def test_insufficient_ingredient_error_raises():
     with pytest.raises(InsufficientIngredientError):
-        raise InsufficientIngredientError("Not enough malt")
+        raise InsufficientIngredientError("malt", requested=10, available=3)
+
+
+def test_insufficient_ingredient_error_payload():
+    err = InsufficientIngredientError("hops", requested=20, available=5)
+    assert err.ingredient_type == "hops"
+    assert err.requested == 20
+    assert err.available == 5
+    assert "hops" in str(err)
+    assert "20" in str(err)
+    assert "5" in str(err)
 
 
 def test_ingredient_not_found_error_raises():
     with pytest.raises(IngredientNotFoundError):
-        raise IngredientNotFoundError("Ingredient not found")
+        raise IngredientNotFoundError("yeast")
+
+
+def test_ingredient_not_found_error_payload():
+    err = IngredientNotFoundError("barley")
+    assert err.ingredient_type == "barley"
+    assert "barley" in str(err)
 
 
 def test_insufficient_ingredient_error_is_exception():

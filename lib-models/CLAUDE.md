@@ -18,12 +18,15 @@ lib_models/models.py
 ├── IngredientType (Enum)        — MALT, HOPS, YEAST, WHEAT, BARLEY
 ├── BrewStatus (Enum)            — REGISTERED, BREWING, READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN
 ├── BrewStyle (Enum)             — LAGER, IPA, STOUT, WHEAT_BEER
-├── IngredientStock              — ingredient_type: IngredientType, quantity: int
-├── BrewOrder                    — ingredient_type: IngredientType, quantity: int, brew_style: BrewStyle
-├── BrewTracking                 — id, brew_status, ingredient_type, quantity, brew_style, date
-├── InsufficientIngredientError  — raised when ingredient stock is too low
-└── IngredientNotFoundError      — raised when ingredient entry does not exist
+├── IngredientStock              — ingredient_type: IngredientType, quantity: PositiveInt (gt=0)
+├── BrewOrder                    — ingredient_type: IngredientType, quantity: PositiveInt (gt=0), brew_style: BrewStyle
+├── BrewTracking                 — id, brew_status, ingredient_type, quantity: PositiveInt (gt=0), brew_style, date
+├── InsufficientIngredientError  — raised when stock is too low; carries ingredient_type, requested, available
+└── IngredientNotFoundError      — raised when ingredient entry does not exist; carries ingredient_type
 ```
+
+> **Note Phase 2:** `BrewTracking` sert à la fois de modèle de réponse API Flask et de modèle de lecture dans `ms-brewmaster`.
+> Si Phase 2 ajoute des champs riches (`fermentation_start`, `quality_result`…), envisager de séparer en `BrewReadModel` vs `BrewSummary`.
 
 Serialization uses Pydantic's `model_dump()` and `model_dump_json()` directly — no custom `to_json()` method.
 

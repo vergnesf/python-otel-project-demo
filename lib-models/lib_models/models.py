@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IngredientType(str, Enum):
@@ -29,14 +30,17 @@ class BrewStyle(str, Enum):
     WHEAT_BEER = "wheat_beer"
 
 
+PositiveInt = Annotated[int, Field(gt=0)]
+
+
 class IngredientStock(BaseModel):
     ingredient_type: IngredientType
-    quantity: int
+    quantity: PositiveInt
 
 
 class BrewOrder(BaseModel):
     ingredient_type: IngredientType
-    quantity: int
+    quantity: PositiveInt
     brew_style: BrewStyle
 
 
@@ -44,14 +48,20 @@ class BrewTracking(BaseModel):
     id: int
     brew_status: BrewStatus
     ingredient_type: IngredientType
-    quantity: int
+    quantity: PositiveInt
     brew_style: BrewStyle
     date: datetime
 
 
 class InsufficientIngredientError(Exception):
-    pass
+    def __init__(self, ingredient_type: str, requested: int, available: int) -> None:
+        self.ingredient_type = ingredient_type
+        self.requested = requested
+        self.available = available
+        super().__init__(f"Insufficient {ingredient_type}: requested {requested}, available {available}")
 
 
 class IngredientNotFoundError(Exception):
-    pass
+    def __init__(self, ingredient_type: str) -> None:
+        self.ingredient_type = ingredient_type
+        super().__init__(f"Ingredient not found: {ingredient_type}")
