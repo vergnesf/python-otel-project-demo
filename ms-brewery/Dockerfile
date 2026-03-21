@@ -12,19 +12,19 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ms-order/pyproject.toml /app/ms-order/
+COPY ms-brewery/pyproject.toml /app/ms-brewery/
 COPY lib-models /app/lib-models/
 
-WORKDIR /app/ms-order
+WORKDIR /app/ms-brewery
 
 RUN pip install --no-cache-dir uv && \
     uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ms-order/order /app/ms-order/order/
+COPY ms-brewery/order /app/ms-brewery/order/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "order/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "brewery/main.py"]

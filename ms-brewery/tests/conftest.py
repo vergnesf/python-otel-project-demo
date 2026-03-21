@@ -1,4 +1,4 @@
-"""conftest.py for order/tests — sets DATABASE_URL before any test module imports.
+"""conftest.py for brewery/tests — sets DATABASE_URL before any test module imports.
 
 Uses a named temporary SQLite file so that Flask-SQLAlchemy's internal engine
 (used by db.create_all) and the raw SQLAlchemy engine (SessionLocal in routes)
@@ -15,7 +15,7 @@ import pytest
 
 # Create a temp SQLite file for the test session. setdefault means an externally-set
 # DATABASE_URL (e.g. real PostgreSQL in CI) takes precedence.
-_db_fd, _db_path = tempfile.mkstemp(suffix="_order_test.db")
+_db_fd, _db_path = tempfile.mkstemp(suffix="_brewery_test.db")
 os.close(_db_fd)
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_db_path}")
 # Disable the OTEL SDK during unit tests — no collector is running.

@@ -13,17 +13,17 @@ vars:
   PROJECTS: >-
     agent-logs agent-metrics agent-orchestrator agent-traces agent-ui
     agent-traduction benchmark lib-ai lib-models
-    ms-customer ms-order ms-ordercheck ms-ordermanagement ms-stock ms-supplier ms-suppliercheck
+    ms-customer ms-brewery ms-ordercheck ms-ordermanagement ms-stock ms-supplier ms-suppliercheck
 
   # Business services with runnable Python processes and a tests/ directory. (7 dirs)
   # Shared libraries (lib-models, lib-ai) are excluded.
   # Scope: test-lint and test-unit.
-  KEEPER_SERVICES: ms-customer ms-order ms-ordercheck ms-ordermanagement ms-stock ms-supplier ms-suppliercheck
+  KEEPER_SERVICES: ms-customer ms-brewery ms-ordercheck ms-ordermanagement ms-stock ms-supplier ms-suppliercheck
 
   # Subset with a container healthcheck defined in docker-compose-apps.yml.
-  # Only Flask REST APIs (ms-order, ms-stock) have healthchecks.
+  # Only Flask REST APIs (ms-brewery, ms-stock) have healthchecks.
   # WARNING: only add a service here if docker-compose-apps.yml defines a HEALTHCHECK for it.
-  HEALTHCHECK_SERVICES: ms-order ms-stock
+  HEALTHCHECK_SERVICES: ms-brewery ms-stock
 
   # Ollama models to pull
   MODELS: mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b

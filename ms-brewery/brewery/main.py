@@ -1,4 +1,4 @@
-from order import create_app
+from brewery import create_app
 
 app = create_app()
 
