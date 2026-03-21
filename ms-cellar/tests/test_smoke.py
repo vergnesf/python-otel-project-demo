@@ -1,11 +1,11 @@
-"""Smoke tests for stock service — verify Flask app starts and health endpoint responds."""
+"""Smoke tests for cellar service — verify Flask app starts and health endpoint responds."""
 
 import pytest
 
 
 @pytest.fixture
 def app():
-    from stock import create_app
+    from cellar import create_app
 
     return create_app()
 

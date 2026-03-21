@@ -1,4 +1,4 @@
-from stock import create_app
+from cellar import create_app
 
 app = create_app()
 

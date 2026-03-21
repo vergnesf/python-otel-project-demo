@@ -1,81 +1,79 @@
-# Stock Service
+# ms-cellar
 
 > **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
 
-Flask REST API that manages wood stock inventory in a PostgreSQL database.
+Flask REST API that manages ingredient stock inventory in a PostgreSQL database.
 
 ## Why I built this
 
 To learn how two symmetric Flask APIs can share a database, how Flasgger generates
 Swagger docs automatically, and how REST and Kafka services appear differently in traces.
 
-## 📋 Overview
+## Overview
 
 - **Type**: REST API (Flask + SQLAlchemy)
 - **Port**: 5001
 - **Database**: PostgreSQL
 - **Framework**: Flask (intentional — synchronous, SQLAlchemy-compatible, no migration to FastAPI planned)
 
-## 🚀 Running the Service
+## Running the Service
 
 ```bash
 # With Docker (recommended)
-docker-compose up stock
+docker-compose up ms-cellar
 
 # Local development
-cd stock/ && uv sync
+cd ms-cellar/ && uv sync
 uv run opentelemetry-instrument \
     --traces_exporter otlp \
     --metrics_exporter otlp \
-    --service_name stock \
+    --service_name cellar \
     --exporter_otlp_endpoint http://localhost:4317 \
-    python -m stock.main
+    python cellar/main.py
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ```bash
 DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
 HOST=0.0.0.0
 PORT=5001
 LOG_LEVEL=INFO
-OTEL_SERVICE_NAME=stock
+OTEL_SERVICE_NAME=cellar
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-## 📊 API Endpoints
+## API Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/stocks` | Create stock entry |
-| GET | `/stocks` | List all stock |
-| GET | `/stocks/<wood_type>` | Get stock by wood type |
-| PUT | `/stocks/<wood_type>` | Update quantity |
-| POST | `/stocks/decrease` | Decrease stock (called by ordermanagement) |
+| POST | `/ingredients` | Create or accumulate ingredient stock |
+| GET | `/ingredients` | List all ingredient stocks |
+| GET | `/ingredients/<ingredient_type>` | Get stock by ingredient type |
+| POST | `/ingredients/decrease` | Decrease stock (called by ms-brewmaster) |
+| GET | `/health` | Health check |
 
 Swagger UI: `http://localhost:5001/apidocs/` _(requires full stack running with PostgreSQL)_
 
-## 📦 Dependencies
+## Dependencies
 
 - `flask` + `flask-sqlalchemy` — web framework + ORM
 - `flasgger` — auto-generated Swagger/OpenAPI docs
 - `psycopg2-binary` — PostgreSQL adapter
-- `common-models` — shared business models
+- `lib-models` — shared brewery domain models (IngredientType, typed exceptions)
 
-## 🔄 Integration
+## Integration
 
-Receives from ← `suppliercheck` (POST /stocks)
-Stock decreased by → `ordermanagement` (POST /stocks/decrease)
+Receives from ← `ms-ingredientcheck` (POST /ingredients)
+Updated by → `ms-brewmaster` (POST /ingredients/decrease)
 
-## 📈 Observability
+## Observability
 
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
-## 🧪 Testing
-
-> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
+## Testing
 
 ```bash
-uv run pytest
-uv run pytest --cov=stock --cov-report=html
+uv run python -m pytest tests/ -v
+uv run python -m ruff check cellar/ tests/
 ```

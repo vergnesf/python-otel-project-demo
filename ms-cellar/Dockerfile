@@ -12,19 +12,19 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ms-stock/pyproject.toml /app/ms-stock/
+COPY ms-cellar/pyproject.toml /app/ms-cellar/
 COPY lib-models /app/lib-models/
 
-WORKDIR /app/ms-stock
+WORKDIR /app/ms-cellar
 
 RUN pip install --no-cache-dir uv && \
     uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ms-stock/stock /app/ms-stock/stock/
+COPY ms-cellar/cellar /app/ms-cellar/cellar/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "stock/main.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "cellar/main.py"]

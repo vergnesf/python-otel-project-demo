@@ -3,31 +3,30 @@ import os
 import random
 
 from flask import Blueprint, current_app, jsonify, request
+from lib_models.models import IngredientNotFoundError, IngredientType, InsufficientIngredientError
 from pydantic import ValidationError
 
 from .. import schemas
 from ..crud import (
-    create_stock,
-    decrease_stock_quantity,
-    get_stock_by_wood_type,
-    get_stocks,
+    create_ingredient,
+    decrease_ingredient_quantity,
+    get_ingredient_by_type,
+    get_ingredients,
 )
 from ..database import SessionLocal
-from ..schemas import StockDecrease
+from ..schemas import IngredientDecrease
 
 # Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
-stocks_bp = Blueprint("stocks", __name__)
+cellar_bp = Blueprint("cellar", __name__)
 
 # Get error rate from environment variable (default 0.1)
 ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
 
-MSG_ERROR_NOT_FOUND = "Stock not found"
-
 
 # Custom error handler to log all HTTP error codes properly
-@stocks_bp.after_request
+@cellar_bp.after_request
 def log_response(response):
     if response.status_code >= 500:
         current_app.logger.error(f"HTTP {response.status_code} error for {request.method} {request.path}")
@@ -38,63 +37,60 @@ def log_response(response):
     return response
 
 
-@stocks_bp.route("/", methods=["POST"])
-def create_stock_route():
+@cellar_bp.route("/", methods=["POST"])
+def create_ingredient_route():
     """
-    Create a new stock
+    Create or accumulate ingredient stock
     ---
     tags:
-      - stocks
+      - ingredients
     parameters:
       - in: body
         name: body
         schema:
           type: object
           required:
-            - wood_type
+            - ingredient_type
             - quantity
           properties:
-            wood_type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
     responses:
       201:
-        description: Stock created successfully
+        description: Ingredient stock created or updated
         schema:
           type: object
           properties:
-            id:
-              type: integer
-            wood_type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
     """
-    # Simulate DB/API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
-        return jsonify({"error": "Simulated DB error during stock creation"}), 500
+        return jsonify({"error": "Simulated DB error during ingredient creation"}), 500
     data = request.json
     if not data:
         return jsonify({"error": "Missing request body"}), 400
     db = SessionLocal()
     try:
-        stock_data = schemas.StockCreate(**data)
-        new_stock = create_stock(db=db, stock=stock_data)
-        return jsonify(new_stock.to_dict()), 201
+        ingredient_data = schemas.IngredientCreate(**data)
+        new_ingredient = create_ingredient(db=db, ingredient=ingredient_data)
+        return jsonify(new_ingredient.to_dict()), 201
     except Exception:
-        return jsonify({"error": "Unexpected error during stock creation"}), 500
+        return jsonify({"error": "Unexpected error during ingredient creation"}), 500
     finally:
         db.close()
 
 
-@stocks_bp.route("/", methods=["GET"])
-def read_stocks_route():
+@cellar_bp.route("/", methods=["GET"])
+def read_ingredients_route():
     """
-    Get a list of stocks
+    Get a list of ingredient stocks
     ---
     tags:
-      - stocks
+      - ingredients
     parameters:
       - in: query
         name: skip
@@ -108,22 +104,19 @@ def read_stocks_route():
         default: 10
     responses:
       200:
-        description: List of stocks
+        description: List of ingredient stocks
         schema:
           type: array
           items:
             type: object
             properties:
-              id:
-                type: integer
-              wood_type:
+              ingredient_type:
                 type: string
               quantity:
                 type: integer
     """
-    # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
-        return jsonify({"error": "Simulated API error during stock list"}), 502
+        return jsonify({"error": "Simulated API error during ingredient list"}), 502
     try:
         skip = int(request.args.get("skip", 0))
         limit = int(request.args.get("limit", 10))
@@ -131,90 +124,89 @@ def read_stocks_route():
         return jsonify({"error": "skip and limit must be integers"}), 400
     db = SessionLocal()
     try:
-        stocks = get_stocks(db, skip=skip, limit=limit)
-        return jsonify([stock.to_dict() for stock in stocks]), 200
+        ingredients = get_ingredients(db, skip=skip, limit=limit)
+        return jsonify([i.to_dict() for i in ingredients]), 200
     except Exception:
-        return jsonify({"error": "Unexpected error during stock list"}), 500
+        return jsonify({"error": "Unexpected error during ingredient list"}), 500
     finally:
         db.close()
 
 
-@stocks_bp.route("/<wood_type>", methods=["GET"])
-def read_stock_route(wood_type):
+@cellar_bp.route("/<ingredient_type>", methods=["GET"])
+def read_ingredient_route(ingredient_type):
     """
-    Get a stock by wood type
+    Get ingredient stock by type
     ---
     tags:
-      - stocks
+      - ingredients
     parameters:
       - in: path
-        name: wood_type
+        name: ingredient_type
         type: string
         required: true
     responses:
       200:
-        description: Stock details
+        description: Ingredient stock details
         schema:
           type: object
           properties:
-            id:
-              type: integer
-            wood_type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
       404:
-        description: Stock not found
+        description: Ingredient not found
         schema:
           type: object
           properties:
             error:
               type: string
     """
-    # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
-        return jsonify({"error": "Simulated API error during stock read"}), 502
+        return jsonify({"error": "Simulated API error during ingredient read"}), 502
     db = SessionLocal()
     try:
-        db_stock = get_stock_by_wood_type(db, wood_type=wood_type)
-        if db_stock is None:
-            return jsonify({"error": MSG_ERROR_NOT_FOUND}), 404
-        return jsonify(db_stock.to_dict()), 200
+        try:
+            typed = IngredientType(ingredient_type)
+        except ValueError:
+            return jsonify({"error": f"Invalid ingredient type: {ingredient_type}"}), 400
+        db_ingredient = get_ingredient_by_type(db, ingredient_type=typed)
+        if db_ingredient is None:
+            return jsonify({"error": "Ingredient not found"}), 404
+        return jsonify(db_ingredient.to_dict()), 200
     except Exception:
-        return jsonify({"error": "Unexpected error during stock read"}), 500
+        return jsonify({"error": "Unexpected error during ingredient read"}), 500
     finally:
         db.close()
 
 
-@stocks_bp.route("/decrease", methods=["POST"])
-def decrease_stock_route():
+@cellar_bp.route("/decrease", methods=["POST"])
+def decrease_ingredient_route():
     """
-    Decrease stock quantity
+    Decrease ingredient stock quantity
     ---
     tags:
-      - stocks
+      - ingredients
     parameters:
       - in: body
         name: body
         schema:
           type: object
           required:
-            - wood_type
+            - ingredient_type
             - quantity
           properties:
-            wood_type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
     responses:
       200:
-        description: Stock quantity decreased
+        description: Ingredient stock quantity decreased
         schema:
           type: object
           properties:
-            id:
-              type: integer
-            wood_type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
@@ -226,36 +218,34 @@ def decrease_stock_route():
             error:
               type: string
       404:
-        description: Stock not found
+        description: Ingredient not found
         schema:
           type: object
           properties:
             error:
               type: string
     """
-    # Simulate DB/API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
-        return jsonify({"error": "Simulated DB error during stock decrease"}), 500
+        return jsonify({"error": "Simulated DB error during ingredient decrease"}), 500
     data = request.json
     if not data:
         return jsonify({"error": "Missing request body"}), 400
     try:
-        stock_data = StockDecrease(**data)
+        ingredient_data = IngredientDecrease(**data)
     except ValidationError:
         return jsonify({"error": "Invalid input"}), 400
 
     db = SessionLocal()
     try:
-        db_stock = get_stock_by_wood_type(db, wood_type=stock_data.wood_type)
-        if db_stock is None:
-            return jsonify({"error": "Stock not found"}), 404
-        if db_stock.quantity is not None and db_stock.quantity < stock_data.quantity:  # type: ignore[misc]
-            return jsonify({"error": "Insufficient stock"}), 400
-        decrease_stock_quantity(db, wood_type=stock_data.wood_type, quantity=stock_data.quantity)
+        decrease_ingredient_quantity(db, ingredient_type=ingredient_data.ingredient_type, quantity=ingredient_data.quantity)
         db.commit()
-        db.refresh(db_stock)
-        return jsonify(db_stock.to_dict()), 200
+        db_ingredient = get_ingredient_by_type(db, ingredient_type=ingredient_data.ingredient_type)  # type: ignore[arg-type]
+        return jsonify(db_ingredient.to_dict()), 200
+    except IngredientNotFoundError as e:
+        return jsonify({"error": str(e)}), 404
+    except InsufficientIngredientError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception:
-        return jsonify({"error": "Unexpected error during stock decrease"}), 500
+        return jsonify({"error": "Unexpected error during ingredient decrease"}), 500
     finally:
         db.close()
