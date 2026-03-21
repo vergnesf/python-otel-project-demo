@@ -7,7 +7,7 @@ import time
 
 from confluent_kafka import Producer
 from lib_models.log_formatter import OtelJsonFormatter
-from lib_models.models import Stock, WoodType
+from lib_models.models import IngredientStock, IngredientType
 from opentelemetry import trace
 from opentelemetry.propagate import inject
 from opentelemetry.trace import SpanKind, StatusCode
@@ -34,10 +34,10 @@ def delivery_report(err, msg):
 producer = Producer({"bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")})
 
 
-def send_stock(stock: Stock):
+def send_ingredient(ingredient: IngredientStock):
     headers: dict[str, str] = {}
     inject(headers)  # inject W3C traceparent/tracestate from active span
-    producer.produce("stocks", value=json.dumps(stock.model_dump()), headers=list(headers.items()), callback=delivery_report)
+    producer.produce("ingredient-deliveries", value=json.dumps(ingredient.model_dump()), headers=list(headers.items()), callback=delivery_report)
     producer.poll(0)
 
 
@@ -45,25 +45,25 @@ def _run_once(error_rate: float) -> None:
     # Simulate random error for observability testing
     # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
     # Span name follows OTEL messaging semconv: "{operation} {destination}"
-    with tracer.start_as_current_span("send stocks", kind=SpanKind.PRODUCER) as span:
+    with tracer.start_as_current_span("send ingredient-deliveries", kind=SpanKind.PRODUCER) as span:
         span.set_attribute("messaging.system", "kafka")
         span.set_attribute("messaging.operation.name", "send")
         span.set_attribute("messaging.operation.type", "publish")
-        span.set_attribute("messaging.destination.name", "stocks")
+        span.set_attribute("messaging.destination.name", "ingredient-deliveries")
         if random.random() < error_rate:
             exc = RuntimeError("simulated failure")
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
             span.record_exception(exc)
             span.set_attribute("error.type", type(exc).__name__)
-            logger.error("failed to send stock (Kafka/network failure)")
+            logger.error("failed to send ingredient delivery (Kafka/network failure)")
         else:
-            stock = Stock(
-                wood_type=random.choice(list(WoodType)),
+            ingredient = IngredientStock(
+                ingredient_type=random.choice(list(IngredientType)),
                 quantity=random.randint(1, 100),
             )
-            logger.info("Created stock: %s", stock.model_dump())
-            send_stock(stock)
-            logger.info("Stock sent successfully: %s", stock.model_dump())
+            logger.info("Created ingredient delivery: %s", ingredient.model_dump())
+            send_ingredient(ingredient)
+            logger.info("Ingredient delivery sent successfully: %s", ingredient.model_dump())
 
 
 if __name__ == "__main__":

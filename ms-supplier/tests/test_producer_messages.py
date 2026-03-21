@@ -1,12 +1,7 @@
 """Tests for supplier producer message construction and Kafka send behaviour.
 
-Strategy: patch the module-level `producer` instance with a MagicMock — confluent_kafka's
-Producer is a C extension (cimpl.Producer) whose methods are read-only and cannot be
-targeted by patch.object. Replacing the whole instance avoids this limitation and keeps
-tests fully offline (no broker needed).
-
 Verifies:
-- Correct topic ("stocks")
+- Correct topic ("ingredient-deliveries")
 - Message value is valid JSON
 - Payload contains expected fields with correct values
 - delivery_report callback is wired on every send
@@ -15,57 +10,56 @@ Verifies:
 import json
 from unittest.mock import MagicMock, patch
 
-from lib_models.models import Stock, WoodType
-from supplier.supplier_producer import delivery_report, send_stock
+from lib_models.models import IngredientStock, IngredientType
+from supplier.supplier_producer import delivery_report, send_ingredient
 
 
 def _make_mock_producer():
-    """Return a fresh MagicMock with the same interface as confluent_kafka.Producer."""
     return MagicMock()
 
 
-def test_send_stock_calls_produce_with_correct_topic():
-    stock = Stock(wood_type=WoodType.OAK, quantity=10)
+def test_send_ingredient_calls_produce_with_correct_topic():
+    ingredient = IngredientStock(ingredient_type=IngredientType.MALT, quantity=10)
     mock_producer = _make_mock_producer()
     with patch("supplier.supplier_producer.producer", mock_producer):
-        send_stock(stock)
+        send_ingredient(ingredient)
     mock_producer.produce.assert_called_once()
     topic = mock_producer.produce.call_args.args[0]
-    assert topic == "stocks"
+    assert topic == "ingredient-deliveries"
 
 
-def test_send_stock_message_is_valid_json():
-    stock = Stock(wood_type=WoodType.MAPLE, quantity=5)
+def test_send_ingredient_message_is_valid_json():
+    ingredient = IngredientStock(ingredient_type=IngredientType.HOPS, quantity=5)
     mock_producer = _make_mock_producer()
     with patch("supplier.supplier_producer.producer", mock_producer):
-        send_stock(stock)
+        send_ingredient(ingredient)
     raw = mock_producer.produce.call_args.kwargs["value"]
     payload = json.loads(raw)
     assert isinstance(payload, dict)
 
 
-def test_send_stock_message_contains_expected_fields():
-    stock = Stock(wood_type=WoodType.BIRCH, quantity=42)
+def test_send_ingredient_message_contains_expected_fields():
+    ingredient = IngredientStock(ingredient_type=IngredientType.YEAST, quantity=42)
     mock_producer = _make_mock_producer()
     with patch("supplier.supplier_producer.producer", mock_producer):
-        send_stock(stock)
+        send_ingredient(ingredient)
     payload = json.loads(mock_producer.produce.call_args.kwargs["value"])
-    assert payload["wood_type"] == WoodType.BIRCH.value
+    assert payload["ingredient_type"] == IngredientType.YEAST.value
     assert payload["quantity"] == 42
 
 
-def test_send_stock_payload_matches_stock_model():
-    stock = Stock(wood_type=WoodType.PINE, quantity=7)
+def test_send_ingredient_payload_matches_model():
+    ingredient = IngredientStock(ingredient_type=IngredientType.WHEAT, quantity=7)
     mock_producer = _make_mock_producer()
     with patch("supplier.supplier_producer.producer", mock_producer):
-        send_stock(stock)
+        send_ingredient(ingredient)
     payload = json.loads(mock_producer.produce.call_args.kwargs["value"])
-    assert payload == stock.model_dump()
+    assert payload == ingredient.model_dump()
 
 
-def test_send_stock_wires_delivery_report_callback():
-    stock = Stock(wood_type=WoodType.ELM, quantity=1)
+def test_send_ingredient_wires_delivery_report_callback():
+    ingredient = IngredientStock(ingredient_type=IngredientType.BARLEY, quantity=1)
     mock_producer = _make_mock_producer()
     with patch("supplier.supplier_producer.producer", mock_producer):
-        send_stock(stock)
+        send_ingredient(ingredient)
     assert mock_producer.produce.call_args.kwargs["callback"] is delivery_report
