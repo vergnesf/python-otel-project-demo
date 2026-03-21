@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir uv && \
     uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ms-brewery/order /app/ms-brewery/order/
+COPY ms-brewery/brewery /app/ms-brewery/brewery/
 
 RUN chown -R appuser:appuser /app
 
