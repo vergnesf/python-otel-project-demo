@@ -6,7 +6,7 @@ import time
 import requests
 from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import BrewStatus, IngredientNotFoundError, InsufficientIngredientError
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.trace import StatusCode
 
 # Configure logging with environment variable
@@ -17,6 +17,8 @@ logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_
 logger = logging.getLogger(__name__)
 
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+brews_managed = meter.create_counter("brews.managed", description="Number of brews transitioned by the brewmaster")
 
 API_URL_BREWS = os.environ.get("API_URL_BREWS", "http://127.0.0.1:8000")
 API_URL_CELLAR = os.environ.get("API_URL_CELLAR", "http://127.0.0.1:8000")
@@ -95,11 +97,18 @@ def process_registered_brew():
                 logger.info("Ingredients consumed for brew: %s", brew)
                 update_brew_status(brew["id"], BrewStatus.READY)
                 logger.info("Brew status updated to READY for brew: %s", brew)
+                brews_managed.add(1, {"result": "ready"})
             except Exception as e:
                 span.set_status(StatusCode.ERROR, str(e))
                 span.record_exception(e)
                 span.set_attribute("error.type", type(e).__name__)
                 logger.error("Failed to process brew %s: %s", brew["id"], e)
+                # result=blocked → real business failure (stock or ingredient not found)
+                # result=error   → unexpected failure (ERROR_RATE simulation, network, etc.)
+                # Increment before update_brew_status so the metric is always recorded
+                # even if the status update itself fails (network error, timeout).
+                result = "blocked" if isinstance(e, (InsufficientIngredientError, IngredientNotFoundError)) else "error"
+                brews_managed.add(1, {"result": result})
                 try:
                     update_brew_status(brew["id"], BrewStatus.BLOCKED)
                     logger.info("Brew status updated to BLOCKED for brew: %s", brew)

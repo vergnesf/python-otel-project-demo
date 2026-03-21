@@ -2,10 +2,12 @@ import os
 
 import pytest
 
-# Set up TracerProvider at module level — BEFORE any import that calls trace.get_tracer().
-# This avoids the "Overriding of current TracerProvider is not allowed" warning.
-from opentelemetry import trace
+# Set up TracerProvider and MeterProvider at module level — BEFORE any import that calls
+# trace.get_tracer() or metrics.get_meter(). This avoids provider override warnings.
+from opentelemetry import metrics, trace
 from opentelemetry.propagate import set_global_textmap
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -21,9 +23,19 @@ _provider = TracerProvider()
 _provider.add_span_processor(SimpleSpanProcessor(_exporter))
 trace.set_tracer_provider(_provider)
 
+_metric_reader = InMemoryMetricReader()
+_meter_provider = MeterProvider(metric_readers=[_metric_reader])
+metrics.set_meter_provider(_meter_provider)
+
 
 @pytest.fixture()
 def span_exporter():
     """Yield the shared InMemorySpanExporter, cleared before each test."""
     _exporter.clear()
     yield _exporter
+
+
+@pytest.fixture()
+def metric_reader():
+    """Yield the shared InMemoryMetricReader. Counters are cumulative — tests use delta checks."""
+    yield _metric_reader

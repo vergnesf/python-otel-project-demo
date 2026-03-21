@@ -183,7 +183,7 @@ tasks:
             failed=$((failed+1))
             continue
           fi
-          output=$(cd "{{.TASKFILE_DIR}}/$svc" 2>&1 && timeout 60 uv run pytest tests/ -q --tb=short 2>&1)
+          output=$(cd "{{.TASKFILE_DIR}}/$svc" 2>&1 && timeout 60 uv run python -m pytest tests/ -q --tb=short 2>&1)
           exitcode=$?
           if [ $exitcode -eq 0 ]; then
             tcount=$(echo "$output" | sed -n 's/^\([0-9]\+\) passed.*/\1/p' | head -1)

@@ -1,11 +1,16 @@
 import logging
 import os
+import time
 
 from flasgger import Swagger
-from flask import Flask, jsonify
+from flask import Flask, g, jsonify, request
 from lib_models.log_formatter import OtelJsonFormatter
+from opentelemetry import metrics
 
 from .database import DATABASE_URL, db
+
+_meter = metrics.get_meter("ms-cellar")
+_http_duration = _meter.create_histogram("cellar.http.duration", unit="s", description="HTTP request duration per endpoint")
 
 
 def create_app():
@@ -23,6 +28,18 @@ def create_app():
     db.init_app(app)
 
     swagger = Swagger(app)  # noqa: F841
+
+    @app.before_request
+    def _start_timer():
+        g.start_time = time.monotonic()
+
+    @app.after_request
+    def _record_duration(response):
+        duration = time.monotonic() - g.get("start_time", time.monotonic())
+        # Use url_rule (e.g. "/decrease") instead of path to avoid high cardinality.
+        route = str(request.url_rule) if request.url_rule else request.path
+        _http_duration.record(duration, {"http.method": request.method, "http.route": route, "http.status_code": str(response.status_code)})
+        return response
 
     @app.route("/health", methods=["GET"])
     def health_check():

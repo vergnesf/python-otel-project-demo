@@ -8,7 +8,7 @@ import time
 from confluent_kafka import Producer
 from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import BrewOrder, BrewStyle, IngredientType
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.propagate import inject
 from opentelemetry.trace import SpanKind, StatusCode
 
@@ -20,6 +20,11 @@ logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_
 logger = logging.getLogger(__name__)
 
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+# Note: brew_orders_created counts messages handed to the Kafka client buffer (after producer.produce),
+# not broker-confirmed deliveries. Broker delivery failures are logged via delivery_report callback.
+brew_orders_created = meter.create_counter("brew_orders.created", description="Number of brew orders produced to Kafka")
+brew_orders_failed = meter.create_counter("brew_orders.failed", description="Number of brew orders dropped due to ERROR_RATE")
 
 
 # Kafka delivery report callback
@@ -56,6 +61,7 @@ def _run_once(error_rate: float) -> None:
             span.record_exception(exc)
             span.set_attribute("error.type", type(exc).__name__)
             logger.error("failed to send brew order (Kafka/network failure)")
+            brew_orders_failed.add(1)
         else:
             brew_order = BrewOrder(
                 ingredient_type=random.choice(list(IngredientType)),
@@ -65,6 +71,7 @@ def _run_once(error_rate: float) -> None:
             logger.info("Created brew order: %s", brew_order.model_dump())
             send_brew_order(brew_order)
             logger.info("Brew order sent successfully: %s", brew_order.model_dump())
+            brew_orders_created.add(1, {"ingredient_type": brew_order.ingredient_type.value, "brew_style": brew_order.brew_style.value})
 
 
 if __name__ == "__main__":
