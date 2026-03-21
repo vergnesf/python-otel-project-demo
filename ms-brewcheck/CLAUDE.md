@@ -24,7 +24,7 @@ pass-through bridge between the Kafka topic and the REST API.
 | `KAFKA_BOOTSTRAP_SERVERS` | required | Kafka broker address |
 | `API_URL` | `http://brewery:5000` | Target Brewery API base URL (appends `/brews`) |
 | `ERROR_RATE` | `0.1` | Fraction of messages that fail (0.0–1.0) |
-| `OTEL_SERVICE_NAME` | `brewcheck` | Telemetry service name |
+| `OTEL_SERVICE_NAME` | `ms-brewcheck` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
 ## Integration
