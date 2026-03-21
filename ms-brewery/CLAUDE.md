@@ -42,7 +42,7 @@ and serves brew data to `ms-brewmaster`.
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `OTEL_SERVICE_NAME` | `brewery` |
+| `OTEL_SERVICE_NAME` | `ms-brewery` |
 | `LOG_LEVEL` | Logging verbosity |
 
 ## What I learned building this

@@ -41,7 +41,7 @@ requested by `ms-brewmaster` when brews are fulfilled.
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `OTEL_SERVICE_NAME` | `cellar` |
+| `OTEL_SERVICE_NAME` | `ms-cellar` |
 | `LOG_LEVEL` | Logging verbosity |
 
 ## What I learned building this
