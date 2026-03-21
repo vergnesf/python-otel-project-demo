@@ -15,13 +15,13 @@ Two-layer model:
 
 | Service | Type | Framework |
 |---------|------|-----------|
-| `ms-customer` | Kafka producer | none |
+| `ms-brewer` | Kafka producer | none |
 | `ms-supplier` | Kafka producer | none |
-| `ms-ordercheck` | Kafka consumer | none |
-| `ms-suppliercheck` | Kafka consumer | none |
-| `ms-ordermanagement` | Background worker | none |
-| `ms-order` | REST API + DB | Flask + SQLAlchemy |
-| `ms-stock` | REST API + DB | Flask + SQLAlchemy |
+| `ms-brewcheck` | Kafka consumer | none |
+| `ms-ingredientcheck` | Kafka consumer | none |
+| `ms-brewmaster` | Background worker | none |
+| `ms-brewery` | REST API + DB | Flask + SQLAlchemy |
+| `ms-cellar` | REST API + DB | Flask + SQLAlchemy |
 | `lib-models` | Shared library | Pydantic v2 |
 | `lib-ai` | Shared AI library | LangChain + MCP |
 | `config` | Infra config files | YAML |
@@ -33,7 +33,7 @@ Two-layer model:
 
 ## Framework Convention
 
-- **Flask** for KEEPER HTTP services (`ms-order`, `ms-stock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
+- **Flask** for KEEPER HTTP services (`ms-brewery`, `ms-cellar`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
 - **FastAPI** for all agent services — async, LLM-friendly.
 
 ## Tools
@@ -49,6 +49,7 @@ Two-layer model:
 ```bash
 task compose-up       # Start full stack (observability → db → kafka → ai-tools → ai → apps → traefik) — idempotent: running containers are preserved; use compose-down first to apply config/image changes
 task compose-down     # Stop all services: traefik first (ingress), then apps → ai → ai-tools → kafka → db → observability
+task compose-reset    # Full reset: down (remove volumes + built images) then up — use after image changes or DB schema changes
 task lint             # Ruff check across all projects (PROJECTS var — includes agents)
 task tools-format     # Ruff format across all projects (runs from repo root, applies root pyproject.toml config)
 task models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
@@ -56,13 +57,13 @@ task test             # test-lint → test-unit → test-integration (sequential
 task --continue test  # Run all test phases even if one fails
 task test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of lint)
 task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
-task test-integration # Container health checks (ms-order, ms-stock only) — skips if stack not running or runtime absent; unhealthy containers report failure
+task test-integration # Container health checks (ms-brewery, ms-cellar only) — skips if stack not running or runtime absent; unhealthy containers report failure
 task --list           # Show all available tasks with descriptions
 ```
 
 > **Taskfile variable scopes:** `PROJECTS` = all services (see `Taskfile.yml` for the full list), used by `task lint`.
 > `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
-> `HEALTHCHECK_SERVICES` (2 dirs) = `ms-order` and `ms-stock` — only Flask services with container healthchecks, used by the `test-integration` health loop.
+> `HEALTHCHECK_SERVICES` (2 dirs) = `ms-brewery` and `ms-cellar` — only Flask services with container healthchecks, used by the `test-integration` health loop.
 > Agent services (`agent-*`) and shared libs (`lib-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
 ## Environment Setup
@@ -86,7 +87,7 @@ Telemetry flows: logs → Loki, metrics → Mimir, traces → Tempo, UI → Graf
 ## Error Injection
 
 `ERROR_RATE` env var (0.0–1.0, default 0.1) injects random failures in Kafka producers, consumers,
-and the ordermanagement worker. The Flask REST APIs (`ms-order`, `ms-stock`) do not use `ERROR_RATE`.
+and the brewmaster worker. The Flask REST APIs (`ms-brewery`, `ms-cellar`) do not use `ERROR_RATE`.
 This is intentional — generates realistic, noisy telemetry for learning OTEL.
 
 ## Shared Libraries
@@ -98,8 +99,8 @@ This is intentional — generates realistic, noisy telemetry for learning OTEL.
 
 All services are behind **Traefik** (port 8081). Direct access:
 - Grafana: `http://localhost:3000`
-- Order API: `http://localhost:5000`
-- Stock API: `http://localhost:5001`
+- Brewery API: `http://localhost:5000`
+- Cellar API: `http://localhost:5001`
 
 Via Traefik (`http://localhost:8081`):
 - Kafka UI (AKHQ): `http://localhost:8081/akhq/`
