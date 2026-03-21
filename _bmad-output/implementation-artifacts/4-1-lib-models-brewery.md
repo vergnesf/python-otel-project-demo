@@ -1,7 +1,7 @@
 # Story 4-1: Replace Sawmill Domain with Brewery Domain Models in lib-models
 
 ## Status
-review
+done
 
 ## Story
 **As a** developer working on the brewery-phase-1 refonte,
@@ -80,6 +80,8 @@ _empty_
 - `lib-models/lib_models/models.py`
 - `lib-models/lib_models/__init__.py`
 - `lib-models/tests/test_models.py`
+- `lib-models/CLAUDE.md`
+- `lib-models/README.md`
 - `_bmad-output/implementation-artifacts/4-1-lib-models-brewery.md`
 
 ## Change Log

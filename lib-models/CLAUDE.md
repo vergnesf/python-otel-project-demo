@@ -15,13 +15,14 @@ in every service that needs it.
 
 ```
 lib_models/models.py
-├── WoodType (Enum)          — OAK, MAPLE, BIRCH, ELM, PINE
-├── OrderStatus (Enum)       — READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN, REGISTERED
-├── Stock                    — wood_type: WoodType, quantity: int
-├── Order                    — wood_type: WoodType, quantity: int
-├── OrderTracking            — id, order_status, wood_type, quantity, date
-├── InsufficientStockError   — raised when stock is too low
-└── StockNotFoundError       — raised when stock entry does not exist
+├── IngredientType (Enum)        — MALT, HOPS, YEAST, WHEAT, BARLEY
+├── BrewStatus (Enum)            — REGISTERED, BREWING, READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN
+├── BrewStyle (Enum)             — LAGER, IPA, STOUT, WHEAT_BEER
+├── IngredientStock              — ingredient_type: IngredientType, quantity: int
+├── BrewOrder                    — ingredient_type: IngredientType, quantity: int, brew_style: BrewStyle
+├── BrewTracking                 — id, brew_status, ingredient_type, quantity, brew_style, date
+├── InsufficientIngredientError  — raised when ingredient stock is too low
+└── IngredientNotFoundError      — raised when ingredient entry does not exist
 ```
 
 Serialization uses Pydantic's `model_dump()` and `model_dump_json()` directly — no custom `to_json()` method.
