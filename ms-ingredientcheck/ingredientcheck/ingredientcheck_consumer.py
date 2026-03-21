@@ -8,7 +8,7 @@ import time
 import requests
 from confluent_kafka import Consumer, KafkaError, KafkaException
 from lib_models.log_formatter import OtelJsonFormatter
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.propagate import extract
 from opentelemetry.trace import SpanKind, StatusCode
 
@@ -20,6 +20,9 @@ logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_
 logger = logging.getLogger(__name__)
 
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+ingredient_deliveries_processed = meter.create_counter("ingredient_deliveries.processed", description="Number of ingredient deliveries successfully forwarded to ms-cellar")
+ingredient_deliveries_processing_errors = meter.create_counter("ingredient_deliveries.processing_errors", description="Number of ingredient deliveries failed (HTTP error or ERROR_RATE)")
 
 # Initialize the Kafka consumer
 consumer = Consumer(
@@ -58,6 +61,7 @@ def _process_message(msg, error_rate: float) -> None:
             span.record_exception(exc)
             span.set_attribute("error.type", type(exc).__name__)
             logger.error("failed to process ingredient delivery (API or network failure)")
+            ingredient_deliveries_processing_errors.add(1)
             return
 
         try:
@@ -67,6 +71,7 @@ def _process_message(msg, error_rate: float) -> None:
             span.record_exception(e)
             span.set_attribute("error.type", type(e).__name__)
             logger.error("Skipping malformed Kafka message: %s", e)
+            ingredient_deliveries_processing_errors.add(1)
             return
 
         logger.info("Received ingredient delivery data: %s", ingredient_data)
@@ -75,12 +80,16 @@ def _process_message(msg, error_rate: float) -> None:
             response = requests.post(API_URL, json=ingredient_data, timeout=5)
             if response.status_code == 201:
                 logger.info("Ingredient delivery data successfully sent to API")
+                ingredient_deliveries_processed.add(1)
             else:
                 logger.error("Failed to send ingredient delivery data to API: %s", response.text)
+                ingredient_deliveries_processing_errors.add(1)
         except requests.Timeout:
             logger.error("Timeout calling API %s, skipping message", API_URL)
+            ingredient_deliveries_processing_errors.add(1)
         except requests.RequestException as e:
             logger.error("HTTP error calling API: %s", e)
+            ingredient_deliveries_processing_errors.add(1)
 
 
 running = True

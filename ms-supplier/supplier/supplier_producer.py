@@ -8,7 +8,7 @@ import time
 from confluent_kafka import Producer
 from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import IngredientStock, IngredientType
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 from opentelemetry.propagate import inject
 from opentelemetry.trace import SpanKind, StatusCode
 
@@ -20,6 +20,9 @@ logging.basicConfig(level=getattr(logging, log_level, logging.INFO), handlers=[_
 logger = logging.getLogger(__name__)
 
 tracer = trace.get_tracer(__name__)
+meter = metrics.get_meter(__name__)
+ingredient_deliveries_created = meter.create_counter("ingredient_deliveries.created", description="Number of ingredient deliveries produced to Kafka")
+ingredient_deliveries_failed = meter.create_counter("ingredient_deliveries.failed", description="Number of ingredient deliveries dropped due to ERROR_RATE")
 
 
 # Kafka delivery report callback
@@ -56,6 +59,7 @@ def _run_once(error_rate: float) -> None:
             span.record_exception(exc)
             span.set_attribute("error.type", type(exc).__name__)
             logger.error("failed to send ingredient delivery (Kafka/network failure)")
+            ingredient_deliveries_failed.add(1)
         else:
             ingredient = IngredientStock(
                 ingredient_type=random.choice(list(IngredientType)),
@@ -64,6 +68,7 @@ def _run_once(error_rate: float) -> None:
             logger.info("Created ingredient delivery: %s", ingredient.model_dump())
             send_ingredient(ingredient)
             logger.info("Ingredient delivery sent successfully: %s", ingredient.model_dump())
+            ingredient_deliveries_created.add(1, {"ingredient_type": ingredient.ingredient_type.value})
 
 
 if __name__ == "__main__":
