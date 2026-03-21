@@ -4,44 +4,54 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class WoodType(str, Enum):
-    OAK = "oak"
-    MAPLE = "maple"
-    BIRCH = "birch"
-    ELM = "elm"
-    PINE = "pine"
+class IngredientType(str, Enum):
+    MALT = "malt"
+    HOPS = "hops"
+    YEAST = "yeast"
+    WHEAT = "wheat"
+    BARLEY = "barley"
 
 
-class OrderStatus(str, Enum):
+class BrewStatus(str, Enum):
+    REGISTERED = "registered"
+    BREWING = "brewing"
     READY = "ready"
     SHIPPED = "shipped"
     BLOCKED = "blocked"
     CLOSED = "closed"
     UNKNOWN = "unknown"
-    REGISTERED = "registered"
 
 
-class Stock(BaseModel):
-    wood_type: WoodType
+class BrewStyle(str, Enum):
+    LAGER = "lager"
+    IPA = "ipa"
+    STOUT = "stout"
+    WHEAT_BEER = "wheat_beer"
+
+
+class IngredientStock(BaseModel):
+    ingredient_type: IngredientType
     quantity: int
 
 
-class Order(BaseModel):
-    wood_type: WoodType
+class BrewOrder(BaseModel):
+    ingredient_type: IngredientType
     quantity: int
+    brew_style: BrewStyle
 
 
-class OrderTracking(BaseModel):
+class BrewTracking(BaseModel):
     id: int
-    order_status: OrderStatus
-    wood_type: WoodType
+    brew_status: BrewStatus
+    ingredient_type: IngredientType
     quantity: int
+    brew_style: BrewStyle
     date: datetime
 
 
-class InsufficientStockError(Exception):
+class InsufficientIngredientError(Exception):
     pass
 
 
-class StockNotFoundError(Exception):
+class IngredientNotFoundError(Exception):
     pass
