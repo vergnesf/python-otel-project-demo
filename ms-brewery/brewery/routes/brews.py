@@ -6,28 +6,28 @@ from flask import Blueprint, current_app, jsonify, request
 
 from .. import schemas
 from ..crud import (
-    create_order,
-    get_order,
-    get_orders,
-    get_orders_by_status,
-    update_order_status,
+    create_brew,
+    get_brew,
+    get_brews,
+    get_brews_by_status,
+    update_brew_status,
 )
 from ..database import SessionLocal
-from ..models import OrderStatus
+from ..models import BrewStatus
 
 # Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
-orders_bp = Blueprint("orders", __name__)
+brews_bp = Blueprint("brews", __name__)
 
 # Get error rate from environment variable (default 0.1)
 ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
 
-MSG_ERROR_NOT_FOUND = "Order not found"
+MSG_ERROR_NOT_FOUND = "Brew not found"
 
 
 # Custom error handler to log all HTTP error codes properly
-@orders_bp.after_request
+@brews_bp.after_request
 def log_response(response):
     if response.status_code >= 500:
         current_app.logger.error(f"HTTP {response.status_code} error for {request.method} {request.path}")
@@ -38,39 +38,44 @@ def log_response(response):
     return response
 
 
-@orders_bp.route("/", methods=["POST"])
-def create_order_route():
+@brews_bp.route("/", methods=["POST"])
+def create_brew_route():
     """
-    Create a new order
+    Create a new brew order
     ---
     tags:
-      - orders
+      - brews
     parameters:
       - in: body
         name: body
         schema:
           type: object
           required:
-            - type
+            - ingredient_type
             - quantity
+            - brew_style
           properties:
-            type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
+            brew_style:
+              type: string
     responses:
       201:
-        description: Order created successfully
+        description: Brew created successfully
         schema:
           type: object
           properties:
             id:
               type: integer
-            type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
-            status:
+            brew_style:
+              type: string
+            brew_status:
               type: string
     """
     # Simulate DB insertion error with probability ERROR_RATE
@@ -82,26 +87,26 @@ def create_order_route():
 
     db = SessionLocal()
     try:
-        order_data = schemas.OrderCreate(**data)
-        new_order = create_order(db=db, order=order_data)
-        return jsonify(new_order.to_dict()), 201
+        brew_data = schemas.BrewCreate(**data)
+        new_brew = create_brew(db=db, brew=brew_data)
+        return jsonify(new_brew.to_dict()), 201
     except Exception:
-        current_app.logger.exception("Unexpected error during order creation")
+        current_app.logger.exception("Unexpected error during brew creation")
         return (
-            jsonify({"error": "Unexpected error during order creation"}),
+            jsonify({"error": "Unexpected error during brew creation"}),
             500,
         )
     finally:
         db.close()
 
 
-@orders_bp.route("/", methods=["GET"])
-def read_orders_route():
+@brews_bp.route("/", methods=["GET"])
+def read_brews_route():
     """
-    Retrieve a list of orders
+    Retrieve a list of brews
     ---
     tags:
-      - orders
+      - brews
     parameters:
       - name: skip
         in: query
@@ -115,7 +120,7 @@ def read_orders_route():
         default: 10
     responses:
       200:
-        description: A list of orders
+        description: A list of brews
         schema:
           type: array
           items:
@@ -123,17 +128,19 @@ def read_orders_route():
             properties:
               id:
                 type: integer
-              type:
+              ingredient_type:
                 type: string
               quantity:
                 type: integer
-              status:
+              brew_style:
+                type: string
+              brew_status:
                 type: string
     """
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return (
-            jsonify({"error": "Simulated API error during order list"}),
+            jsonify({"error": "Simulated API error during brew list"}),
             502,
         )
     try:
@@ -144,25 +151,25 @@ def read_orders_route():
 
     db = SessionLocal()
     try:
-        orders = get_orders(db=db, skip=skip, limit=limit)
-        return jsonify([order.to_dict() for order in orders])
+        brews = get_brews(db=db, skip=skip, limit=limit)
+        return jsonify([brew.to_dict() for brew in brews])
     except Exception:
-        current_app.logger.exception("Unexpected error during order list")
+        current_app.logger.exception("Unexpected error during brew list")
         return (
-            jsonify({"error": "Unexpected error during order list"}),
+            jsonify({"error": "Unexpected error during brew list"}),
             500,
         )
     finally:
         db.close()
 
 
-@orders_bp.route("/status/<status>", methods=["GET"])
-def read_orders_by_status_route(status):
+@brews_bp.route("/status/<status>", methods=["GET"])
+def read_brews_by_status_route(status):
     """
-    Retrieve a list of orders by status
+    Retrieve a list of brews by status
     ---
     tags:
-      - orders
+      - brews
     parameters:
       - name: status
         in: path
@@ -180,7 +187,7 @@ def read_orders_by_status_route(status):
         default: 10
     responses:
       200:
-        description: A list of orders
+        description: A list of brews
         schema:
           type: array
           items:
@@ -188,17 +195,19 @@ def read_orders_by_status_route(status):
             properties:
               id:
                 type: integer
-              type:
+              ingredient_type:
                 type: string
               quantity:
                 type: integer
-              status:
+              brew_style:
+                type: string
+              brew_status:
                 type: string
     """
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return (
-            jsonify({"error": "Simulated API error during order list by status"}),
+            jsonify({"error": "Simulated API error during brew list by status"}),
             502,
         )
     try:
@@ -208,85 +217,87 @@ def read_orders_by_status_route(status):
         return jsonify({"error": "skip and limit must be integers"}), 400
 
     try:
-        order_status = OrderStatus(status)
+        brew_status = BrewStatus(status)
     except ValueError:
         return jsonify({"error": f"Invalid status: {status}"}), 400
 
     db = SessionLocal()
     try:
-        orders = get_orders_by_status(db=db, order_status=order_status, skip=skip, limit=limit)
-        return jsonify([order.to_dict() for order in orders])
+        brews = get_brews_by_status(db=db, brew_status=brew_status, skip=skip, limit=limit)
+        return jsonify([brew.to_dict() for brew in brews])
     except Exception:
-        current_app.logger.exception("Unexpected error during order list by status")
+        current_app.logger.exception("Unexpected error during brew list by status")
         return (
-            jsonify({"error": "Unexpected error during order list by status"}),
+            jsonify({"error": "Unexpected error during brew list by status"}),
             500,
         )
     finally:
         db.close()
 
 
-@orders_bp.route("/<int:order_id>", methods=["GET"])
-def read_order_route(order_id):
+@brews_bp.route("/<int:brew_id>", methods=["GET"])
+def read_brew_route(brew_id):
     """
-    Retrieve a specific order by ID
+    Retrieve a specific brew by ID
     ---
     tags:
-      - orders
+      - brews
     parameters:
-      - name: order_id
+      - name: brew_id
         in: path
         type: integer
         required: true
     responses:
       200:
-        description: An order
+        description: A brew
         schema:
           type: object
           properties:
             id:
               type: integer
-            type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
-            status:
+            brew_style:
+              type: string
+            brew_status:
               type: string
       404:
-        description: Order not found
+        description: Brew not found
     """
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return (
-            jsonify({"error": "Simulated API error during order read"}),
+            jsonify({"error": "Simulated API error during brew read"}),
             502,
         )
 
     db = SessionLocal()
     try:
-        db_order = get_order(db=db, order_id=order_id)
-        if db_order is None:
-            return jsonify({"error": "Order not found"}), 404
-        return jsonify(db_order.to_dict())
+        db_brew = get_brew(db=db, brew_id=brew_id)
+        if db_brew is None:
+            return jsonify({"error": "Brew not found"}), 404
+        return jsonify(db_brew.to_dict())
     except Exception:
-        current_app.logger.exception("Unexpected error during order read")
+        current_app.logger.exception("Unexpected error during brew read")
         return (
-            jsonify({"error": "Unexpected error during order read"}),
+            jsonify({"error": "Unexpected error during brew read"}),
             500,
         )
     finally:
         db.close()
 
 
-@orders_bp.route("/<int:order_id>", methods=["PUT"])
-def update_order_status_route(order_id):
+@brews_bp.route("/<int:brew_id>", methods=["PUT"])
+def update_brew_status_route(brew_id):
     """
-    Update the status of a specific order
+    Update the status of a specific brew
     ---
     tags:
-      - orders
+      - brews
     parameters:
-      - name: order_id
+      - name: brew_id
         in: path
         type: integer
         required: true
@@ -295,58 +306,60 @@ def update_order_status_route(order_id):
         schema:
           type: object
           required:
-            - status
+            - brew_status
           properties:
-            status:
+            brew_status:
               type: string
     responses:
       200:
-        description: Order updated successfully
+        description: Brew updated successfully
         schema:
           type: object
           properties:
             id:
               type: integer
-            type:
+            ingredient_type:
               type: string
             quantity:
               type: integer
-            status:
+            brew_style:
+              type: string
+            brew_status:
               type: string
       404:
-        description: Order not found
+        description: Brew not found
     """
     # Simulate API error with probability ERROR_RATE
     if random.random() < ERROR_RATE:
         return (
-            jsonify({"error": "Simulated API error during order status update"}),
+            jsonify({"error": "Simulated API error during brew status update"}),
             502,
         )
     data = request.json
-    if not data or "order_status" not in data:
-        return jsonify({"error": "Missing 'order_status' in request body"}), 400
+    if not data or "brew_status" not in data:
+        return jsonify({"error": "Missing 'brew_status' in request body"}), 400
 
     try:
-        order_status = OrderStatus(data["order_status"])
+        brew_status = BrewStatus(data["brew_status"])
     except ValueError:
-        return jsonify({"error": "Invalid order status"}), 400
+        return jsonify({"error": "Invalid brew status"}), 400
 
     db = SessionLocal()
     try:
-        order = get_order(db, order_id=order_id)
-        if order is None:
-            return jsonify({"error": "Order not found"}), 404
+        brew = get_brew(db, brew_id=brew_id)
+        if brew is None:
+            return jsonify({"error": "Brew not found"}), 404
 
-        updated_order = update_order_status(db, order_id=order_id, order_status=order_status)
+        updated_brew = update_brew_status(db, brew_id=brew_id, brew_status=brew_status)
 
-        if updated_order is None:
-            return jsonify({"error": "Order not found"}), 404
+        if updated_brew is None:
+            return jsonify({"error": "Brew not found"}), 404
 
-        return jsonify(updated_order.to_dict()), 200
+        return jsonify(updated_brew.to_dict()), 200
     except Exception:
-        current_app.logger.exception("Unexpected error during order status update")
+        current_app.logger.exception("Unexpected error during brew status update")
         return (
-            jsonify({"error": "Unexpected error during order status update"}),
+            jsonify({"error": "Unexpected error during brew status update"}),
             500,
         )
     finally:
