@@ -117,7 +117,7 @@ services:
       API_URL: http://ms-brewery:5000
     depends_on:
       ms-brewery:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -137,7 +137,7 @@ services:
       API_URL: http://ms-cellar:5001
     depends_on:
       ms-cellar:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
@@ -158,9 +158,9 @@ services:
       INTERVAL_SECONDS: 5
     depends_on:
       ms-brewery:
-        condition: service_started
+        condition: service_healthy
       ms-cellar:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - otel-network
