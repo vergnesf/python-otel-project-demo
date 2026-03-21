@@ -24,7 +24,7 @@ realistic, noisy telemetry for observability learning.
 | `KAFKA_BOOTSTRAP_SERVERS` | required | Kafka broker address |
 | `INTERVAL_SECONDS` | `60` (code) / `5` (docker-compose) | Publish interval in seconds |
 | `ERROR_RATE` | `0.1` | Fraction of messages that fail (0.0–1.0) |
-| `OTEL_SERVICE_NAME` | `brewer` | Telemetry service name |
+| `OTEL_SERVICE_NAME` | `ms-brewer` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
 ## Models
