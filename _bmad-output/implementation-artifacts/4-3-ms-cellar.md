@@ -26,4 +26,5 @@ Rename and migrate `ms-stock` Flask REST API to `ms-cellar` using the brewery do
 
 ## Review Notes
 
-Pending adversarial code review.
+Code review found 1 HIGH issue: `Taskfile.yml` still referenced `ms-stock` in KEEPER_SERVICES/PROJECTS/HEALTHCHECK_SERVICES — `task test-unit` would fail after merge.
+Fixed: `ms-stock` → `ms-cellar` in all three variables. Traefik hostname left for #105. Status: **APPROVE**.
