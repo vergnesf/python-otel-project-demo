@@ -24,7 +24,7 @@ in the supplier pipeline.
 | `KAFKA_BOOTSTRAP_SERVERS` | required | Kafka broker address |
 | `API_URL` | `http://cellar:5001` | Target Cellar API base URL (appends `/ingredients`) |
 | `ERROR_RATE` | `0.1` | Fraction of messages that fail (0.0–1.0) |
-| `OTEL_SERVICE_NAME` | `ingredientcheck` | Telemetry service name |
+| `OTEL_SERVICE_NAME` | `ms-ingredientcheck` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
 ## Integration
