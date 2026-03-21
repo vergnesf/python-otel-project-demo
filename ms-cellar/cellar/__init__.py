@@ -27,14 +27,14 @@ def create_app():
     @app.route("/health", methods=["GET"])
     def health_check():
         """Health check endpoint."""
-        return jsonify({"status": "healthy", "service": "stock"}), 200
+        return jsonify({"status": "healthy", "service": "cellar"}), 200
 
     with app.app_context():
-        from .models import Stock  # noqa: F401
+        from .models import IngredientStockModel  # noqa: F401
 
         db.create_all()
-        from .routes.stocks import stocks_bp
+        from .routes.cellar import cellar_bp
 
-        app.register_blueprint(stocks_bp, url_prefix="/stocks")
+        app.register_blueprint(cellar_bp, url_prefix="/ingredients")
 
     return app
