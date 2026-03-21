@@ -12,19 +12,19 @@ WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-COPY ms-suppliercheck/pyproject.toml /app/ms-suppliercheck/
+COPY ms-ingredientcheck/pyproject.toml /app/ms-ingredientcheck/
 COPY lib-models /app/lib-models/
 
-WORKDIR /app/ms-suppliercheck
+WORKDIR /app/ms-ingredientcheck
 
 RUN pip install --no-cache-dir uv && \
     uv run --no-dev python -m ensurepip && \
     uv run --no-dev opentelemetry-bootstrap -a install
 
-COPY ms-suppliercheck/suppliercheck /app/ms-suppliercheck/suppliercheck/
+COPY ms-ingredientcheck/ingredientcheck /app/ms-ingredientcheck/ingredientcheck/
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "suppliercheck/suppliercheck_consumer.py"]
+CMD ["uv", "run", "--no-dev", "opentelemetry-instrument", "python", "ingredientcheck/ingredientcheck_consumer.py"]
