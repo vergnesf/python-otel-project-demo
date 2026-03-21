@@ -1,4 +1,4 @@
-"""conftest.py for ordermanagement/tests."""
+"""conftest.py for brewmaster/tests."""
 
 import os
 
