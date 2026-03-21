@@ -10,7 +10,7 @@ from opentelemetry import metrics
 from .database import DATABASE_URL, db
 
 _meter = metrics.get_meter("ms-brewery")
-_http_duration = _meter.create_histogram("brews.http.duration", unit="s", description="HTTP request duration per endpoint")
+_http_duration = _meter.create_histogram("brewery.http.duration", unit="s", description="HTTP request duration per endpoint")
 
 
 def create_app():

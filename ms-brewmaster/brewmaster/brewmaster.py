@@ -103,9 +103,12 @@ def process_registered_brew():
                 span.record_exception(e)
                 span.set_attribute("error.type", type(e).__name__)
                 logger.error("Failed to process brew %s: %s", brew["id"], e)
+                # result=blocked → real business failure (stock or ingredient not found)
+                # result=error   → unexpected failure (ERROR_RATE simulation, network, etc.)
                 # Increment before update_brew_status so the metric is always recorded
                 # even if the status update itself fails (network error, timeout).
-                brews_managed.add(1, {"result": "blocked"})
+                result = "blocked" if isinstance(e, (InsufficientIngredientError, IngredientNotFoundError)) else "error"
+                brews_managed.add(1, {"result": result})
                 try:
                     update_brew_status(brew["id"], BrewStatus.BLOCKED)
                     logger.info("Brew status updated to BLOCKED for brew: %s", brew)

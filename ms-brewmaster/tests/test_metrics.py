@@ -62,8 +62,9 @@ def test_brews_managed_ready_increments_on_success(metric_reader):
     assert after - before == 1
 
 
-def test_brews_managed_blocked_increments_on_error_rate(metric_reader):
-    before = _get_counter_value(metric_reader, "brews.managed", {"result": "blocked"})
+def test_brews_managed_error_increments_on_error_rate(metric_reader):
+    """ERROR_RATE raises RuntimeError → result=error (not a business-rule block)."""
+    before = _get_counter_value(metric_reader, "brews.managed", {"result": "error"})
     with (
         patch("brewmaster.brewmaster.requests.get", return_value=_mock_get_response([BREW])),
         patch("brewmaster.brewmaster.requests.post") as mock_post,
@@ -72,6 +73,22 @@ def test_brews_managed_blocked_increments_on_error_rate(metric_reader):
         patch.dict("os.environ", {"ERROR_RATE": "1.0"}),
     ):
         mock_post.return_value.status_code = 200
+        process_registered_brew()
+    after = _get_counter_value(metric_reader, "brews.managed", {"result": "error"})
+    assert after - before == 1
+
+
+def test_brews_managed_blocked_increments_on_insufficient_ingredients(metric_reader):
+    """InsufficientIngredientError → result=blocked (real business failure)."""
+    insufficient_resp = MagicMock()
+    insufficient_resp.status_code = 400
+    before = _get_counter_value(metric_reader, "brews.managed", {"result": "blocked"})
+    with (
+        patch("brewmaster.brewmaster.requests.get", return_value=_mock_get_response([BREW])),
+        patch("brewmaster.brewmaster.requests.post", return_value=insufficient_resp),
+        patch("brewmaster.brewmaster.requests.put", return_value=_mock_put_response()),
+        patch("brewmaster.brewmaster.random.random", return_value=0.5),
+    ):
         process_registered_brew()
     after = _get_counter_value(metric_reader, "brews.managed", {"result": "blocked"})
     assert after - before == 1
