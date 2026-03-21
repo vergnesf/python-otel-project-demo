@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
+# Note: brew_orders_created counts messages handed to the Kafka client buffer (after producer.produce),
+# not broker-confirmed deliveries. Broker delivery failures are logged via delivery_report callback.
 brew_orders_created = meter.create_counter("brew_orders.created", description="Number of brew orders produced to Kafka")
 brew_orders_failed = meter.create_counter("brew_orders.failed", description="Number of brew orders dropped due to ERROR_RATE")
 

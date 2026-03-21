@@ -36,7 +36,9 @@ def create_app():
     @app.after_request
     def _record_duration(response):
         duration = time.monotonic() - g.get("start_time", time.monotonic())
-        _http_duration.record(duration, {"http.method": request.method, "http.route": request.path, "http.status_code": str(response.status_code)})
+        # Use url_rule (e.g. "/decrease") instead of path to avoid high cardinality.
+        route = str(request.url_rule) if request.url_rule else request.path
+        _http_duration.record(duration, {"http.method": request.method, "http.route": route, "http.status_code": str(response.status_code)})
         return response
 
     @app.route("/health", methods=["GET"])

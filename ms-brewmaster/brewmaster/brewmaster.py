@@ -103,6 +103,8 @@ def process_registered_brew():
                 span.record_exception(e)
                 span.set_attribute("error.type", type(e).__name__)
                 logger.error("Failed to process brew %s: %s", brew["id"], e)
+                # Increment before update_brew_status so the metric is always recorded
+                # even if the status update itself fails (network error, timeout).
                 brews_managed.add(1, {"result": "blocked"})
                 try:
                     update_brew_status(brew["id"], BrewStatus.BLOCKED)
