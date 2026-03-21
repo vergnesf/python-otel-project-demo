@@ -24,17 +24,17 @@ x-common-apps-env: &common-apps-env
   ERROR_RATE: "0.1"
 
 services:
-  ms-customer:
+  ms-brewer:
     build:
       context: ..
-      dockerfile: ms-customer/Dockerfile
+      dockerfile: ms-brewer/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-customer
+    container_name: ms-brewer
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-customer
+      OTEL_SERVICE_NAME: ms-brewer
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
       INTERVAL_SECONDS: 5
     restart: unless-stopped
@@ -58,96 +58,108 @@ services:
     networks:
       - otel-network
 
-  ms-order:
+  ms-brewery:
     build:
       context: ..
-      dockerfile: ms-order/Dockerfile
+      dockerfile: ms-brewery/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-order
+    container_name: ms-brewery
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-order
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/order_db
+      OTEL_SERVICE_NAME: ms-brewery
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/brew_db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     networks:
       - otel-network
 
-  ms-stock:
+  ms-cellar:
     build:
       context: ..
-      dockerfile: ms-stock/Dockerfile
+      dockerfile: ms-cellar/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-stock
+    container_name: ms-cellar
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-stock
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/stock_db
+      OTEL_SERVICE_NAME: ms-cellar
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/cellar_db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     networks:
       - otel-network
 
-  ms-ordercheck:
+  ms-brewcheck:
     build:
       context: ..
-      dockerfile: ms-ordercheck/Dockerfile
+      dockerfile: ms-brewcheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-ordercheck
+    container_name: ms-brewcheck
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-ordercheck
+      OTEL_SERVICE_NAME: ms-brewcheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://ms-order:5000
+      API_URL: http://ms-brewery:5000
     depends_on:
-      ms-order:
+      ms-brewery:
         condition: service_started
     restart: unless-stopped
     networks:
       - otel-network
 
-  ms-suppliercheck:
+  ms-ingredientcheck:
     build:
       context: ..
-      dockerfile: ms-suppliercheck/Dockerfile
+      dockerfile: ms-ingredientcheck/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-suppliercheck
+    container_name: ms-ingredientcheck
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-suppliercheck
+      OTEL_SERVICE_NAME: ms-ingredientcheck
       KAFKA_BOOTSTRAP_SERVERS: broker:29092
-      API_URL: http://ms-stock:5001
+      API_URL: http://ms-cellar:5001
     depends_on:
-      ms-stock:
+      ms-cellar:
         condition: service_started
     restart: unless-stopped
     networks:
       - otel-network
 
-  ms-ordermanagement:
+  ms-brewmaster:
     build:
       context: ..
-      dockerfile: ms-ordermanagement/Dockerfile
+      dockerfile: ms-brewmaster/Dockerfile
       args:
         DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
         IMG_PYTHON: ${IMG_PYTHON_BASE}
-    container_name: ms-ordermanagement
+    container_name: ms-brewmaster
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-ordermanagement
-      API_URL_ORDERS: http://ms-order:5000
-      API_URL_STOCKS: http://ms-stock:5001
+      OTEL_SERVICE_NAME: ms-brewmaster
+      API_URL_BREWS: http://ms-brewery:5000
+      API_URL_CELLAR: http://ms-cellar:5001
       INTERVAL_SECONDS: 5
     depends_on:
-      ms-order:
+      ms-brewery:
         condition: service_started
-      ms-stock:
+      ms-cellar:
         condition: service_started
     restart: unless-stopped
     networks:
