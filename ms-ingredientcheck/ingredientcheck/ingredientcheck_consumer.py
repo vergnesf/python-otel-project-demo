@@ -25,12 +25,12 @@ tracer = trace.get_tracer(__name__)
 consumer = Consumer(
     {
         "bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
-        "group.id": "stock-check-group",
+        "group.id": "ingredient-check-group",
         "auto.offset.reset": "earliest",
     }
 )
 
-API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000") + "/stocks"
+API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000") + "/ingredients"
 
 
 def _process_message(msg, error_rate: float) -> None:
@@ -44,12 +44,12 @@ def _process_message(msg, error_rate: float) -> None:
     links = [trace.Link(remote_span_ctx)] if remote_span_ctx.is_valid else []
 
     # Span name follows OTEL messaging semconv: "{operation} {destination}"
-    with tracer.start_as_current_span("process stocks", links=links, kind=SpanKind.CONSUMER) as span:
+    with tracer.start_as_current_span("process ingredient-deliveries", links=links, kind=SpanKind.CONSUMER) as span:
         span.set_attribute("messaging.system", "kafka")
         span.set_attribute("messaging.operation.name", "process")
         span.set_attribute("messaging.operation.type", "process")
-        span.set_attribute("messaging.destination.name", "stocks")
-        span.set_attribute("messaging.consumer.group.name", "stock-check-group")
+        span.set_attribute("messaging.destination.name", "ingredient-deliveries")
+        span.set_attribute("messaging.consumer.group.name", "ingredient-check-group")
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < error_rate:
@@ -57,11 +57,11 @@ def _process_message(msg, error_rate: float) -> None:
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
             span.record_exception(exc)
             span.set_attribute("error.type", type(exc).__name__)
-            logger.error("failed to process stock (API or network failure)")
+            logger.error("failed to process ingredient delivery (API or network failure)")
             return
 
         try:
-            stock_data = json.loads(msg.value().decode("utf-8"))
+            ingredient_data = json.loads(msg.value().decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             span.set_status(StatusCode.ERROR, "malformed message")
             span.record_exception(e)
@@ -69,14 +69,14 @@ def _process_message(msg, error_rate: float) -> None:
             logger.error("Skipping malformed Kafka message: %s", e)
             return
 
-        logger.info("Received stock data: %s", stock_data)
+        logger.info("Received ingredient delivery data: %s", ingredient_data)
 
         try:
-            response = requests.post(API_URL, json=stock_data, timeout=5)
+            response = requests.post(API_URL, json=ingredient_data, timeout=5)
             if response.status_code == 201:
-                logger.info("Stock data successfully sent to API")
+                logger.info("Ingredient delivery data successfully sent to API")
             else:
-                logger.error("Failed to send stock data to API: %s", response.text)
+                logger.error("Failed to send ingredient delivery data to API: %s", response.text)
         except requests.Timeout:
             logger.error("Timeout calling API %s, skipping message", API_URL)
         except requests.RequestException as e:
@@ -93,7 +93,7 @@ def _shutdown(signum, frame):
 
 
 def consume_messages():
-    consumer.subscribe(["stocks"])
+    consumer.subscribe(["ingredient-deliveries"])
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
     logger.info("Starting message consumption loop with ERROR_RATE=%s", ERROR_RATE)
 
@@ -127,5 +127,5 @@ def consume_messages():
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
-    logger.info("SupplierCheck service starting")
+    logger.info("IngredientCheck service starting")
     consume_messages()

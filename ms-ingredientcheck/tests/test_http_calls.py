@@ -1,4 +1,4 @@
-"""Tests for suppliercheck HTTP forwarding logic with patched requests.
+"""Tests for ingredientcheck HTTP forwarding logic with patched requests.
 
 Drive strategy: consumer.poll() side_effect chain drives consume_messages():
   - Call 1: return a fake Kafka message (valid payload)
@@ -12,9 +12,9 @@ import json
 from unittest.mock import MagicMock, patch
 
 import requests
-from suppliercheck.suppliercheck_consumer import API_URL, consume_messages
+from ingredientcheck.ingredientcheck_consumer import API_URL, consume_messages
 
-STOCK_PAYLOAD = {"wood_type": "oak", "quantity": 10}
+INGREDIENT_PAYLOAD = {"ingredient_type": "malt", "quantity": 50}
 
 
 class _FakeMsg:
@@ -34,13 +34,8 @@ class _FakeMsg:
 
 
 def _run_one_cycle(mock_response=None, post_side_effect=None):
-    """Drive consume_messages() through exactly one message cycle then exit cleanly.
-
-    consumer.poll returns a real message on call 1, then KeyboardInterrupt on call 2.
-    KeyboardInterrupt is caught by consume_messages() and triggers clean shutdown.
-    Returns the mock requests.post for assertion.
-    """
-    fake_msg = _FakeMsg(STOCK_PAYLOAD)
+    """Drive consume_messages() through exactly one message cycle then exit cleanly."""
+    fake_msg = _FakeMsg(INGREDIENT_PAYLOAD)
     mock_consumer = MagicMock()
     mock_consumer.poll.side_effect = [fake_msg, KeyboardInterrupt()]
 
@@ -51,9 +46,9 @@ def _run_one_cycle(mock_response=None, post_side_effect=None):
         mock_post.return_value = mock_response
 
     with (
-        patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
-        patch("suppliercheck.suppliercheck_consumer.requests.post", mock_post),
-        patch("suppliercheck.suppliercheck_consumer.random.random", return_value=0.5),
+        patch("ingredientcheck.ingredientcheck_consumer.consumer", mock_consumer),
+        patch("ingredientcheck.ingredientcheck_consumer.requests.post", mock_post),
+        patch("ingredientcheck.ingredientcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 
@@ -65,7 +60,7 @@ def test_happy_path_calls_post_with_correct_payload():
     mock_resp.status_code = 201
     mock_post = _run_one_cycle(mock_response=mock_resp)
     mock_post.assert_called_once()
-    assert mock_post.call_args.kwargs["json"] == STOCK_PAYLOAD
+    assert mock_post.call_args.kwargs["json"] == INGREDIENT_PAYLOAD
 
 
 def test_happy_path_uses_correct_api_url():
@@ -80,12 +75,10 @@ def test_non_201_response_does_not_raise():
     mock_resp = MagicMock()
     mock_resp.status_code = 500
     mock_resp.text = "Internal Server Error"
-    # Must not raise — the loop should continue and exit on KeyboardInterrupt
     _run_one_cycle(mock_response=mock_resp)
 
 
 def test_timeout_does_not_crash_loop():
-    # requests.Timeout must be caught — loop continues to the next poll() call
     _run_one_cycle(post_side_effect=requests.Timeout())
 
 
@@ -113,9 +106,9 @@ def test_malformed_json_does_not_crash_loop():
     mock_post = MagicMock()
 
     with (
-        patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
-        patch("suppliercheck.suppliercheck_consumer.requests.post", mock_post),
-        patch("suppliercheck.suppliercheck_consumer.random.random", return_value=0.5),
+        patch("ingredientcheck.ingredientcheck_consumer.consumer", mock_consumer),
+        patch("ingredientcheck.ingredientcheck_consumer.requests.post", mock_post),
+        patch("ingredientcheck.ingredientcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 
@@ -130,8 +123,8 @@ def test_malformed_json_produces_error_span(span_exporter):
     mock_consumer.poll.side_effect = [_MalformedMsg(), KeyboardInterrupt()]
 
     with (
-        patch("suppliercheck.suppliercheck_consumer.consumer", mock_consumer),
-        patch("suppliercheck.suppliercheck_consumer.random.random", return_value=0.5),
+        patch("ingredientcheck.ingredientcheck_consumer.consumer", mock_consumer),
+        patch("ingredientcheck.ingredientcheck_consumer.random.random", return_value=0.5),
     ):
         consume_messages()
 
