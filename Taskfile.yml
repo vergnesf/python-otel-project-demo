@@ -13,12 +13,12 @@ vars:
   PROJECTS: >-
     agent-logs agent-metrics agent-orchestrator agent-traces agent-ui
     agent-traduction benchmark lib-ai lib-models
-    ms-brewer ms-brewery ms-brewcheck ms-ordermanagement ms-cellar ms-supplier ms-ingredientcheck
+    ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-cellar ms-supplier ms-ingredientcheck
 
   # Business services with runnable Python processes and a tests/ directory. (7 dirs)
   # Shared libraries (lib-models, lib-ai) are excluded.
   # Scope: test-lint and test-unit.
-  KEEPER_SERVICES: ms-brewer ms-brewery ms-brewcheck ms-ordermanagement ms-cellar ms-supplier ms-ingredientcheck
+  KEEPER_SERVICES: ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-cellar ms-supplier ms-ingredientcheck
 
   # Subset with a container healthcheck defined in docker-compose-apps.yml.
   # Only Flask REST APIs (ms-brewery, ms-cellar) have healthchecks.
