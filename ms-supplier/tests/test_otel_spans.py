@@ -6,21 +6,21 @@ from opentelemetry.trace import StatusCode
 from supplier.supplier_producer import _run_once
 
 
-def test_send_stock_span_ok_on_success(span_exporter):
-    with patch("supplier.supplier_producer.send_stock"):
+def test_send_ingredient_span_ok_on_success(span_exporter):
+    with patch("supplier.supplier_producer.send_ingredient"):
         with patch("supplier.supplier_producer.random.random", return_value=0.5):
             _run_once(0.0)
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
-    assert spans[0].name == "send stocks"
+    assert spans[0].name == "send ingredient-deliveries"
     assert spans[0].status.status_code == StatusCode.UNSET
     assert spans[0].attributes["messaging.system"] == "kafka"
     assert spans[0].attributes["messaging.operation.name"] == "send"
-    assert spans[0].attributes["messaging.destination.name"] == "stocks"
+    assert spans[0].attributes["messaging.destination.name"] == "ingredient-deliveries"
 
 
-def test_send_stock_span_error_on_error_rate(span_exporter):
+def test_send_ingredient_span_error_on_error_rate(span_exporter):
     _run_once(1.0)
 
     spans = span_exporter.get_finished_spans()
@@ -31,7 +31,7 @@ def test_send_stock_span_error_on_error_rate(span_exporter):
     assert spans[0].attributes["error.type"] == "RuntimeError"
 
 
-def test_send_stock_injects_traceparent_header(span_exporter):
+def test_send_ingredient_injects_traceparent_header(span_exporter):
     """W3C traceparent header is injected into Kafka message headers."""
     captured_headers = None
 

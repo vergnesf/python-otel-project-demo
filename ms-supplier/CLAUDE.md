@@ -1,15 +1,15 @@
-# CLAUDE.md — supplier
+# CLAUDE.md — ms-supplier
 
 ## What this service does
 
-Kafka **producer** — generates random `Stock` events and publishes them to the `stocks` topic.
-Mirrors `customer` in structure: random intervals, error injection, full OTEL instrumentation.
+Kafka **producer** — generates random `IngredientStock` events and publishes them to the `ingredient-deliveries` topic.
+Mirrors `ms-brewer` in structure: random intervals, error injection, full OTEL instrumentation.
 
 ## Tech stack
 
 - Pure Python, no HTTP framework
 - `confluent-kafka` — Kafka producer client
-- `common-models` — shared `Stock` and `WoodType` Pydantic models (editable install)
+- `lib-models` — shared `IngredientStock` and `IngredientType` Pydantic models (editable install)
 - `opentelemetry-distro` + `opentelemetry-exporter-otlp` — auto-instrumentation
 
 ## Entry point
@@ -26,9 +26,14 @@ Mirrors `customer` in structure: random intervals, error injection, full OTEL in
 | `OTEL_SERVICE_NAME` | `supplier` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
+## Models
+
+- `IngredientStock` — represents an ingredient delivery event (ingredient_type, quantity)
+- `IngredientType` — enum: MALT, HOPS, YEAST, WHEAT, BARLEY
+
 ## Integration
 
-Publishes to → `stocks` Kafka topic → consumed by `suppliercheck`
+Publishes to → `ingredient-deliveries` Kafka topic → consumed by `ms-ingredientcheck`
 
 ## What I learned building this
 
