@@ -42,6 +42,7 @@ def consume_ingredients(brew):
     payload = {"ingredient_type": brew["ingredient_type"], "quantity": brew["quantity"]}
     response = requests.post(API_URL_CELLAR_CONSUME, headers=HEADERS_JSON, json=payload, timeout=5)
     if response.status_code == 400:
+        # available=0 is a placeholder — the actual available quantity is not returned in the HTTP 400 response
         raise InsufficientIngredientError(brew["ingredient_type"], brew["quantity"], 0)
     if response.status_code == 404:
         raise IngredientNotFoundError(brew["ingredient_type"])

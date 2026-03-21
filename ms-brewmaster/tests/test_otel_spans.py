@@ -28,6 +28,8 @@ def test_process_brew_span_ok_on_success(span_exporter):
     brew_spans = [s for s in spans if s.name == "process brew"]
     assert len(brew_spans) == 1
     assert brew_spans[0].status.status_code == StatusCode.UNSET
+    # Verify brew.style attribute is set from the brew dict
+    assert brew_spans[0].attributes.get("brew.style") == BREW["brew_style"]
 
 
 def test_process_brew_span_error_on_error_rate(span_exporter):
