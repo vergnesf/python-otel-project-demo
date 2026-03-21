@@ -1,83 +1,81 @@
-# Order Service
+# ms-brewery
 
 > **Status:** `KEEPER` — Stable service. Expected to stay functional and tested.
 
-Flask REST API that manages customer orders in a PostgreSQL database.
+Flask REST API that manages brew orders in a PostgreSQL database.
 
 ## Why I built this
 
 To learn the Flask app factory pattern, SQLAlchemy ORM integration, auto-generated
 Swagger docs with Flasgger, and OTEL instrumentation of synchronous REST APIs.
 
-## 📋 Overview
+## Overview
 
 - **Type**: REST API (Flask + SQLAlchemy)
 - **Port**: 5000
 - **Database**: PostgreSQL
 - **Framework**: Flask (intentional — synchronous, SQLAlchemy-compatible, no migration to FastAPI planned)
 
-## 🚀 Running the Service
+## Running the Service
 
 ```bash
 # With Docker (recommended)
-docker-compose up order
+docker-compose up ms-brewery
 
 # Local development
-cd order/ && uv sync
+cd ms-brewery/ && uv sync
 uv run opentelemetry-instrument \
     --traces_exporter otlp \
     --metrics_exporter otlp \
-    --service_name order \
+    --service_name brewery \
     --exporter_otlp_endpoint http://localhost:4317 \
-    python -m order.main
+    python brewery/main.py
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ```bash
 DATABASE_URL=postgresql://postgres:yourpassword@postgres:5432/mydatabase
 HOST=0.0.0.0
 PORT=5000
 LOG_LEVEL=INFO
-OTEL_SERVICE_NAME=order
+OTEL_SERVICE_NAME=brewery
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 ```
 
-## 📊 API Endpoints
+## API Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/orders` | Create order |
-| GET | `/orders` | List all orders |
-| GET | `/orders/<id>` | Get one order |
-| PUT | `/orders/<id>` | Update order status |
-| GET | `/orders/status/registered` | Filter registered orders |
+| POST | `/brews` | Create brew order |
+| GET | `/brews` | List all brews |
+| GET | `/brews/<id>` | Get one brew |
+| PUT | `/brews/<id>` | Update brew status |
+| GET | `/brews/status/<status>` | Filter brews by status |
 | GET | `/health` | Health check |
 
 Swagger UI: `http://localhost:5000/apidocs/` _(requires full stack running with PostgreSQL)_
 
-## 📦 Dependencies
+## Dependencies
 
 - `flask` + `flask-sqlalchemy` — web framework + ORM
 - `flasgger` — auto-generated Swagger/OpenAPI docs
 - `psycopg2-binary` — PostgreSQL adapter
-- `common-models` — shared business models
+- `lib-models` — shared brewery domain models (IngredientType, BrewStatus, BrewStyle)
 
-## 🔄 Integration
+## Integration
 
-Receives from ← `ordercheck` (POST /orders)
-Serves to → `ordermanagement` (GET /orders/status/registered)
-Updated by → `ordermanagement` (PUT /orders/<id>)
+Receives from ← `ms-brewcheck` (POST /brews)
+Serves to → `ms-brewmaster` (GET /brews/status/registered)
+Updated by → `ms-brewmaster` (PUT /brews/<id>)
 
-## 📈 Observability
+## Observability
 
 Auto-instrumented via `opentelemetry-instrument`. Logs → Loki, Metrics → Mimir, Traces → Tempo.
 
-## 🧪 Testing
-
-> Note: `tests/` currently contains only an empty `__init__.py` — smoke tests tracked in issue #17.
+## Testing
 
 ```bash
-uv run pytest
-uv run pytest --cov=order --cov-report=html
+uv run python -m pytest tests/ -v
+uv run python -m ruff check brewery/ tests/
 ```
