@@ -32,6 +32,9 @@ class _FakeMsg:
     def headers(self):
         return []
 
+    def offset(self):
+        return 0
+
 
 def _run_one_cycle(mock_response=None, post_side_effect=None):
     """Drive consume_messages() through exactly one message cycle then exit cleanly."""
@@ -97,6 +100,9 @@ class _MalformedMsg:
 
     def headers(self):
         return []
+
+    def offset(self):
+        return 0
 
 
 def test_malformed_json_does_not_crash_loop():

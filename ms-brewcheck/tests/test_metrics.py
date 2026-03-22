@@ -12,6 +12,7 @@ from brewcheck.brewcheck_consumer import _process_message
 def _make_msg(payload=None):
     msg = MagicMock()
     msg.headers.return_value = []
+    msg.offset.return_value = 42
     msg.value.return_value = json.dumps(payload or {"ingredient_type": "malt", "quantity": 5, "brew_style": "ipa"}).encode()
     return msg
 

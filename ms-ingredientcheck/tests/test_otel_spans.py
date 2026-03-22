@@ -10,6 +10,7 @@ from opentelemetry.trace import StatusCode
 def _make_msg(headers=None, payload=None):
     msg = MagicMock()
     msg.headers.return_value = headers or []
+    msg.offset.return_value = 42
     msg.value.return_value = json.dumps(payload or {"ingredient_type": "malt", "quantity": 50}).encode()
     return msg
 

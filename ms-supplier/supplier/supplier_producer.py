@@ -36,7 +36,9 @@ def delivery_report(err, msg):
 
 
 # Initialize the Kafka producer
-producer = Producer({"bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")})
+_kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+_kafka_server_address = _kafka_bootstrap.split(":")[0]
+producer = Producer({"bootstrap.servers": _kafka_bootstrap})
 
 
 def send_ingredient(ingredient: IngredientStock):
@@ -55,6 +57,7 @@ def _run_once(error_rate: float) -> None:
         span.set_attribute("messaging.operation.name", "send")
         span.set_attribute("messaging.operation.type", "publish")
         span.set_attribute("messaging.destination.name", "ingredient-deliveries")
+        span.set_attribute("server.address", _kafka_server_address)
         if random.random() < error_rate:
             exc = RuntimeError("simulated failure")
             span.set_status(StatusCode.ERROR, "simulated failure (ERROR_RATE)")
