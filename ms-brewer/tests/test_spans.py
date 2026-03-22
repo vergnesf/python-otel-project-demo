@@ -12,9 +12,9 @@ def _get_span(span_exporter, name):
 
 
 def test_producer_span_has_server_address(span_exporter):
+    from brewer.brewer_producer import _kafka_server_address
+
     with patch("brewer.brewer_producer.send_brew_order"):
         _run_once(0.0)
     span = _get_span(span_exporter, "send brew-orders")
-    assert "server.address" in span.attributes
-    assert isinstance(span.attributes["server.address"], str)
-    assert span.attributes["server.address"] != ""
+    assert span.attributes.get("server.address") == _kafka_server_address

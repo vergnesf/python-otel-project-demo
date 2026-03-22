@@ -21,13 +21,13 @@ def _get_span(span_exporter, name):
 
 
 def test_consumer_span_has_server_address(span_exporter):
+    from brewcheck.brewcheck_consumer import _kafka_server_address
+
     with patch("brewcheck.brewcheck_consumer.requests.post") as mock_post:
         mock_post.return_value.status_code = 201
         _process_message(_make_msg(), 0.0)
     span = _get_span(span_exporter, "process brew-orders")
-    assert "server.address" in span.attributes
-    assert isinstance(span.attributes["server.address"], str)
-    assert span.attributes["server.address"] != ""
+    assert span.attributes.get("server.address") == _kafka_server_address
 
 
 def test_consumer_span_has_kafka_message_offset(span_exporter):

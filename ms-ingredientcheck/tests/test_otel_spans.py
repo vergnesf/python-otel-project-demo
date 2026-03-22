@@ -20,6 +20,8 @@ def test_process_ingredient_delivery_span_ok_on_success(span_exporter):
         mock_post.return_value.status_code = 201
         _process_message(_make_msg(), 0.0)
 
+    from ingredientcheck.ingredientcheck_consumer import _kafka_server_address
+
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
     assert spans[0].name == "process ingredient-deliveries"
@@ -28,6 +30,8 @@ def test_process_ingredient_delivery_span_ok_on_success(span_exporter):
     assert spans[0].attributes["messaging.operation.name"] == "process"
     assert spans[0].attributes["messaging.destination.name"] == "ingredient-deliveries"
     assert spans[0].attributes["messaging.consumer.group.name"] == "ingredient-check-group"
+    assert spans[0].attributes["server.address"] == _kafka_server_address
+    assert spans[0].attributes["messaging.kafka.message.offset"] == 42
 
 
 def test_process_ingredient_delivery_span_error_on_error_rate(span_exporter):
