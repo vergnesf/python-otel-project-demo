@@ -34,6 +34,10 @@ def fetch_brewing_brews() -> list:
         response.raise_for_status()
         return response.json()
     except requests.RequestException as e:
+        with tracer.start_as_current_span("fetch brewing brews") as span:
+            span.set_status(StatusCode.ERROR, str(e))
+            span.record_exception(e)
+            span.set_attribute("error.type", type(e).__name__)
         logger.error("Failed to fetch brewing brews: %s", e)
         return []
 
@@ -46,6 +50,15 @@ def update_brew_status(brew_id: int, status: BrewStatus) -> None:
 
 def process_brewing_brews(fermentation_seconds: float, error_rate: float) -> None:
     brews = fetch_brewing_brews()
+
+    # Clean up tracking for brews that are no longer in BREWING status
+    # (e.g., moved to BLOCKED by ms-brewmaster before fermentation completes)
+    current_brewing_ids = {brew["id"] for brew in brews}
+    stale_ids = [bid for bid in list(_fermentation_start) if bid not in current_brewing_ids]
+    for bid in stale_ids:
+        logger.info("Brew %d no longer in BREWING status, removing from fermentation tracking", bid)
+        del _fermentation_start[bid]
+
     if not brews:
         return
 

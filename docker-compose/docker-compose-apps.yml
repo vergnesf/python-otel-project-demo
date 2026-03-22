@@ -175,7 +175,7 @@ services:
     container_name: ms-fermentation
     environment:
       <<: *common-apps-env
-      OTEL_SERVICE_NAME: ms-fermentation
+      OTEL_SERVICE_NAME: fermentation
       API_URL_BREWS: http://ms-brewery:5000
       FERMENTATION_SECONDS: 30
       INTERVAL_SECONDS: 10
