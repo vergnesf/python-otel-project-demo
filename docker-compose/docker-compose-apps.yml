@@ -165,6 +165,28 @@ services:
     networks:
       - otel-network
 
+  ms-beerstock:
+    build:
+      context: ..
+      dockerfile: ms-beerstock/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: ms-beerstock
+    environment:
+      <<: *common-apps-env
+      OTEL_SERVICE_NAME: ms-beerstock
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-yourpassword}@postgres:5432/beerstock_db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - otel-network
+
   ms-fermentation:
     build:
       context: ..
