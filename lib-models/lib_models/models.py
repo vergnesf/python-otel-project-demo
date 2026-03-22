@@ -53,6 +53,11 @@ class BrewTracking(BaseModel):
     date: datetime
 
 
+class BeerStock(BaseModel):
+    brew_style: BrewStyle
+    quantity: int
+
+
 class InsufficientIngredientError(Exception):
     def __init__(self, ingredient_type: str, requested: int, available: int) -> None:
         self.ingredient_type = ingredient_type
@@ -65,3 +70,11 @@ class IngredientNotFoundError(Exception):
     def __init__(self, ingredient_type: str) -> None:
         self.ingredient_type = ingredient_type
         super().__init__(f"Ingredient not found: {ingredient_type}")
+
+
+class InsufficientBeerStockError(Exception):
+    def __init__(self, brew_style: str, requested: int, available: int) -> None:
+        self.brew_style = brew_style
+        self.requested = requested
+        self.available = available
+        super().__init__(f"Insufficient beer stock for {brew_style}: requested {requested}, available {available}")
