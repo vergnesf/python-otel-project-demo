@@ -25,6 +25,7 @@ and serves brew data to `ms-brewmaster`.
 - `brewery/schemas.py` — Pydantic schemas (`BrewCreate`, `Brew`)
 - `brewery/crud.py` — DB operations
 - `brewery/routes/brews.py` — Flask Blueprint with all endpoints
+- `brewery/kafka.py` — Kafka producer: publishes brew dict to `brews-ready` topic on READY transition
 
 ## Endpoints
 
@@ -42,8 +43,14 @@ and serves brew data to `ms-brewmaster`.
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
+| `KAFKA_BOOTSTRAP_SERVERS` | Kafka broker — if set, enables publishing to `brews-ready` on READY transition |
 | `OTEL_SERVICE_NAME` | `ms-brewery` |
 | `LOG_LEVEL` | Logging verbosity |
+
+## Integration
+
+Receives from ← `ms-brewcheck` (POST /brews — brew order creation)
+Publishes to → `brews-ready` Kafka topic (on READY transition — consumed by `ms-quality-control`)
 
 ## What I learned building this
 

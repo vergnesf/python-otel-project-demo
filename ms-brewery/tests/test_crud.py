@@ -130,3 +130,33 @@ def test_update_brew_status_missing_body_returns_400(client):
 def test_update_brew_status_not_found_returns_404(client):
     response = client.put("/brews/99999", json={"brew_status": "shipped"})
     assert response.status_code == 404
+
+
+def test_update_brew_status_ready_publishes_to_kafka(client):
+    """Transitioning to READY must call publish_brew_ready exactly once."""
+    from unittest.mock import patch
+
+    create_resp = client.post("/brews/", json={"ingredient_type": "malt", "quantity": 1, "brew_style": "ipa"})
+    brew_id = create_resp.get_json()["id"]
+
+    with patch("brewery.routes.brews.publish_brew_ready") as mock_publish:
+        response = client.put(f"/brews/{brew_id}", json={"brew_status": "ready"})
+
+    assert response.status_code == 200
+    assert response.get_json()["brew_status"] == "ready"
+    mock_publish.assert_called_once()
+    assert mock_publish.call_args.args[0]["id"] == brew_id
+
+
+def test_update_brew_status_non_ready_does_not_publish(client):
+    """Transitioning to a non-READY status must NOT call publish_brew_ready."""
+    from unittest.mock import patch
+
+    create_resp = client.post("/brews/", json={"ingredient_type": "hops", "quantity": 1, "brew_style": "stout"})
+    brew_id = create_resp.get_json()["id"]
+
+    with patch("brewery.routes.brews.publish_brew_ready") as mock_publish:
+        response = client.put(f"/brews/{brew_id}", json={"brew_status": "shipped"})
+
+    assert response.status_code == 200
+    mock_publish.assert_not_called()

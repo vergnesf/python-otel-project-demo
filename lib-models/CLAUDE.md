@@ -16,7 +16,7 @@ in every service that needs it.
 ```
 lib_models/models.py
 ├── IngredientType (Enum)        — MALT, HOPS, YEAST, WHEAT, BARLEY
-├── BrewStatus (Enum)            — REGISTERED, BREWING, READY, SHIPPED, BLOCKED, CLOSED, UNKNOWN
+├── BrewStatus (Enum)            — REGISTERED, BREWING, READY, APPROVED, REJECTED, SHIPPED, BLOCKED, CLOSED, UNKNOWN
 ├── BrewStyle (Enum)             — LAGER, IPA, STOUT, WHEAT_BEER
 ├── IngredientStock              — ingredient_type: IngredientType, quantity: PositiveInt (gt=0)
 ├── BrewOrder                    — ingredient_type: IngredientType, quantity: PositiveInt (gt=0), brew_style: BrewStyle
