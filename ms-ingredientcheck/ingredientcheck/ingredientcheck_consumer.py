@@ -25,9 +25,11 @@ ingredient_deliveries_processed = meter.create_counter("ingredient_deliveries.pr
 ingredient_deliveries_processing_errors = meter.create_counter("ingredient_deliveries.processing_errors", description="Number of ingredient deliveries failed (HTTP error or ERROR_RATE)")
 
 # Initialize the Kafka consumer
+_kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+_kafka_server_address = _kafka_bootstrap.split(":")[0]
 consumer = Consumer(
     {
-        "bootstrap.servers": os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092"),
+        "bootstrap.servers": _kafka_bootstrap,
         "group.id": "ingredient-check-group",
         "auto.offset.reset": "earliest",
     }
@@ -53,6 +55,8 @@ def _process_message(msg, error_rate: float) -> None:
         span.set_attribute("messaging.operation.type", "process")
         span.set_attribute("messaging.destination.name", "ingredient-deliveries")
         span.set_attribute("messaging.consumer.group.name", "ingredient-check-group")
+        span.set_attribute("server.address", _kafka_server_address)
+        span.set_attribute("messaging.kafka.message.offset", msg.offset())
         # Simulate random error for observability testing
         # The error rate is controlled by the ERROR_RATE environment variable (default: 0.1)
         if random.random() < error_rate:

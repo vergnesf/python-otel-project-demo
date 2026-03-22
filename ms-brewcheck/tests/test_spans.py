@@ -1,0 +1,38 @@
+"""Tests for span attributes in ms-brewcheck (semconv compliance)."""
+
+import json
+from unittest.mock import MagicMock, patch
+
+from brewcheck.brewcheck_consumer import _process_message
+
+
+def _make_msg(payload=None):
+    msg = MagicMock()
+    msg.headers.return_value = []
+    msg.offset.return_value = 42
+    msg.value.return_value = json.dumps(payload or {"ingredient_type": "malt", "quantity": 5, "brew_style": "ipa"}).encode()
+    return msg
+
+
+def _get_span(span_exporter, name):
+    spans = [s for s in span_exporter.get_finished_spans() if s.name == name]
+    assert spans, f"No span named '{name}' found"
+    return spans[-1]
+
+
+def test_consumer_span_has_server_address(span_exporter):
+    from brewcheck.brewcheck_consumer import _kafka_server_address
+
+    with patch("brewcheck.brewcheck_consumer.requests.post") as mock_post:
+        mock_post.return_value.status_code = 201
+        _process_message(_make_msg(), 0.0)
+    span = _get_span(span_exporter, "process brew-orders")
+    assert span.attributes.get("server.address") == _kafka_server_address
+
+
+def test_consumer_span_has_kafka_message_offset(span_exporter):
+    with patch("brewcheck.brewcheck_consumer.requests.post") as mock_post:
+        mock_post.return_value.status_code = 201
+        _process_message(_make_msg(), 0.0)
+    span = _get_span(span_exporter, "process brew-orders")
+    assert span.attributes.get("messaging.kafka.message.offset") == 42
