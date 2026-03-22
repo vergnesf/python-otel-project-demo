@@ -21,8 +21,10 @@ lib_models/models.py
 ├── IngredientStock              — ingredient_type: IngredientType, quantity: PositiveInt (gt=0)
 ├── BrewOrder                    — ingredient_type: IngredientType, quantity: PositiveInt (gt=0), brew_style: BrewStyle
 ├── BrewTracking                 — id, brew_status, ingredient_type, quantity: PositiveInt (gt=0), brew_style, date
+├── BeerStock                    — brew_style: BrewStyle, quantity: int
 ├── InsufficientIngredientError  — raised when stock is too low; carries ingredient_type, requested, available
-└── IngredientNotFoundError      — raised when ingredient entry does not exist; carries ingredient_type
+├── IngredientNotFoundError      — raised when ingredient entry does not exist; carries ingredient_type
+└── InsufficientBeerStockError   — raised when beer stock is too low or missing; carries brew_style, requested, available
 ```
 
 > **Note Phase 2:** `BrewTracking` sert à la fois de modèle de réponse API Flask et de modèle de lecture dans `ms-brewmaster`.
