@@ -28,7 +28,7 @@ Introduces OTEL patterns not present in other KEEPER services:
 | `FERMENTATION_SECONDS` | `30` | Simulated fermentation time per brew |
 | `INTERVAL_SECONDS` | `10` | Polling interval in seconds |
 | `ERROR_RATE` | `0.1` | Fraction of completions that fail (0.0–1.0) |
-| `OTEL_SERVICE_NAME` | `fermentation` | Telemetry service name |
+| `OTEL_SERVICE_NAME` | `ms-fermentation` | Telemetry service name |
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 
 ## Integration
