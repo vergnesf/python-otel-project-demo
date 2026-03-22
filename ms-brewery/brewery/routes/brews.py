@@ -13,6 +13,7 @@ from ..crud import (
     update_brew_status,
 )
 from ..database import SessionLocal
+from ..kafka import publish_brew_ready
 from ..models import BrewStatus
 
 # Configure Flask/Werkzeug logging to show HTTP errors as ERROR level
@@ -355,7 +356,11 @@ def update_brew_status_route(brew_id):
         if updated_brew is None:
             return jsonify({"error": "Brew not found"}), 404
 
-        return jsonify(updated_brew.to_dict()), 200
+        brew_dict = updated_brew.to_dict()
+        if brew_status == BrewStatus.READY:
+            publish_brew_ready(brew_dict)
+
+        return jsonify(brew_dict), 200
     except Exception:
         current_app.logger.exception("Unexpected error during brew status update")
         return (

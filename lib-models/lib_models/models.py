@@ -17,6 +17,8 @@ class BrewStatus(str, Enum):
     REGISTERED = "registered"
     BREWING = "brewing"
     READY = "ready"
+    APPROVED = "approved"
+    REJECTED = "rejected"
     SHIPPED = "shipped"
     BLOCKED = "blocked"
     CLOSED = "closed"
