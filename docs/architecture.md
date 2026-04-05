@@ -41,6 +41,7 @@ This project is a **personal learning lab** built in layers, each added as a new
 |---------|------|------|
 | `ms-brewer` | Generates brew orders → Kafka (`brew-orders`) | Kafka producer |
 | `ms-supplier` | Generates ingredient deliveries → Kafka (`ingredient-deliveries`) | Kafka producer |
+| `ms-retailer` | Simulates retailers placing beer orders → Kafka (`beer-orders`) | Kafka producer |
 | `ms-brewcheck` | Validates & forwards brew orders to ms-brewery | Kafka consumer → REST |
 | `ms-ingredientcheck` | Validates & forwards ingredient deliveries to ms-cellar | Kafka consumer → REST |
 | `ms-brewery` | Brew management API | Flask + PostgreSQL |

@@ -6,19 +6,19 @@ version: '3'
 dotenv: ['versions.env', '.env']
 
 vars:
-  # All service directories — used by lint and tools-format (ruff). (19 dirs total)
+  # All service directories — used by lint and tools-format (ruff). (20 dirs total)
   # Includes agent/benchmark services that have no smoke tests.
   # NOTE: KEEPER_SERVICES is a subset of PROJECTS — if you add a new KEEPER service,
   # update BOTH vars below.
   PROJECTS: >-
     agent-logs agent-metrics agent-orchestrator agent-traces agent-ui
     agent-traduction benchmark lib-ai lib-models
-    ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-beerstock ms-cellar ms-fermentation ms-quality-control ms-supplier ms-ingredientcheck
+    ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-beerstock ms-cellar ms-fermentation ms-quality-control ms-retailer ms-supplier ms-ingredientcheck
 
-  # Business services with runnable Python processes and a tests/ directory. (10 dirs)
+  # Business services with runnable Python processes and a tests/ directory. (11 dirs)
   # Shared libraries (lib-models, lib-ai) are excluded.
   # Scope: test-lint and test-unit.
-  KEEPER_SERVICES: ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-beerstock ms-cellar ms-fermentation ms-quality-control ms-supplier ms-ingredientcheck
+  KEEPER_SERVICES: ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-beerstock ms-cellar ms-fermentation ms-quality-control ms-retailer ms-supplier ms-ingredientcheck
 
   # Subset with a container healthcheck defined in docker-compose-apps.yml.
   # Only Flask REST APIs (ms-brewery, ms-cellar, ms-beerstock) have healthchecks.

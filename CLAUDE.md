@@ -17,6 +17,7 @@ Two-layer model:
 |---------|------|-----------|
 | `ms-brewer` | Kafka producer | none |
 | `ms-supplier` | Kafka producer | none |
+| `ms-retailer` | Kafka producer | none |
 | `ms-brewcheck` | Kafka consumer | none |
 | `ms-ingredientcheck` | Kafka consumer | none |
 | `ms-brewmaster` | Background worker | none |
