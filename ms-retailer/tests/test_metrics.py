@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from confluent_kafka import KafkaException
 from retailer.retailer_producer import _run_once
 
 
@@ -33,4 +34,12 @@ def test_beer_orders_created_increments_on_success(metric_reader):
     with patch("retailer.retailer_producer.send_beer_order"):
         _run_once(0.0)
     after = _get_counter_value(metric_reader, "beer_orders.created")
+    assert after - before == 1
+
+
+def test_beer_orders_failed_increments_on_kafka_exception(metric_reader):
+    before = _get_counter_value(metric_reader, "beer_orders.failed")
+    with patch("retailer.retailer_producer.send_beer_order", side_effect=KafkaException("broker down")):
+        _run_once(0.0)
+    after = _get_counter_value(metric_reader, "beer_orders.failed")
     assert after - before == 1

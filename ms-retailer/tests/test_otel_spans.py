@@ -54,8 +54,7 @@ def test_send_beer_order_injects_traceparent_header(span_exporter):
     with patch("retailer.retailer_producer.producer") as mock_producer:
         mock_producer.produce.side_effect = capture_produce
         mock_producer.poll.return_value = None
-        with patch("retailer.retailer_producer.random.random", return_value=0.5):
-            _run_once(0.0)
+        _run_once(0.0)  # error_rate=0.0 forces success branch; no random mock needed
 
     assert captured_headers is not None
     header_keys = [k for k, _ in captured_headers]

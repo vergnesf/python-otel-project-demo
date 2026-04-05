@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 tracer = trace.get_tracer(__name__)
 meter = metrics.get_meter(__name__)
 beer_orders_created = meter.create_counter("beer_orders.created", description="Number of beer orders produced to Kafka")
-beer_orders_failed = meter.create_counter("beer_orders.failed", description="Number of beer orders dropped due to ERROR_RATE")
+beer_orders_failed = meter.create_counter("beer_orders.failed", description="Number of beer orders that failed — simulated (ERROR_RATE) or real Kafka errors")
 
 _RETAILERS = ["Bar du Port", "Brasserie du Centre", "Cave Martin", "Le Zinc", "Bistrot des Halles"]
 
@@ -29,6 +29,7 @@ _RETAILERS = ["Bar du Port", "Brasserie du Centre", "Cave Martin", "Le Zinc", "B
 def delivery_report(err, msg):
     if err is not None:
         logger.error("Message delivery failed: %s", err)
+        beer_orders_failed.add(1)
     else:
         logger.info("Message delivered to %s [%d]", msg.topic(), msg.partition())
 
