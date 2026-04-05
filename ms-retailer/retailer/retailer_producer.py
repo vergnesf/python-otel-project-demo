@@ -5,7 +5,7 @@ import random
 import signal
 import time
 
-from confluent_kafka import Producer
+from confluent_kafka import KafkaException, Producer
 from lib_models.log_formatter import OtelJsonFormatter
 from lib_models.models import BeerOrder, BrewStyle
 from opentelemetry import metrics, trace
@@ -68,14 +68,29 @@ def _run_once(error_rate: float) -> None:
             span.set_attribute("retailer.name", beer_order.retailer_name)
             span.set_attribute("brew.style", beer_order.brew_style.value)
             logger.info("Created beer order: %s", beer_order.model_dump())
-            send_beer_order(beer_order)
-            logger.info("Beer order sent successfully: %s", beer_order.model_dump())
-            beer_orders_created.add(1, {"brew_style": beer_order.brew_style.value, "retailer_name": beer_order.retailer_name})
+            try:
+                send_beer_order(beer_order)
+                logger.info("Beer order sent successfully: %s", beer_order.model_dump())
+                beer_orders_created.add(1, {"brew_style": beer_order.brew_style.value, "retailer_name": beer_order.retailer_name})
+            except (KafkaException, BufferError) as exc:
+                span.set_status(StatusCode.ERROR, str(exc))
+                span.record_exception(exc)
+                span.set_attribute("error.type", type(exc).__name__)
+                logger.error("failed to enqueue beer order: %s", exc)
+                beer_orders_failed.add(1)
 
 
 if __name__ == "__main__":
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
-    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    try:
+        interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
+    except ValueError:
+        logger.error("Invalid INTERVAL_SECONDS value, must be an integer. Using default 10.")
+        interval_seconds = 10
+    try:
+        ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    except ValueError:
+        logger.error("Invalid ERROR_RATE value, must be a float. Using default 0.1.")
+        ERROR_RATE = 0.1
 
     logger.info(
         "Retailer service starting with ERROR_RATE=%s and INTERVAL_SECONDS=%s",

@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from confluent_kafka import KafkaException
 from opentelemetry.trace import StatusCode
 from retailer.retailer_producer import _run_once
 
@@ -28,6 +29,18 @@ def test_send_beer_order_span_error_on_error_rate(span_exporter):
     assert "simulated failure" in spans[0].status.description
     assert any(e.name == "exception" for e in spans[0].events)
     assert spans[0].attributes["error.type"] == "RuntimeError"
+
+
+def test_send_beer_order_span_error_on_kafka_exception(span_exporter):
+    """KafkaException from broker sets span ERROR and increments failed counter."""
+    with patch("retailer.retailer_producer.send_beer_order", side_effect=KafkaException("queue full")):
+        _run_once(0.0)
+
+    spans = span_exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].status.status_code == StatusCode.ERROR
+    assert any(e.name == "exception" for e in spans[0].events)
+    assert spans[0].attributes["error.type"] == "KafkaException"
 
 
 def test_send_beer_order_injects_traceparent_header(span_exporter):
