@@ -32,4 +32,6 @@ def span_exporter():
 
 @pytest.fixture()
 def metric_reader():
+    # InMemoryMetricReader has no public reset() — counters are cumulative across tests.
+    # Always use delta checks (value after - value before) in metric tests, never absolute values.
     yield _metric_reader

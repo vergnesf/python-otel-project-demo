@@ -8,8 +8,7 @@ from retailer.retailer_producer import _run_once
 
 def test_send_beer_order_span_ok_on_success(span_exporter):
     with patch("retailer.retailer_producer.send_beer_order"):
-        with patch("retailer.retailer_producer.random.random", return_value=0.5):
-            _run_once(0.0)
+        _run_once(0.0)  # error_rate=0.0 forces success branch; no random mock needed
 
     spans = span_exporter.get_finished_spans()
     assert len(spans) == 1
