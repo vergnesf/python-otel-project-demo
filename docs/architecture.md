@@ -4,33 +4,73 @@ This project is a **personal learning lab** built in layers, each added as a new
 
 ## Two-Layer Design
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  BUSINESS LAYER (stable)                                │
-│                                                         │
-│  ms-brewer  ──┐               ┌── ms-brewcheck     ── ms-brewery ─┤
-│               ├── Kafka ──────┤                               ├── PostgreSQL
-│  ms-supplier ─┘               └── ms-ingredientcheck─ ms-cellar─┤
-│                  ms-brewmaster (background worker)               │
-└─────────────────────────┬───────────────────────────────┘
-                          │ OTLP
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  OBSERVABILITY STACK                                    │
-│  OTEL Collector → Loki (logs)                          │
-│                 → Mimir (metrics)                       │
-│                 → Tempo (traces)                        │
-│                 → Grafana (UI)                          │
-└─────────────────────────┬───────────────────────────────┘
-                          │ MCP Protocol
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│  AGENT LAYER (evolving)                                 │
-│                                                         │
-│  agent-ui → agent-orchestrator ──┬── agent-logs        │
-│                                  ├── agent-metrics      │
-│                                  └── agent-traces       │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph BUSINESS["Business Layer (KEEPER)"]
+        direction LR
+
+        subgraph Producers
+            BR[ms-brewer]
+            SU[ms-supplier]
+            RT[ms-retailer]
+        end
+
+        subgraph Kafka
+            BO([brew-orders])
+            ID([ingredient-deliveries])
+            BEO([beer-orders])
+            BRD([brews-ready])
+        end
+
+        subgraph Consumers
+            BC[ms-brewcheck]
+            IC[ms-ingredientcheck]
+            QC[ms-quality-control]
+        end
+
+        subgraph APIs["REST APIs"]
+            BRY[ms-brewery]
+            CEL[ms-cellar]
+            BST[ms-beerstock]
+        end
+
+        subgraph Workers
+            BM[ms-brewmaster]
+            FE[ms-fermentation]
+        end
+
+        PG[(PostgreSQL)]
+
+        BR --> BO --> BC --> BRY
+        SU --> ID --> IC --> CEL
+        RT --> BEO
+
+        BRY --> BRD --> QC --> BRY
+        BRY -->|APPROVED| BST
+
+        BM -->|consumes ingredients| CEL
+        BM -->|updates brew status| BRY
+        FE -->|BREWING → READY| BRY
+
+        BRY & CEL & BST --> PG
+    end
+
+    subgraph OBS["Observability Stack"]
+        OC[OTEL Collector]
+        LK[Loki]
+        MI[Mimir]
+        TE[Tempo]
+        GR[Grafana]
+        OC --> LK & MI & TE --> GR
+    end
+
+    subgraph AGENTS["Agent Layer (evolving)"]
+        UI[agent-ui] --> ORC[agent-orchestrator]
+        ORC --> AL[agent-logs] & AM[agent-metrics] & AT[agent-traces]
+    end
+
+    BUSINESS -->|OTLP| OBS
+    OBS -->|MCP Protocol| AGENTS
 ```
 
 ## Services

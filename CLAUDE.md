@@ -82,6 +82,17 @@ Docker image versions live in `versions.env` (committed — no copy needed, over
 - **Conventional Commits** format — see `.github/instructions/commit-message.instructions.md`
 - PRs reviewed by a BMAD persona before merging (BMAD is the AI-assisted workflow framework used in this project — see `_bmad/`)
 
+## Doc Review (mandatory on every PR)
+
+Before opening a PR, verify:
+- `CLAUDE.md` (root) KEEPER Services table matches the actual services in `Taskfile.yml` `KEEPER_SERVICES`
+- `docs/architecture.md` services table is up to date
+- `README.md` Project Structure section reflects any added/removed services
+- New services have a `README.md` in their directory
+- No links in any doc point to files that don't exist
+
+A PR template at `.github/pull_request_template.md` provides the checklist.
+
 ## OpenTelemetry Pattern
 
 All KEEPER services are auto-instrumented via the `opentelemetry-instrument` wrapper in their Dockerfile `CMD`.
