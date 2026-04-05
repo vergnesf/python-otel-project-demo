@@ -60,6 +60,12 @@ class BeerStock(BaseModel):
     quantity: int
 
 
+class BeerOrder(BaseModel):
+    brew_style: BrewStyle
+    quantity: PositiveInt
+    retailer_name: str
+
+
 class InsufficientIngredientError(Exception):
     def __init__(self, ingredient_type: str, requested: int, available: int) -> None:
         self.ingredient_type = ingredient_type
