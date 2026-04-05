@@ -45,13 +45,16 @@ See [Architecture](docs/architecture.md) for full details.
 ├── lib-models/            # Shared business models (Pydantic v2)
 ├── lib-ai/                # Shared AI utilities (MCP client, LLM config)
 ├── ms-brewer/             # Brew orders producer (Kafka)
-├── ms-brewery/            # Brewery management API (Flask + PostgreSQL)
-├── ms-cellar/             # Ingredient stock API (Flask + PostgreSQL)
 ├── ms-supplier/           # Ingredient deliveries producer (Kafka)
 ├── ms-retailer/           # Retail beer orders producer (Kafka)
 ├── ms-brewcheck/          # Brew order validator (Kafka consumer)
 ├── ms-ingredientcheck/    # Ingredient delivery validator (Kafka consumer)
+├── ms-quality-control/    # Finished brew quality control (Kafka consumer)
+├── ms-brewery/            # Brewery management API (Flask + PostgreSQL)
+├── ms-cellar/             # Ingredient stock API (Flask + PostgreSQL)
+├── ms-beerstock/          # Finished beer stock API (Flask + PostgreSQL)
 ├── ms-brewmaster/         # Brew orchestration worker
+├── ms-fermentation/       # Fermentation timing worker
 ├── agent-orchestrator/    # AI Agent: main coordinator
 ├── agent-logs/            # AI Agent: Loki log analysis
 ├── agent-metrics/         # AI Agent: Mimir metrics analysis

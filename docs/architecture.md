@@ -44,9 +44,12 @@ This project is a **personal learning lab** built in layers, each added as a new
 | `ms-retailer` | Simulates retailers placing beer orders → Kafka (`beer-orders`) | Kafka producer |
 | `ms-brewcheck` | Validates & forwards brew orders to ms-brewery | Kafka consumer → REST |
 | `ms-ingredientcheck` | Validates & forwards ingredient deliveries to ms-cellar | Kafka consumer → REST |
+| `ms-quality-control` | Performs quality control on finished brews, approves or rejects | Kafka consumer → REST |
 | `ms-brewery` | Brew management API | Flask + PostgreSQL |
 | `ms-cellar` | Ingredient stock management API | Flask + PostgreSQL |
+| `ms-beerstock` | Finished beer stock management API | Flask + PostgreSQL |
 | `ms-brewmaster` | Fetches registered brews, consumes ingredients, updates brew status | Background worker |
+| `ms-fermentation` | Monitors brews in BREWING status, transitions to READY on completion | Background worker |
 | `lib-models` | Shared business models | Pydantic |
 | `lib-ai` | Shared AI utilities (LLM config, MCP client) | LangChain |
 | `config` | Infrastructure configuration files | YAML |

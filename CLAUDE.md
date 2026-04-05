@@ -20,9 +20,12 @@ Two-layer model:
 | `ms-retailer` | Kafka producer | none |
 | `ms-brewcheck` | Kafka consumer | none |
 | `ms-ingredientcheck` | Kafka consumer | none |
+| `ms-quality-control` | Kafka consumer | none |
 | `ms-brewmaster` | Background worker | none |
+| `ms-fermentation` | Background worker | none |
 | `ms-brewery` | REST API + DB | Flask + SQLAlchemy |
 | `ms-cellar` | REST API + DB | Flask + SQLAlchemy |
+| `ms-beerstock` | REST API + DB | Flask + SQLAlchemy |
 | `lib-models` | Shared library | Pydantic v2 |
 | `lib-ai` | Shared AI library | LangChain + MCP |
 | `config` | Infra config files | YAML |
@@ -34,7 +37,7 @@ Two-layer model:
 
 ## Framework Convention
 
-- **Flask** for KEEPER HTTP services (`ms-brewery`, `ms-cellar`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
+- **Flask** for KEEPER HTTP services (`ms-brewery`, `ms-cellar`, `ms-beerstock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
 - **FastAPI** for all agent services — async, LLM-friendly.
 
 ## Tools
