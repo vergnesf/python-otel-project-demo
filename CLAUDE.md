@@ -20,9 +20,12 @@ Two-layer model:
 | `ms-retailer` | Kafka producer | none |
 | `ms-brewcheck` | Kafka consumer | none |
 | `ms-ingredientcheck` | Kafka consumer | none |
+| `ms-quality-control` | Kafka consumer | none |
 | `ms-brewmaster` | Background worker | none |
+| `ms-fermentation` | Background worker | none |
 | `ms-brewery` | REST API + DB | Flask + SQLAlchemy |
 | `ms-cellar` | REST API + DB | Flask + SQLAlchemy |
+| `ms-beerstock` | REST API + DB | Flask + SQLAlchemy |
 | `lib-models` | Shared library | Pydantic v2 |
 | `lib-ai` | Shared AI library | LangChain + MCP |
 | `config` | Infra config files | YAML |
@@ -34,7 +37,7 @@ Two-layer model:
 
 ## Framework Convention
 
-- **Flask** for KEEPER HTTP services (`ms-brewery`, `ms-cellar`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
+- **Flask** for KEEPER HTTP services (`ms-brewery`, `ms-cellar`, `ms-beerstock`) — synchronous, SQLAlchemy-based. No migration to FastAPI planned.
 - **FastAPI** for all agent services — async, LLM-friendly.
 
 ## Tools
@@ -78,6 +81,17 @@ Docker image versions live in `versions.env` (committed — no copy needed, over
 - **Always branch + PR** — never commit directly to `main`
 - **Conventional Commits** format — see `.github/instructions/commit-message.instructions.md`
 - PRs reviewed by a BMAD persona before merging (BMAD is the AI-assisted workflow framework used in this project — see `_bmad/`)
+
+## Doc Review (mandatory on every PR)
+
+Before opening a PR, verify:
+- `CLAUDE.md` (root) KEEPER Services table matches the actual services in `Taskfile.yml` `KEEPER_SERVICES`
+- `docs/architecture.md` services table is up to date
+- `README.md` Project Structure section reflects any added/removed services
+- New services have a `README.md` in their directory
+- No links in any doc point to files that don't exist
+
+A PR template at `.github/pull_request_template.md` provides the checklist.
 
 ## OpenTelemetry Pattern
 

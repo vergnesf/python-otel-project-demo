@@ -313,7 +313,9 @@ sed -i 's/GRAFANA_SERVICE_ACCOUNT_TOKEN=.*/GRAFANA_SERVICE_ACCOUNT_TOKEN=YOUR_TO
 # OR manually edit .env and replace the token value
 
 # 10. Restart the grafana-mcp service to apply the new token
-make redeploy grafana-mcp
+docker compose restart grafana-mcp
+# or with Podman:
+podman compose restart grafana-mcp
 ```
 
 ### 3. Verify All Services
@@ -354,9 +356,7 @@ task compose-down && podman-compose down -v || docker-compose down -v
 ## 🎓 Next Steps
 
 - **Explore the Architecture**: See [docs/architecture.md](docs/architecture.md)
-- **Learn about AI Agents**: See [docs/agents.md](docs/agents.md)
-- **Local Development**: See [docs/handbook/development.md](docs/handbook/development.md)
-- **Troubleshooting**: See [docs/handbook/troubleshooting.md](docs/handbook/troubleshooting.md)
+- **Podman on Bazzite/Toolbox**: See [docs/podman_toolbox_bazzite_setup.md](docs/podman_toolbox_bazzite_setup.md)
 
 ## 💡 Tips
 
