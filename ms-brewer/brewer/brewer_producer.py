@@ -37,7 +37,9 @@ def delivery_report(err, msg):
 
 # Initialize the Kafka producer
 _kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-_kafka_server_address = _kafka_bootstrap.split(":")[0]
+if not _kafka_bootstrap:
+    logger.warning("KAFKA_BOOTSTRAP_SERVERS is empty — server.address span attribute will be empty")
+_kafka_server_address = _kafka_bootstrap.split(",")[0].split(":")[0]
 producer = Producer({"bootstrap.servers": _kafka_bootstrap})
 
 
@@ -79,7 +81,13 @@ def _run_once(error_rate: float) -> None:
 
 if __name__ == "__main__":
     interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
+    if interval_seconds < 1:
+        logger.warning("INTERVAL_SECONDS=%d is less than 1 — clamping to 1 to avoid busy-loop", interval_seconds)
+        interval_seconds = 1
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    if not 0.0 <= ERROR_RATE <= 1.0:
+        logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", ERROR_RATE)
+        ERROR_RATE = max(0.0, min(1.0, ERROR_RATE))
 
     logger.info(
         "Brewer service starting with ERROR_RATE=%s and INTERVAL_SECONDS=%s",

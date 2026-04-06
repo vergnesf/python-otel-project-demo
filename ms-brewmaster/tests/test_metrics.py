@@ -57,7 +57,7 @@ def test_brews_managed_ready_increments_on_success(metric_reader):
         patch("brewmaster.brewmaster.requests.put", return_value=_mock_put_response()),
         patch("brewmaster.brewmaster.random.random", return_value=0.5),
     ):
-        process_registered_brew()
+        process_registered_brew(0.1)
     after = _get_counter_value(metric_reader, "brews.managed", {"result": "ready"})
     assert after - before == 1
 
@@ -70,10 +70,9 @@ def test_brews_managed_error_increments_on_error_rate(metric_reader):
         patch("brewmaster.brewmaster.requests.post") as mock_post,
         patch("brewmaster.brewmaster.requests.put", return_value=_mock_put_response()),
         patch("brewmaster.brewmaster.random.random", return_value=0.0),
-        patch.dict("os.environ", {"ERROR_RATE": "1.0"}),
     ):
         mock_post.return_value.status_code = 200
-        process_registered_brew()
+        process_registered_brew(1.0)
     after = _get_counter_value(metric_reader, "brews.managed", {"result": "error"})
     assert after - before == 1
 
@@ -89,6 +88,6 @@ def test_brews_managed_blocked_increments_on_insufficient_ingredients(metric_rea
         patch("brewmaster.brewmaster.requests.put", return_value=_mock_put_response()),
         patch("brewmaster.brewmaster.random.random", return_value=0.5),
     ):
-        process_registered_brew()
+        process_registered_brew(0.1)
     after = _get_counter_value(metric_reader, "brews.managed", {"result": "blocked"})
     assert after - before == 1

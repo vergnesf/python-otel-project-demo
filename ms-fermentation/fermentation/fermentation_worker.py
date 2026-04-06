@@ -105,7 +105,13 @@ def process_brewing_brews(fermentation_seconds: float, error_rate: float) -> Non
 if __name__ == "__main__":
     fermentation_seconds = float(os.getenv("FERMENTATION_SECONDS", "30"))
     interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
+    if interval_seconds < 1:
+        logger.warning("INTERVAL_SECONDS=%d is less than 1 — clamping to 1 to avoid busy-loop", interval_seconds)
+        interval_seconds = 1
     error_rate = float(os.environ.get("ERROR_RATE", 0.1))
+    if not 0.0 <= error_rate <= 1.0:
+        logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", error_rate)
+        error_rate = max(0.0, min(1.0, error_rate))
 
     logger.info(
         "Fermentation service starting: FERMENTATION_SECONDS=%.0f, INTERVAL_SECONDS=%d, ERROR_RATE=%.2f",

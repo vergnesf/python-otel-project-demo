@@ -26,7 +26,9 @@ brew_orders_processing_errors = meter.create_counter("brew_orders.processing_err
 
 # Initialize the Kafka consumer
 _kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-_kafka_server_address = _kafka_bootstrap.split(":")[0]
+if not _kafka_bootstrap:
+    logger.warning("KAFKA_BOOTSTRAP_SERVERS is empty — server.address span attribute will be empty")
+_kafka_server_address = _kafka_bootstrap.split(",")[0].split(":")[0]
 consumer = Consumer(
     {
         "bootstrap.servers": _kafka_bootstrap,
@@ -108,6 +110,9 @@ def _shutdown(signum, frame):
 def consume_messages():
     consumer.subscribe(["brew-orders"])
     ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    if not 0.0 <= ERROR_RATE <= 1.0:
+        logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", ERROR_RATE)
+        ERROR_RATE = max(0.0, min(1.0, ERROR_RATE))
     logger.info("Starting message consumption loop with ERROR_RATE=%s", ERROR_RATE)
 
     try:
