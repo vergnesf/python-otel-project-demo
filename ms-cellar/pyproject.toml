@@ -30,5 +30,5 @@ venv = ".venv"
 venvPath = "."
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
-extraPaths = ["../lib-models"]
+extraPaths = ["../lib-models"]  # assumes service sits at depth-1 under repo root
 exclude = ["**/.venv", "**/__pycache__"]
