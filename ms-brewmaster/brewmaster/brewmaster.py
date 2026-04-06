@@ -75,9 +75,8 @@ def update_brew_status(brew_id, status):
         raise
 
 
-def process_registered_brew():
+def process_registered_brew(error_rate: float):
     brews = fetch_registered_brews()
-    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
 
     if not brews:
         return
@@ -89,7 +88,7 @@ def process_registered_brew():
             if brew.get("brew_style"):
                 span.set_attribute("brew.style", brew["brew_style"])
             try:
-                if random.random() < ERROR_RATE:
+                if random.random() < error_rate:
                     raise RuntimeError("external API or DB failure during brew processing")
 
                 logger.info("Processing brew: %s", brew)
@@ -128,9 +127,16 @@ def process_registered_brew():
 
 if __name__ == "__main__":
     interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
+    if interval_seconds < 1:
+        logger.warning("INTERVAL_SECONDS=%d is less than 1 — clamping to 1 to avoid busy-loop", interval_seconds)
+        interval_seconds = 1
+    error_rate = float(os.environ.get("ERROR_RATE", 0.1))
+    if not 0.0 <= error_rate <= 1.0:
+        logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", error_rate)
+        error_rate = max(0.0, min(1.0, error_rate))
 
-    logger.info("Starting brewmaster service with %d seconds interval", interval_seconds)
+    logger.info("Starting brewmaster service with ERROR_RATE=%.2f and INTERVAL_SECONDS=%d", error_rate, interval_seconds)
 
     while True:
-        process_registered_brew()
+        process_registered_brew(error_rate)
         time.sleep(interval_seconds)
