@@ -2,8 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
-from opentelemetry.trace import StatusCode
 from brewmaster.brewmaster import process_registered_brew
+from opentelemetry.trace import StatusCode
 
 BREW = {"id": 1, "ingredient_type": "malt", "quantity": 5, "brew_style": "lager"}
 
@@ -22,7 +22,7 @@ def test_process_brew_span_ok_on_success(span_exporter):
         patch("brewmaster.brewmaster.requests.put", return_value=mock_put),
         patch("brewmaster.brewmaster.random.random", return_value=0.5),
     ):
-        process_registered_brew()
+        process_registered_brew(0.1)
 
     spans = span_exporter.get_finished_spans()
     brew_spans = [s for s in spans if s.name == "process brew"]
@@ -45,7 +45,7 @@ def test_process_brew_span_error_on_error_rate(span_exporter):
         patch("brewmaster.brewmaster.requests.put", return_value=mock_put),
         patch("brewmaster.brewmaster.random.random", return_value=0.0),
     ):
-        process_registered_brew()
+        process_registered_brew(0.1)
 
     spans = span_exporter.get_finished_spans()
     brew_spans = [s for s in spans if s.name == "process brew"]

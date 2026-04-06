@@ -150,7 +150,7 @@ def test_process_happy_path_updates_status_to_ready():
     ):
         from brewmaster.brewmaster import process_registered_brew
 
-        process_registered_brew()
+        process_registered_brew(0.1)
 
     mock_put.assert_called_once()
     assert mock_put.call_args.kwargs["json"] == {"brew_status": "ready"}
@@ -168,7 +168,7 @@ def test_process_insufficient_ingredients_marks_brew_blocked():
     ):
         from brewmaster.brewmaster import process_registered_brew
 
-        process_registered_brew()
+        process_registered_brew(0.1)
 
     mock_put.assert_called_once()
     assert mock_put.call_args.kwargs["json"] == {"brew_status": "blocked"}
@@ -182,7 +182,7 @@ def test_process_no_brews_does_not_call_post_or_put():
     ):
         from brewmaster.brewmaster import process_registered_brew
 
-        process_registered_brew()
+        process_registered_brew(0.1)
 
     mock_post.assert_not_called()
     mock_put.assert_not_called()
@@ -200,11 +200,10 @@ def test_process_error_rate_100_skips_consume_and_marks_blocked():
         patch("brewmaster.brewmaster.requests.post") as mock_post,
         patch("brewmaster.brewmaster.requests.put", return_value=_mock_put_response()) as mock_put,
         patch("brewmaster.brewmaster.random.random", return_value=0.0),
-        patch.dict("os.environ", {"ERROR_RATE": "1.0"}),
     ):
         from brewmaster.brewmaster import process_registered_brew
 
-        process_registered_brew()
+        process_registered_brew(1.0)
 
     mock_post.assert_not_called()
     mock_put.assert_called_once()
