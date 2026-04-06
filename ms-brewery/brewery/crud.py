@@ -46,10 +46,10 @@ def create_brew(db: Session, brew: schemas.BrewCreate):
     Create a new brew.
     """
     db_brew = models.BrewModel(  # pyright: ignore[reportCallIssue]
-        ingredient_type=brew.ingredient_type,
-        quantity=brew.quantity,
-        brew_style=brew.brew_style,
-        brew_status=BrewStatus.REGISTERED,
+        ingredient_type=brew.ingredient_type,  # pyright: ignore[reportCallIssue]
+        quantity=brew.quantity,  # pyright: ignore[reportCallIssue]
+        brew_style=brew.brew_style,  # pyright: ignore[reportCallIssue]
+        brew_status=BrewStatus.REGISTERED,  # pyright: ignore[reportCallIssue]
     )
     db.add(db_brew)
     db.commit()

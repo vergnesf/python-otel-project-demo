@@ -34,6 +34,6 @@ def decrease_ingredient_quantity(db: Session, ingredient_type: str, quantity: in
     if ingredient is None:
         raise IngredientNotFoundError(ingredient_type)
     if ingredient.quantity is None or ingredient.quantity < quantity:  # type: ignore[misc]
-        raise InsufficientIngredientError(ingredient_type, requested=quantity, available=ingredient.quantity or 0)  # type: ignore[arg-type]
+        raise InsufficientIngredientError(ingredient_type, requested=quantity, available=ingredient.quantity or 0)  # pyright: ignore[reportArgumentType]
     ingredient.quantity -= quantity  # type: ignore[misc]
     db.commit()

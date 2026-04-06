@@ -159,7 +159,7 @@ tasks:
             echo "✓"
           else
             echo "✗"
-            echo "$output" | grep "error:" | sed 's/^/  /'
+            echo "$output" | grep -E "(error:|note:|  ~~)" | sed 's/^/  /'
             failed=$((failed+1))
           fi
         done

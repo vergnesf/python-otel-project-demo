@@ -33,6 +33,6 @@ def ship_beer_stock(db: Session, brew_style: str, quantity: int) -> None:
     stock = get_beer_stock_by_style(db, brew_style)  # type: ignore[arg-type]
     if stock is None or stock.quantity is None or stock.quantity < quantity:  # type: ignore[misc]
         available = stock.quantity if stock is not None else 0
-        raise InsufficientBeerStockError(brew_style, requested=quantity, available=available or 0)  # type: ignore[arg-type]
+        raise InsufficientBeerStockError(brew_style, requested=quantity, available=available or 0)  # pyright: ignore[reportArgumentType]
     stock.quantity -= quantity  # type: ignore[misc]
     db.commit()

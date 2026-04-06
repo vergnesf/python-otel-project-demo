@@ -33,4 +33,3 @@ pythonVersion = "3.14"
 typeCheckingMode = "basic"
 extraPaths = ["../lib-models"]
 exclude = ["**/.venv", "**/__pycache__"]
-reportCallIssue = "none"
