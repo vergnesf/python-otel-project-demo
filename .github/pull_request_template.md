@@ -4,8 +4,7 @@
 
 ## Test plan
 
-- [ ] `task test-unit` passes
-- [ ] `task test-lint` passes
+- [ ] `task test` passes (test-lint → test-unit, all 186 tests green)
 
 ## Doc checklist
 

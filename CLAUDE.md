@@ -82,9 +82,12 @@ Docker image versions live in `versions.env` (committed — no copy needed, over
 - **Conventional Commits** format — see `.github/instructions/commit-message.instructions.md`
 - PRs reviewed by a BMAD persona before merging (BMAD is the AI-assisted workflow framework used in this project — see `_bmad/`)
 
-## Doc Review (mandatory on every PR)
+## Pre-PR Checklist (mandatory on every PR)
 
-Before opening a PR, verify:
+Before opening a PR, run `task test` and verify all phases pass (test-lint → test-unit).
+If you modify a service's public function signatures, update its tests accordingly.
+
+Also verify:
 - `CLAUDE.md` (root) KEEPER Services table matches the actual services in `Taskfile.yml` `KEEPER_SERVICES`
 - `docs/architecture.md` services table is up to date
 - `README.md` Project Structure section reflects any added/removed services
