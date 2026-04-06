@@ -60,13 +60,13 @@ task models-init      # Pull Ollama AI models (mistral, llama, qwen, etc.)
 task test             # test-lint → test-unit → test-integration (sequential, stops on first failure)
 task --continue test  # Run all test phases even if one fails
 task test-lint        # Ruff check scoped to KEEPER_SERVICES only (subset of lint)
-task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (7 dirs), no Docker required
+task test-unit        # Pytest smoke tests — KEEPER_SERVICES only (11 dirs), no Docker required
 task test-integration # Container health checks (ms-brewery, ms-cellar only) — skips if stack not running or runtime absent; unhealthy containers report failure
 task --list           # Show all available tasks with descriptions
 ```
 
 > **Taskfile variable scopes:** `PROJECTS` = all services (see `Taskfile.yml` for the full list), used by `task lint`.
-> `KEEPER_SERVICES` (7 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
+> `KEEPER_SERVICES` (11 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
 > `HEALTHCHECK_SERVICES` (2 dirs) = `ms-brewery` and `ms-cellar` — only Flask services with container healthchecks, used by the `test-integration` health loop.
 > Agent services (`agent-*`) and shared libs (`lib-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
