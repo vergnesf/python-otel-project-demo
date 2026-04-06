@@ -139,6 +139,32 @@ tasks:
   # Code quality
   # ---------------------------------------------------------------------------
 
+  typecheck:
+    desc: "Run pyright type checking on all KEEPER services"
+    silent: true
+    cmds:
+      - echo "Type-checking KEEPER services with pyright..."
+      - |
+        failed=0
+        for svc in {{.KEEPER_SERVICES}}; do
+          printf "  %-20s" "$svc"
+          if [ ! -d "{{.TASKFILE_DIR}}/$svc" ]; then
+            echo "✗ (directory not found: $svc)"
+            failed=$((failed+1))
+            continue
+          fi
+          output=$(cd "{{.TASKFILE_DIR}}/$svc" && uvx pyright . 2>&1)
+          exitcode=$?
+          if [ $exitcode -eq 0 ]; then
+            echo "✓"
+          else
+            echo "✗"
+            echo "$output" | grep "error:" | sed 's/^/  /'
+            failed=$((failed+1))
+          fi
+        done
+        if [ $failed -eq 0 ]; then echo "All services type-check passed"; else exit 1; fi
+
   lint:
     desc: "Lint all projects with ruff (PROJECTS: all 16 dirs including agents)"
     cmds:

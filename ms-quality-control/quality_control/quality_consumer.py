@@ -137,19 +137,20 @@ def consume_messages():
             msg = consumer.poll(timeout=1.0)
             if msg is None:
                 continue
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
+            err = msg.error()
+            if err:
+                if err.code() == KafkaError._PARTITION_EOF:
                     logger.info(
                         "End of partition reached %s [%d] at offset %d",
                         msg.topic(),
                         msg.partition(),
                         msg.offset(),
                     )
-                elif msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                elif err.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
                     logger.warning("Topic not available yet, retrying in 5s...")
                     time.sleep(5)
-                elif msg.error():
-                    raise KafkaException(msg.error())
+                elif err:
+                    raise KafkaException(err)
             else:
                 _process_message(msg, REJECT_RATE, ERROR_RATE)
     except KeyboardInterrupt:

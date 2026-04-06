@@ -17,7 +17,7 @@ def create_beer_stock(db: Session, stock: schemas.BeerStockCreate):
         db_stock.quantity += stock.quantity  # type: ignore[misc]
     else:
         # Create new beer stock entry
-        db_stock = models.BeerStockModel(brew_style=stock.brew_style, quantity=stock.quantity)
+        db_stock = models.BeerStockModel(brew_style=stock.brew_style, quantity=stock.quantity)  # pyright: ignore[reportCallIssue]
         db.add(db_stock)
 
     db.commit()
@@ -33,6 +33,6 @@ def ship_beer_stock(db: Session, brew_style: str, quantity: int) -> None:
     stock = get_beer_stock_by_style(db, brew_style)  # type: ignore[arg-type]
     if stock is None or stock.quantity is None or stock.quantity < quantity:  # type: ignore[misc]
         available = stock.quantity if stock is not None else 0
-        raise InsufficientBeerStockError(brew_style, requested=quantity, available=available or 0)
+        raise InsufficientBeerStockError(brew_style, requested=quantity, available=available or 0)  # type: ignore[arg-type]
     stock.quantity -= quantity  # type: ignore[misc]
     db.commit()

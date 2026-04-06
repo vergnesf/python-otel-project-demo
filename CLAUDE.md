@@ -84,7 +84,10 @@ Docker image versions live in `versions.env` (committed — no copy needed, over
 
 ## Pre-PR Checklist (mandatory on every PR)
 
-Before opening a PR, run `task test` and verify all phases pass (test-lint → test-unit).
+Before opening a PR, run both commands and verify they pass:
+- `task test` — test-lint (ruff) → test-unit (pytest)
+- `task typecheck` — pyright on all KEEPER services
+
 If you modify a service's public function signatures, update its tests accordingly.
 
 Also verify:

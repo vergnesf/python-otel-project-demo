@@ -45,7 +45,7 @@ def create_brew(db: Session, brew: schemas.BrewCreate):
     """
     Create a new brew.
     """
-    db_brew = models.BrewModel(
+    db_brew = models.BrewModel(  # pyright: ignore[reportCallIssue]
         ingredient_type=brew.ingredient_type,
         quantity=brew.quantity,
         brew_style=brew.brew_style,
