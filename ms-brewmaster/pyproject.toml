@@ -21,3 +21,11 @@ dev = [
 
 [tool.uv.sources]
 lib-models = { path = "../lib-models", editable = true }
+
+[tool.pyright]
+venv = ".venv"
+venvPath = "."
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+extraPaths = ["../lib-models"]
+exclude = ["**/.venv", "**/__pycache__"]

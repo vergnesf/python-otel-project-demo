@@ -17,7 +17,7 @@ def create_ingredient(db: Session, ingredient: schemas.IngredientCreate):
         db_ingredient.quantity += ingredient.quantity  # type: ignore[misc]
     else:
         # Create new ingredient stock entry
-        db_ingredient = models.IngredientStockModel(ingredient_type=ingredient.ingredient_type, quantity=ingredient.quantity)
+        db_ingredient = models.IngredientStockModel(ingredient_type=ingredient.ingredient_type, quantity=ingredient.quantity)  # pyright: ignore[reportCallIssue]
         db.add(db_ingredient)
 
     db.commit()
@@ -34,6 +34,6 @@ def decrease_ingredient_quantity(db: Session, ingredient_type: str, quantity: in
     if ingredient is None:
         raise IngredientNotFoundError(ingredient_type)
     if ingredient.quantity is None or ingredient.quantity < quantity:  # type: ignore[misc]
-        raise InsufficientIngredientError(ingredient_type, requested=quantity, available=ingredient.quantity or 0)
+        raise InsufficientIngredientError(ingredient_type, requested=quantity, available=ingredient.quantity or 0)  # pyright: ignore[reportArgumentType]
     ingredient.quantity -= quantity  # type: ignore[misc]
     db.commit()

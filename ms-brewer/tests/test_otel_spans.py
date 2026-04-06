@@ -36,7 +36,7 @@ def test_send_brew_order_span_error_on_error_rate(span_exporter):
 
 def test_send_brew_order_injects_traceparent_header(span_exporter):
     """W3C traceparent header is injected into Kafka message headers."""
-    captured_headers = None
+    captured_headers: list | None = None
 
     def capture_produce(topic, value=None, headers=None, callback=None):
         nonlocal captured_headers

@@ -240,6 +240,7 @@ def decrease_ingredient_route():
         decrease_ingredient_quantity(db, ingredient_type=ingredient_data.ingredient_type, quantity=ingredient_data.quantity)
         db.commit()
         db_ingredient = get_ingredient_by_type(db, ingredient_type=ingredient_data.ingredient_type)  # type: ignore[arg-type]
+        assert db_ingredient is not None  # guaranteed: decrease_ingredient_quantity() raises before reaching here
         return jsonify(db_ingredient.to_dict()), 200
     except IngredientNotFoundError as e:
         return jsonify({"error": str(e)}), 404

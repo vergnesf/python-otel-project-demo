@@ -4,7 +4,8 @@
 
 ## Test plan
 
-- [ ] `task test` passes (test-lint → test-unit, all 186 tests green)
+- [ ] `task test` passes (test-lint → test-unit)
+- [ ] `task typecheck` passes (pyright on all KEEPER services)
 
 ## Doc checklist
 
