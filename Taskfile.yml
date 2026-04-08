@@ -258,7 +258,7 @@ tasks:
         # Uses 'inspect' directly — avoids podman-compose ps limitations (no per-service filtering).
         any_running=false
         for svc in {{.HEALTHCHECK_SERVICES}}; do
-          if $RUNTIME inspect "$svc" >/dev/null 2>&1; then
+          if $RUNTIME inspect --format '{{`{{.State.Running}}`}}' "$svc" 2>/dev/null | grep -q true; then
             any_running=true
             break
           fi
