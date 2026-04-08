@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import signal
+import sys
 import time
 
 from confluent_kafka import Producer
@@ -37,8 +38,6 @@ def delivery_report(err, msg):
 
 # Initialize the Kafka producer
 _kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-if not _kafka_bootstrap:
-    logger.warning("KAFKA_BOOTSTRAP_SERVERS is empty — server.address span attribute will be empty")
 _kafka_server_address = _kafka_bootstrap.split(",")[0].split(":")[0]
 producer = Producer({"bootstrap.servers": _kafka_bootstrap})
 
@@ -80,11 +79,22 @@ def _run_once(error_rate: float) -> None:
 
 
 if __name__ == "__main__":
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
+    if not os.environ.get("KAFKA_BOOTSTRAP_SERVERS"):
+        logger.error("KAFKA_BOOTSTRAP_SERVERS is not set — cannot connect to Kafka. Exiting.")
+        sys.exit(1)
+    try:
+        interval_seconds = int(os.getenv("INTERVAL_SECONDS", "60"))
+    except ValueError:
+        logger.error("Invalid INTERVAL_SECONDS value, must be an integer. Using default 60.")
+        interval_seconds = 60
     if interval_seconds < 1:
         logger.warning("INTERVAL_SECONDS=%d is less than 1 — clamping to 1 to avoid busy-loop", interval_seconds)
         interval_seconds = 1
-    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    try:
+        ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    except ValueError:
+        logger.error("Invalid ERROR_RATE value, must be a float. Using default 0.1.")
+        ERROR_RATE = 0.1
     if not 0.0 <= ERROR_RATE <= 1.0:
         logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", ERROR_RATE)
         ERROR_RATE = max(0.0, min(1.0, ERROR_RATE))
