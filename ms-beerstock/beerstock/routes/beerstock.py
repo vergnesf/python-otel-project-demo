@@ -233,7 +233,9 @@ def ship_beer_stock_route():
         ship_beer_stock(db, brew_style=ship_data.brew_style, quantity=ship_data.quantity)
         db.commit()
         db_stock = get_beer_stock_by_style(db, brew_style=ship_data.brew_style)  # type: ignore[arg-type]
-        assert db_stock is not None  # guaranteed: ship_beer_stock() raises before reaching here
+        if db_stock is None:
+            current_app.logger.error("Invariant violation: stock not found after ship for brew_style=%s", ship_data.brew_style)
+            return jsonify({"error": "Internal error: stock not found after update"}), 500
         return jsonify(db_stock.to_dict()), 200
     except InsufficientBeerStockError as e:
         return jsonify({"error": str(e)}), 400

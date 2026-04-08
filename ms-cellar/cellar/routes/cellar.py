@@ -240,7 +240,9 @@ def decrease_ingredient_route():
         decrease_ingredient_quantity(db, ingredient_type=ingredient_data.ingredient_type, quantity=ingredient_data.quantity)
         db.commit()
         db_ingredient = get_ingredient_by_type(db, ingredient_type=ingredient_data.ingredient_type)  # type: ignore[arg-type]
-        assert db_ingredient is not None  # guaranteed: decrease_ingredient_quantity() raises before reaching here
+        if db_ingredient is None:
+            current_app.logger.error("Invariant violation: ingredient not found after decrease for type=%s", ingredient_data.ingredient_type)
+            return jsonify({"error": "Internal error: ingredient not found after update"}), 500
         return jsonify(db_ingredient.to_dict()), 200
     except IngredientNotFoundError as e:
         return jsonify({"error": str(e)}), 404

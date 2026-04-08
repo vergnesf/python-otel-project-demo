@@ -149,7 +149,7 @@ def consume_messages():
                 elif err.code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
                     logger.warning("Topic not available yet, retrying in 5s...")
                     time.sleep(5)
-                elif err:
+                else:
                     raise KafkaException(err)
             else:
                 _process_message(msg, REJECT_RATE, ERROR_RATE)
