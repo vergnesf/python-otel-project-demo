@@ -245,26 +245,37 @@ tasks:
     cmds:
       - echo "Checking container health for {{.HEALTHCHECK_SERVICES}} (requires running stack)..."
       - |
-        COMPOSE_CMD="{{.COMPOSE_CMD}}"
-        DOCKER_AVAILABLE=$(command -v docker >/dev/null 2>&1 && echo true || echo false)
-        PODMAN_AVAILABLE=$(command -v podman >/dev/null 2>&1 && echo true || echo false)
-        if [ "$DOCKER_AVAILABLE" = "false" ] && [ "$PODMAN_AVAILABLE" = "false" ]; then
+        # Detect runtime: prefer podman, fall back to docker
+        if command -v podman >/dev/null 2>&1; then
+          RUNTIME=podman
+        elif command -v docker >/dev/null 2>&1; then
+          RUNTIME=docker
+        else
           echo "  No container runtime found (docker/podman) — skipping integration checks"
           exit 0
         fi
-        if ! $COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps {{.HEALTHCHECK_SERVICES}} 2>/dev/null | grep -qE "\b(Up|running|healthy|unhealthy|starting)\b"; then
+        # Check that at least one HEALTHCHECK_SERVICE container exists and is running.
+        # Uses 'inspect' directly — avoids podman-compose ps limitations (no per-service filtering).
+        any_running=false
+        for svc in {{.HEALTHCHECK_SERVICES}}; do
+          if $RUNTIME inspect "$svc" >/dev/null 2>&1; then
+            any_running=true
+            break
+          fi
+        done
+        if [ "$any_running" = "false" ]; then
           echo "  Services {{.HEALTHCHECK_SERVICES}} not running — skipping integration checks (run task compose-up first)"
           exit 0
         fi
         failed=0
         for svc in {{.HEALTHCHECK_SERVICES}}; do
           printf "  %-20s" "$svc"
-          status=$($COMPOSE_CMD -f docker-compose/docker-compose-apps.yml ps "$svc" --format '{{`{{.Health}}`}}' 2>/dev/null | head -1)
+          status=$($RUNTIME inspect --format '{{`{{.State.Health.Status}}`}}' "$svc" 2>/dev/null | head -1)
           status=${status:-unknown}
           if [ "$status" = "healthy" ]; then
             echo "✓ healthy"
           elif [ "$status" = "unknown" ]; then
-            echo "✗ unknown (no HEALTHCHECK instruction in docker-compose-apps.yml for $svc)"
+            echo "✗ unknown (container not found or no HEALTHCHECK defined)"
             failed=$((failed+1))
           else
             echo "✗ $status"
