@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import signal
 import time
 
 import requests
@@ -135,6 +136,18 @@ if __name__ == "__main__":
         error_rate,
     )
 
-    while True:
+    running = True
+
+    def _shutdown(signum, frame):
+        global running
+        logger.info("Received signal %s, shutting down", signum)
+        running = False
+
+    signal.signal(signal.SIGTERM, _shutdown)
+    signal.signal(signal.SIGINT, _shutdown)
+
+    while running:
         process_brewing_brews(fermentation_seconds, error_rate)
         time.sleep(interval_seconds)
+
+    logger.info("Fermentation worker stopped")
