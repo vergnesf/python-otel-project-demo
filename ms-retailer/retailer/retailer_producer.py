@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import signal
+import sys
 import time
 
 from confluent_kafka import KafkaException, Producer
@@ -35,8 +36,6 @@ def delivery_report(err, msg):
 
 
 _kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-if not _kafka_bootstrap:
-    logger.warning("KAFKA_BOOTSTRAP_SERVERS is empty — server.address span attribute will be empty")
 _kafka_server_address = _kafka_bootstrap.split(",")[0].split(":")[0]
 producer = Producer({"bootstrap.servers": _kafka_bootstrap})
 
@@ -84,6 +83,9 @@ def _run_once(error_rate: float) -> None:
 
 
 if __name__ == "__main__":
+    if not os.environ.get("KAFKA_BOOTSTRAP_SERVERS"):
+        logger.error("KAFKA_BOOTSTRAP_SERVERS is not set — cannot connect to Kafka. Exiting.")
+        sys.exit(1)
     try:
         interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
     except ValueError:

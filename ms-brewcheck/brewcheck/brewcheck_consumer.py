@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import signal
+import sys
 import time
 
 import requests
@@ -26,8 +27,6 @@ brew_orders_processing_errors = meter.create_counter("brew_orders.processing_err
 
 # Initialize the Kafka consumer
 _kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-if not _kafka_bootstrap:
-    logger.warning("KAFKA_BOOTSTRAP_SERVERS is empty — server.address span attribute will be empty")
 _kafka_server_address = _kafka_bootstrap.split(",")[0].split(":")[0]
 consumer = Consumer(
     {
@@ -109,7 +108,11 @@ def _shutdown(signum, frame):
 
 def consume_messages():
     consumer.subscribe(["brew-orders"])
-    ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    try:
+        ERROR_RATE = float(os.environ.get("ERROR_RATE", 0.1))
+    except ValueError:
+        logger.error("Invalid ERROR_RATE value, must be a float. Using default 0.1.")
+        ERROR_RATE = 0.1
     if not 0.0 <= ERROR_RATE <= 1.0:
         logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", ERROR_RATE)
         ERROR_RATE = max(0.0, min(1.0, ERROR_RATE))
@@ -144,6 +147,9 @@ def consume_messages():
 
 
 if __name__ == "__main__":
+    if not os.environ.get("KAFKA_BOOTSTRAP_SERVERS"):
+        logger.error("KAFKA_BOOTSTRAP_SERVERS is not set — cannot connect to Kafka. Exiting.")
+        sys.exit(1)
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
     logger.info("BrewCheck service starting")

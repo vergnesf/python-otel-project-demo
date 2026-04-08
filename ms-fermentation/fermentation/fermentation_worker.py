@@ -103,12 +103,27 @@ def process_brewing_brews(fermentation_seconds: float, error_rate: float) -> Non
 
 
 if __name__ == "__main__":
-    fermentation_seconds = float(os.getenv("FERMENTATION_SECONDS", "30"))
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
+    try:
+        fermentation_seconds = float(os.getenv("FERMENTATION_SECONDS", "30"))
+    except ValueError:
+        logger.error("Invalid FERMENTATION_SECONDS value, must be a float. Using default 30.")
+        fermentation_seconds = 30.0
+    if fermentation_seconds <= 0:
+        logger.warning("FERMENTATION_SECONDS=%.0f must be > 0 — clamping to 1", fermentation_seconds)
+        fermentation_seconds = 1.0
+    try:
+        interval_seconds = int(os.getenv("INTERVAL_SECONDS", "10"))
+    except ValueError:
+        logger.error("Invalid INTERVAL_SECONDS value, must be an integer. Using default 10.")
+        interval_seconds = 10
     if interval_seconds < 1:
         logger.warning("INTERVAL_SECONDS=%d is less than 1 — clamping to 1 to avoid busy-loop", interval_seconds)
         interval_seconds = 1
-    error_rate = float(os.environ.get("ERROR_RATE", 0.1))
+    try:
+        error_rate = float(os.environ.get("ERROR_RATE", 0.1))
+    except ValueError:
+        logger.error("Invalid ERROR_RATE value, must be a float. Using default 0.1.")
+        error_rate = 0.1
     if not 0.0 <= error_rate <= 1.0:
         logger.warning("ERROR_RATE=%.2f is outside [0.0, 1.0] — clamping", error_rate)
         error_rate = max(0.0, min(1.0, error_rate))

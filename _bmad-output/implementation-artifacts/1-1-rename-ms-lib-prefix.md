@@ -1,7 +1,9 @@
 # Story 1-1: Rename Service Directories with ms- and lib- Prefixes
 
 ## Status
-review
+obsolete
+
+> **Note (2026-04-08):** Story exécutée et mergée (commit `cdd2d16`, 2026-03-14). Obsolète car la refonte brewery-phase-1 a remplacé tous les services sawmill (`ms-customer`, `ms-order`, `ms-stock`, etc.) par le domaine brasserie (`ms-brewery`, `ms-cellar`, `ms-beerstock`, etc.). Les ACs ne correspondent plus à l'état réel du repo.
 
 ## Story
 **As a** developer navigating the repository,
