@@ -21,9 +21,10 @@ vars:
   KEEPER_SERVICES: ms-brewer ms-brewery ms-brewcheck ms-brewmaster ms-beerstock ms-cellar ms-dispatch ms-fermentation ms-quality-control ms-retailer ms-supplier ms-ingredientcheck
 
   # Subset with a container healthcheck defined in docker-compose-apps.yml.
-  # Only Flask REST APIs (ms-brewery, ms-cellar, ms-beerstock) have healthchecks.
+  # Flask REST APIs: ms-brewery, ms-cellar, ms-beerstock (urllib.request health endpoint).
+  # Kafka consumers: ms-dispatch (grep /proc/*/cmdline for running process).
   # WARNING: only add a service here if docker-compose-apps.yml defines a HEALTHCHECK for it.
-  HEALTHCHECK_SERVICES: ms-brewery ms-cellar ms-beerstock
+  HEALTHCHECK_SERVICES: ms-brewery ms-cellar ms-beerstock ms-dispatch
 
   # Ollama models to pull
   MODELS: mistral:7b llama3.2:3b qwen3:0.6b granite4:3b mistral-nemo:12b qwen2.5:7b phi4:14b
