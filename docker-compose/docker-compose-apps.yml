@@ -205,6 +205,26 @@ services:
     networks:
       - otel-network
 
+  ms-dispatch:
+    build:
+      context: ..
+      dockerfile: ms-dispatch/Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY:-}
+        IMG_PYTHON: ${IMG_PYTHON_BASE}
+    container_name: ms-dispatch
+    environment:
+      <<: *common-apps-env
+      OTEL_SERVICE_NAME: ms-dispatch
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      API_URL_BEERSTOCK: http://ms-beerstock:5002
+    depends_on:
+      ms-beerstock:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - otel-network
+
   ms-quality-control:
     build:
       context: ..

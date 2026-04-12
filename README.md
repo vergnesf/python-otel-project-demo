@@ -50,6 +50,7 @@ See [Architecture](docs/architecture.md) for full details.
 ├── ms-brewcheck/          # Brew order validator (Kafka consumer)
 ├── ms-ingredientcheck/    # Ingredient delivery validator (Kafka consumer)
 ├── ms-quality-control/    # Finished brew quality control (Kafka consumer)
+├── ms-dispatch/           # Beer order dispatch — calls ms-beerstock to ship (Kafka consumer)
 ├── ms-brewery/            # Brewery management API (Flask + PostgreSQL)
 ├── ms-cellar/             # Ingredient stock API (Flask + PostgreSQL)
 ├── ms-beerstock/          # Finished beer stock API (Flask + PostgreSQL)

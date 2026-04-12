@@ -85,6 +85,7 @@ flowchart TB
 | `ms-brewcheck` | Validates & forwards brew orders to ms-brewery | Kafka consumer → REST |
 | `ms-ingredientcheck` | Validates & forwards ingredient deliveries to ms-cellar | Kafka consumer → REST |
 | `ms-quality-control` | Performs quality control on finished brews, approves or rejects | Kafka consumer → REST |
+| `ms-dispatch` | Dispatches retail beer orders by calling ms-beerstock `/beerstock/ship` | Kafka consumer → REST |
 | `ms-brewery` | Brew management API | Flask + PostgreSQL |
 | `ms-cellar` | Ingredient stock management API | Flask + PostgreSQL |
 | `ms-beerstock` | Finished beer stock management API | Flask + PostgreSQL |

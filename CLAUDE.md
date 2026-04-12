@@ -21,6 +21,7 @@ Two-layer model:
 | `ms-brewcheck` | Kafka consumer | none |
 | `ms-ingredientcheck` | Kafka consumer | none |
 | `ms-quality-control` | Kafka consumer | none |
+| `ms-dispatch` | Kafka consumer | none |
 | `ms-brewmaster` | Background worker | none |
 | `ms-fermentation` | Background worker | none |
 | `ms-brewery` | REST API + DB | Flask + SQLAlchemy |
