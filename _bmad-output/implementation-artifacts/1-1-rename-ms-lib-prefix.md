@@ -1,7 +1,9 @@
 # Story 1-1: Rename Service Directories with ms- and lib- Prefixes
 
 ## Status
-review
+obsolete
+
+> **Note (2026-04-08):** Story executed and merged (commit `cdd2d16`, 2026-03-14). Obsolete: the brewery-phase-1 refactor replaced all sawmill-domain services (`ms-customer`, `ms-order`, `ms-stock`, etc.) with brewery-domain services (`ms-brewery`, `ms-cellar`, `ms-beerstock`, etc.). Acceptance criteria no longer match the actual repo state.
 
 ## Story
 **As a** developer navigating the repository,
