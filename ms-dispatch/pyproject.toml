@@ -1,0 +1,31 @@
+[project]
+name = "dispatch"
+version = "0.1.0"
+description = "Kafka consumer — dispatches retail beer orders by calling ms-beerstock /beerstock/ship"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "confluent-kafka>=2.13.2",
+    "lib-models",
+    "opentelemetry-distro>=0.61b0",
+    "opentelemetry-exporter-otlp>=1.40.0",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pyright",
+    "pytest>=8",
+]
+
+[tool.uv.sources]
+lib-models = { path = "../lib-models", editable = true }
+
+[tool.pyright]
+venv = ".venv"
+venvPath = "."
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+extraPaths = ["../lib-models"]
+exclude = ["**/.venv", "**/__pycache__"]
