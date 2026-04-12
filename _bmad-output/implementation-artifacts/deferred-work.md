@@ -14,4 +14,12 @@
 
 - **`time.sleep(interval_seconds)` not interruptible on SIGTERM** [`ms-brewmaster`, `ms-brewer`, `ms-supplier`] — After `_shutdown` sets `running = False`, the main loop may be blocked in `time.sleep()` (up to 60s default). Docker's stop timeout is 10s before SIGKILL, so graceful shutdown is rarely achieved at long intervals. In docker-compose the interval is set to 5s, mitigating the issue in practice. Pre-existing.
 
-- **`ms-fermentation` still uses `while True` with no signal handler** [`ms-fermentation/fermentation/fermentation_worker.py`] — Other workers (ms-brewer, ms-supplier, ms-brewmaster) register a `running` flag + `_shutdown` handler, but ms-fermentation does not. SIGTERM from Docker causes a dirty shutdown. Pre-existing.
+- **`ms-fermentation` still uses `while True` with no signal handler** — ✅ Resolved in PR #150.
+
+## Deferred from: code review of PR #150 (2026-04-12)
+
+- **KAFKA_BOOTSTRAP_SERVERS guard placed after module-level Producer instantiation** [`ms-brewer`, `ms-retailer`, `ms-supplier`] — `producer = Producer(...)` est instancié au niveau module avec le fallback `"localhost:9092"` avant que le `sys.exit(1)` dans `__main__` soit atteint. Design trade-off intentionnel : le guard dans `__main__` empêche l'exécution de la boucle principale mais ne prévient pas la création du Producer. Documenté dans la description PR #150 ("check placé dans `__main__` pour ne pas casser les imports de test"). Pre-existing.
+
+- **`$RUNTIME inspect` utilise le service name comme container name** [`Taskfile.yml`] — La boucle `for svc in {{.HEALTHCHECK_SERVICES}}` passe le nom du service directement à `$RUNTIME inspect "$svc"`. Si le container a un nom avec prefix projet (ex: `myproject_ms-brewery_1`), `inspect` échoue silencieusement et `any_running` reste `false`, sautant les checks même si les containers sont up. Pre-existing, dépend de la convention de nommage de l'environnement.
+
+- **`podman inspect` retourne `"null"` au lieu de `""` pour containers sans HEALTHCHECK** [`Taskfile.yml`] — `docker inspect --format '{{.State.Health.Status}}'` retourne une chaîne vide pour un container sans `HEALTHCHECK` (correctement rattrapée par `${status:-unknown}`), mais `podman inspect` peut retourner `"null"` — la substitution ne se déclenche pas et le branch `else` affiche `✗ null` au lieu du message descriptif `✗ unknown`. Cosmétique. Pre-existing.
