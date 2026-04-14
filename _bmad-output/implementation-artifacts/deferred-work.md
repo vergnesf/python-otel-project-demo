@@ -1,5 +1,15 @@
 # Deferred Work
 
+## Deferred from: code review of PR #154 (2026-04-14)
+
+- **`results/` dir created relative to CWD** [`benchmark/benchmark/main.py`] — `Path("results")` resolves to wherever the process is invoked, not the project root. Pre-existing pattern — `benchmark_results.html` uses the same convention. Works correctly when run from the `benchmark/` directory.
+
+- **`default=str` catch-all in `json.dump`** [`benchmark/benchmark/main.py`] — Non-serializable values are silently stringified instead of raising. Current data (dicts of primitives) poses no practical risk, but unexpected types (Pydantic models, datetimes) would produce unparseable strings in the JSON output.
+
+- **No I/O exception handling in `save_results_json`** [`benchmark/benchmark/main.py`] — `PermissionError` / disk-full would abort the export silently. Pre-existing pattern — HTML export has the same absence of error handling.
+
+- **`benchmark_start_time` is `None` if `BENCHMARK_MODELS` is empty** [`benchmark/benchmark/main.py`] — `total_duration = time.perf_counter() - benchmark_start_time` raises `TypeError` if the model list is empty. Pre-existing issue, not introduced by this PR.
+
 ## Deferred from: code review of PR #153 (2026-04-14)
 
 - **Process-alive ≠ process-functioning** [`docker-compose/docker-compose-apps.yml`] — All `/proc/*/cmdline` healthchecks confirm the Python process is alive but not that it is functioning (Kafka connected, loop running, no swallowed exception). A stuck-but-alive process reports healthy. Pre-existing trade-off for a learning lab.
