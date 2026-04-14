@@ -1,5 +1,15 @@
 # Deferred Work
 
+## Deferred from: code review of PR #153 (2026-04-14)
+
+- **Process-alive ≠ process-functioning** [`docker-compose/docker-compose-apps.yml`] — All `/proc/*/cmdline` healthchecks confirm the Python process is alive but not that it is functioning (Kafka connected, loop running, no swallowed exception). A stuck-but-alive process reports healthy. Pre-existing trade-off for a learning lab.
+
+- **`start_period: 30s` uniform across all services** [`docker-compose/docker-compose-apps.yml`] — No per-service tuning for startup time. Producers with 5s interval and consumers waiting on Kafka all get the same value. Pre-existing.
+
+- **`ms-dispatch` missing `start_period`** [`docker-compose/docker-compose-apps.yml`] — The `ms-dispatch` healthcheck (added in #151) has no `start_period` unlike the 8 services added in #153. Cosmetic inconsistency. Pre-existing.
+
+- **CLAUDE.md HEALTHCHECK_SERVICES description no longer lists individual services** [`CLAUDE.md`] — The description now says "all other KEEPER services" instead of naming them. Less precise for future readers. Pre-existing after this PR's scope.
+
 ## Deferred from: code review (2026-04-08)
 
 - **500 after committed transaction — no rollback path** [`ms-beerstock/routes/beerstock.py:236`, `ms-cellar/routes/cellar.py:243`] — If the `if None` guard fires after `db.commit()`, the transaction is already committed but the client receives a 500. Branch is theoretically unreachable (CRUD layer invariant), but if triggered the DB state is inconsistent with no compensating action. Pre-existing.
