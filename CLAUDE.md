@@ -68,7 +68,7 @@ task --list           # Show all available tasks with descriptions
 
 > **Taskfile variable scopes:** `PROJECTS` = all services (see `Taskfile.yml` for the full list), used by `task lint`.
 > `KEEPER_SERVICES` (12 dirs) = business services with runnable processes, used by `task test-lint` and `task test-unit`.
-> `HEALTHCHECK_SERVICES` (4 dirs) = `ms-brewery`, `ms-cellar`, `ms-beerstock` (Flask/HTTP healthcheck), `ms-dispatch` (process healthcheck via `/proc`) — used by the `test-integration` health loop.
+> `HEALTHCHECK_SERVICES` (12 dirs) = `ms-brewery`, `ms-cellar`, `ms-beerstock` (Flask/HTTP healthcheck), all other KEEPER services (process healthcheck via `/proc`) — used by the `test-integration` health loop.
 > Agent services (`agent-*`) and shared libs (`lib-*`) are in `PROJECTS` but not `KEEPER_SERVICES`.
 
 ## Environment Setup
