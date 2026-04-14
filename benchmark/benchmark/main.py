@@ -41,7 +41,7 @@ def save_results_json(all_results: dict, models: list[str], run_at: datetime, to
 
     for model in models:
         model_safe = model.replace(":", "_").replace("/", "_")
-        output_file = results_dir / f"{date_str}_{model_safe}.json"
+        output_file = results_dir / f"{run_at.strftime('%Y-%m-%d_%H%M%S')}_{model_safe}.json"
 
         # Pivot from {agent: {model: metrics}} to {agent: metrics}
         model_agents = {agent: agent_results.get(model, {}) for agent, agent_results in all_results.items()}
