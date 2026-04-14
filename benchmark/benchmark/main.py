@@ -2,6 +2,7 @@
 """Benchmark runner for agent APIs."""
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -32,10 +33,38 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def save_results_json(all_results: dict, models: list[str], run_at: datetime, total_duration_s: float) -> None:
+    """Save benchmark results as dated JSON files, one file per model."""
+    results_dir = Path("results")
+    results_dir.mkdir(exist_ok=True)
+    date_str = run_at.strftime("%Y-%m-%d")
+
+    for model in models:
+        model_safe = model.replace(":", "_").replace("/", "_")
+        output_file = results_dir / f"{date_str}_{model_safe}.json"
+
+        # Pivot from {agent: {model: metrics}} to {agent: metrics}
+        model_agents = {agent: agent_results.get(model, {}) for agent, agent_results in all_results.items()}
+
+        payload = {
+            "model": model,
+            "date": date_str,
+            "run_at": run_at.isoformat(),
+            "total_duration_s": round(total_duration_s, 2),
+            "agents": model_agents,
+        }
+
+        with output_file.open("w") as f:
+            json.dump(payload, f, indent=2, default=str)
+
+        console.print(f"[green]✓ Saved to {output_file.absolute()}[/green]")
+
+
 async def main() -> None:
     """Run all benchmarks."""
     # Set OLLAMA_URL for common-ai to use Traefik proxy
     os.environ["OLLAMA_URL"] = OLLAMA_URL
+    run_start = datetime.now()
 
     logger.info(f"Starting benchmarks at {datetime.now().isoformat()}")
     logger.info(f"Models: {', '.join(BENCHMARK_MODELS)}")
@@ -125,6 +154,11 @@ async def main() -> None:
     console.print(f"  Models tested: {', '.join(original_models)}")
 
     render_summary(all_results, original_models)
+
+    # Export to JSON (one file per model)
+    console.print()
+    console.print("[bold yellow]💾 Exporting to JSON...[/bold yellow]")
+    save_results_json(all_results, original_models, run_start, total_duration)
 
     # Export to HTML
     console.print()
