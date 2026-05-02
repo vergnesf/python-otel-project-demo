@@ -1,0 +1,7 @@
+
+# Ensure CLAUDE.md symlink works correctly on all platforms
+# (Without this, Windows with core.symlinks=false treats it as text file)
+CLAUDE.md text eol=lf
+
+# Preserve symlink type across platforms
+CLAUDE.md merge=union
