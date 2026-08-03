@@ -2,7 +2,7 @@
 """OTEL pipeline validation script.
 
 Queries Tempo, Loki, and Mimir APIs to verify that recent telemetry data
-from KEEPER services is flowing correctly through the observability stack.
+from brewery services is flowing correctly through the observability stack.
 
 Usage:
     uv run python scripts/check_otel_pipeline.py
@@ -31,14 +31,19 @@ LOKI_URL = f"{TRAEFIK_URL}/loki"
 MIMIR_BASE_URL = f"{TRAEFIK_URL}/mimir"
 MIMIR_URL = f"{MIMIR_BASE_URL}/prometheus"
 
-KEEPER_SERVICES = [
-    "ms-customer",
+BREWERY_SERVICES = [
+    "ms-beerstock",
+    "ms-brewcheck",
+    "ms-brewer",
+    "ms-brewery",
+    "ms-brewmaster",
+    "ms-cellar",
+    "ms-dispatch",
+    "ms-fermentation",
+    "ms-ingredientcheck",
+    "ms-quality-control",
+    "ms-retailer",
     "ms-supplier",
-    "ms-order",
-    "ms-stock",
-    "ms-ordercheck",
-    "ms-suppliercheck",
-    "ms-ordermanagement",
 ]
 
 # Look back window for recent data (seconds)
@@ -114,7 +119,7 @@ def check_tempo_ready(report: Report) -> None:
 
 
 def check_tempo_traces(report: Report, service: str) -> None:
-    """Recent traces exist in Tempo for the given KEEPER service."""
+    """Recent traces exist in Tempo for the given brewery service."""
     # Tempo /api/search expects start/end as Unix seconds (not nanoseconds)
     start_s = int(time.time() - LOOKBACK_SECONDS)
     end_s = int(time.time())
@@ -145,7 +150,7 @@ def check_loki_ready(report: Report) -> None:
 
 
 def check_loki_logs(report: Report, service: str) -> None:
-    """Recent logs exist in Loki for the given KEEPER service."""
+    """Recent logs exist in Loki for the given brewery service."""
     start_ns = _ago_ns(LOOKBACK_SECONDS)
     end_ns = _now_ns()
     query = f'{{service_name="{service}"}}'
@@ -177,7 +182,7 @@ def check_mimir_ready(report: Report) -> None:
 
 
 def check_mimir_metrics(report: Report) -> None:
-    """Active OTEL metrics exist in Mimir for KEEPER services."""
+    """Active OTEL metrics exist in Mimir for brewery services."""
     # Query for any OTEL-generated metric with a service_name label from our services
     query = 'count by (service_name) ({__name__=~".+", service_name=~"ms-.+"})'
     encoded = urllib.parse.quote(query)
@@ -189,20 +194,20 @@ def check_mimir_metrics(report: Report) -> None:
             services_with_metrics = [r["metric"].get("service_name", "?") for r in results]
             report.add(
                 CheckResult(
-                    "mimir:keeper_metrics",
+                    "mimir:brewery_metrics",
                     True,
                     f"Active metrics found for: {', '.join(sorted(services_with_metrics))}",
                 )
             )
         else:
-            report.add(CheckResult("mimir:keeper_metrics", False, "No active KEEPER metrics found in Mimir"))
+            report.add(CheckResult("mimir:brewery_metrics", False, "No active brewery metrics found in Mimir"))
     except Exception as e:
-        report.add(CheckResult("mimir:keeper_metrics", False, f"Query failed: {e}"))
+        report.add(CheckResult("mimir:brewery_metrics", False, f"Query failed: {e}"))
 
 
-def check_mimir_otel_collector_metrics(report: Report) -> None:
-    """otel_sdk metrics are present — confirms SDK telemetry is flowing through the pipeline."""
-    query = 'count({__name__=~"otel_sdk_.+"})'
+def check_mimir_spanmetrics(report: Report) -> None:
+    """Span metrics derived from traces are present — confirms trace-derived telemetry is flowing."""
+    query = 'count(traces_spanmetrics_calls_total)'
     encoded = urllib.parse.quote(query)
     url = f"{MIMIR_URL}/api/v1/query?query={encoded}"
     try:
@@ -210,11 +215,11 @@ def check_mimir_otel_collector_metrics(report: Report) -> None:
         results = data.get("data", {}).get("result", [])
         count = int(float(results[0]["value"][1])) if results else 0
         if count > 0:
-            report.add(CheckResult("mimir:otel_sdk", True, f"{count} otel_sdk metric series active"))
+            report.add(CheckResult("mimir:spanmetrics", True, f"{count} spanmetrics series active"))
         else:
-            report.add(CheckResult("mimir:otel_sdk", False, "No otel_sdk metrics found — SDK telemetry may not be flowing"))
+            report.add(CheckResult("mimir:spanmetrics", False, "No spanmetrics found — trace-derived metrics may not be flowing"))
     except Exception as e:
-        report.add(CheckResult("mimir:otel_sdk", False, f"Query failed: {e}"))
+        report.add(CheckResult("mimir:spanmetrics", False, f"Query failed: {e}"))
 
 
 # ---------------------------------------------------------------------------
@@ -226,20 +231,20 @@ def run_checks() -> Report:
     report = Report()
 
     print(f"\n🔍 OTEL Pipeline Check — {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}")
-    print(f"   Lookback window: {LOOKBACK_SECONDS}s | Services: {len(KEEPER_SERVICES)}\n")
+    print(f"   Lookback window: {LOOKBACK_SECONDS}s | Services: {len(BREWERY_SERVICES)}\n")
 
     # --- Tempo ---
     print("── Tempo ─────────────────────────────────────────")
     check_tempo_ready(report)
     if report.results[-1].passed:
-        for svc in KEEPER_SERVICES:
+        for svc in BREWERY_SERVICES:
             check_tempo_traces(report, svc)
 
     # --- Loki ---
     print("\n── Loki ──────────────────────────────────────────")
     check_loki_ready(report)
     if report.results[-1].passed:
-        for svc in KEEPER_SERVICES:
+        for svc in BREWERY_SERVICES:
             check_loki_logs(report, svc)
 
     # --- Mimir ---
@@ -247,7 +252,7 @@ def run_checks() -> Report:
     check_mimir_ready(report)
     if report.results[-1].passed:
         check_mimir_metrics(report)
-        check_mimir_otel_collector_metrics(report)
+        check_mimir_spanmetrics(report)
 
     return report
 
