@@ -51,7 +51,6 @@ Thumbs.db
 # Project files
 .python-version
 /poetry.toml
-uv.lock
 
 # pytest
 .pytest_cache/

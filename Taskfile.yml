@@ -299,6 +299,87 @@ tasks:
   # AI models
   # ---------------------------------------------------------------------------
 
+  upgrade-pydeps:
+    desc: "Upgrade uv.lock deps across PROJECTS; run tests and rollback on failure"
+    silent: true
+    cmds:
+      - echo "Upgrading uv.lock dependencies for all projects (with test + rollback)..."
+      - |
+        set -euo pipefail
+        upgraded=0
+        rolled_back=0
+        failed=0
+        keeper_list="{{.KEEPER_SERVICES}}"
+        for proj in {{.PROJECTS}}; do
+          printf "  %-20s" "$proj"
+          if [ ! -f "{{.TASKFILE_DIR}}/$proj/pyproject.toml" ]; then
+            echo "✗ (no pyproject.toml)"
+            failed=$((failed+1))
+            continue
+          fi
+
+          lock_file="{{.TASKFILE_DIR}}/$proj/uv.lock"
+          backup_file="$lock_file.backup-upgrade"
+          has_lock=false
+          if [ -f "$lock_file" ]; then
+            cp "$lock_file" "$backup_file"
+            has_lock=true
+          fi
+
+          output=$(cd "{{.TASKFILE_DIR}}/$proj" && uv lock --upgrade 2>&1)
+          upgrade_exit=$?
+          if [ $upgrade_exit -ne 0 ]; then
+            echo "✗ (upgrade failed)"
+            printf "  === %s ===\n" "$proj"
+            echo "$output" | sed 's/^/  /'
+            if [ "$has_lock" = true ]; then
+              mv "$backup_file" "$lock_file"
+            fi
+            failed=$((failed+1))
+            continue
+          fi
+
+          # Determine if this project is a KEEPER service with tests.
+          is_keeper=false
+          for k in $keeper_list; do
+            if [ "$k" = "$proj" ]; then
+              is_keeper=true
+              break
+            fi
+          done
+
+          if [ "$is_keeper" = true ]; then
+            test_output=$(cd "{{.TASKFILE_DIR}}/$proj" && timeout 120 uv run python -m pytest tests/ -q --tb=short 2>&1)
+            test_exit=$?
+          else
+            test_output=$(cd "{{.TASKFILE_DIR}}/$proj" && uv sync --locked 2>&1)
+            test_exit=$?
+          fi
+
+          if [ $test_exit -eq 0 ]; then
+            echo "✓"
+            upgraded=$((upgraded+1))
+            rm -f "$backup_file"
+          else
+            echo "✗ (tests failed — rolling back uv.lock)"
+            printf "  === %s ===\n" "$proj"
+            echo "$test_output" | sed 's/^/  /'
+            if [ "$has_lock" = true ]; then
+              mv "$backup_file" "$lock_file"
+            fi
+            rolled_back=$((rolled_back+1))
+          fi
+        done
+
+        echo ""
+        echo "Upgrade summary:"
+        echo "  upgraded : $upgraded"
+        echo "  rolled back : $rolled_back"
+        echo "  failed : $failed"
+        if [ $rolled_back -gt 0 ] || [ $failed -gt 0 ]; then
+          exit 1
+        fi
+
   models-init:
     desc: "Pull Ollama AI models into running ollama container (docker or podman)"
     silent: true
