@@ -74,3 +74,5 @@ benchmark_results.html
 
 # Taskfile cache (checksums)
 .task/
+
+*.backup*

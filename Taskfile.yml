@@ -380,6 +380,16 @@ tasks:
           exit 1
         fi
 
+  upgrade-docker:
+    desc: "Check Docker image updates, then ask before modifying versions.env and Dockerfiles"
+    cmds:
+      - |
+        if ! command -v curl >/dev/null 2>&1; then
+          echo "ERROR: curl is required to query Docker Hub"
+          exit 1
+        fi
+      - uv run python {{.TASKFILE_DIR}}/scripts/upgrade_docker.py --pin-sha
+
   models-init:
     desc: "Pull Ollama AI models into running ollama container (docker or podman)"
     silent: true

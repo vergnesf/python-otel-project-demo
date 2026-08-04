@@ -1,5 +1,7 @@
-# Build arguments for cache busting
-FROM python:3.14-slim
+ARG DOCKER_REGISTRY
+ARG IMG_PYTHON
+
+FROM ${DOCKER_REGISTRY}${IMG_PYTHON}
 
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
